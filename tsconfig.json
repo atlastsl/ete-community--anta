@@ -4,7 +4,10 @@
     "strict": true,
     "rootDir": "./",
     "jsx": "react",
-    "outDir": "./build"
+    "outDir": "./build",
+    "paths": {
+      "~/*": ["./inertia/*"]
+    }
   },
   "references": [{ "path": "./tsconfig.inertia.json" }]
 }

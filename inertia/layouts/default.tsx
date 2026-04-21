@@ -19,46 +19,63 @@ export default function Layout({ children }: { children: ReactElement<Data.Share
   })
 
   return (
-    <>
-      <header>
-        <div>
-          <div>
-            <Link route="home">
-              <svg
-                width="120"
-                height="24"
-                viewBox="0 0 195 38"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M180 37.5v-30h-7.5V0H195v7.5h-7.5v30H180ZM150 15V7.5h-15V0h15v7.5h7.5V15H150Zm-15 22.5V30h-7.5V7.5h7.5V30h15v7.5h-15Zm15-7.5v-7.5h7.5V30H150ZM82.5 37.5v-30H90V0h15v7.5h7.5v30H105v-15H90v15h-7.5ZM90 15h15V7.8H90V15ZM45 37.5V0h22.5v7.5h-15V15h15v7.5h-15V30h15v7.5H45ZM0 37.5V0h22.5v7.5H30V15h-7.5v15H30v7.5h-7.5V30H15v-7.5H7.5v15H0ZM7.5 15h14.7V7.5H7.5V15Z"
-                  fill="currentColor"
-                />
-              </svg>
-            </Link>
-          </div>
-          <div>
-            <nav>
-              {children.props.user ? (
-                <>
-                  <span>{children.props.user.initials}</span>
-                  <Form route="session.destroy">
-                    <button type="submit"> Logout </button>
-                  </Form>
-                </>
-              ) : (
-                <>
-                  <Link route="new_account.create">Signup</Link>
-                  <Link route="session.create">Login</Link>
-                </>
-              )}
-            </nav>
-          </div>
+    <div className="min-h-screen bg-background text-text font-sans">
+      <header className="sticky top-0 z-50 bg-surface border-b border-neutral-200">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+          <Link route="home" className="flex items-center">
+            <svg
+              width="120"
+              height="24"
+              viewBox="0 0 195 38"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              className="text-primary"
+            >
+              <path
+                d="M180 37.5v-30h-7.5V0H195v7.5h-7.5v30H180ZM150 15V7.5h-15V0h15v7.5h7.5V15H150Zm-15 22.5V30h-7.5V7.5h7.5V30h15v7.5h-15Zm15-7.5v-7.5h7.5V30H150ZM82.5 37.5v-30H90V0h15v7.5h7.5v30H105v-15H90v15h-7.5ZM90 15h15V7.8H90V15ZM45 37.5V0h22.5v7.5h-15V15h15v7.5h-15V30h15v7.5H45ZM0 37.5V0h22.5v7.5H30V15h-7.5v15H30v7.5h-7.5V30H15v-7.5H7.5v15H0ZM7.5 15h14.7V7.5H7.5V15Z"
+                fill="currentColor"
+              />
+            </svg>
+          </Link>
+
+          <nav className="flex items-center gap-6">
+            {children.props.user ? (
+              <>
+                <span className="text-sm font-medium text-muted">
+                  {children.props.user.email}
+                </span>
+                <Form route="session.destroy">
+                  <button
+                    type="submit"
+                    className="text-sm font-medium text-muted hover:text-text transition-colors"
+                  >
+                    Logout
+                  </button>
+                </Form>
+              </>
+            ) : (
+              <>
+                <Link
+                  route="new_account.create"
+                  className="text-sm font-medium text-muted hover:text-text transition-colors"
+                >
+                  Signup
+                </Link>
+                <Link
+                  route="session.create"
+                  className="text-sm font-medium text-surface bg-primary hover:bg-primary-dark px-4 py-2 rounded-lg transition-colors"
+                >
+                  Login
+                </Link>
+              </>
+            )}
+          </nav>
         </div>
       </header>
-      <main>{children}</main>
-      <Toaster position="top-center" richColors />
-    </>
+
+      <main className="max-w-7xl mx-auto px-6 py-8">{children}</main>
+
+      <Toaster position="bottom-right" richColors />
+    </div>
   )
 }

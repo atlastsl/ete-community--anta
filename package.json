@@ -71,17 +71,26 @@
     "@adonisjs/shield": "^9.0.0",
     "@adonisjs/static": "^2.0.1",
     "@adonisjs/vite": "^5.1.0",
+    "@fontsource-variable/inter": "^5.2.8",
+    "@fontsource/playfair-display": "^5.2.8",
     "@inertiajs/react": "^2.3.18",
+    "@tailwindcss/vite": "^4.2.3",
     "@tuyau/core": "^1.2.2",
     "@vinejs/vine": "^4.3.0",
     "better-sqlite3": "^12.8.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "edge.js": "^6.5.0",
+    "lucide-react": "^1.8.0",
     "luxon": "^3.7.2",
     "pg": "^8.20.0",
+    "radix-ui": "^1.4.3",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "reflect-metadata": "^0.2.2",
-    "sonner": "^2.0.7"
+    "sonner": "^2.0.7",
+    "tailwind-merge": "^3.5.0",
+    "tailwindcss": "^4.2.3"
   },
   "hotHook": {
     "boundaries": [
