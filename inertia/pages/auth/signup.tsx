@@ -1,11 +1,14 @@
 import { Form } from '@adonisjs/inertia/react'
+import { useTranslation } from 'react-i18next'
 
 export default function Signup() {
+  const { t } = useTranslation('public')
+
   return (
     <div className="form-container">
       <div>
-        <h1> Signup </h1>
-        <p>Enter your details below to create your account</p>
+        <h1>{t('auth.signup.title')}</h1>
+        <p>{t('auth.signup.subtitle')}</p>
       </div>
 
       <div>
@@ -13,7 +16,7 @@ export default function Signup() {
           {({ errors }) => (
             <>
               <div>
-                <label htmlFor="fullName">Full name</label>
+                <label htmlFor="fullName">{t('auth.signup.fullName')}</label>
                 <input
                   type="text"
                   name="fullName"
@@ -24,7 +27,7 @@ export default function Signup() {
               </div>
 
               <div>
-                <label htmlFor="email">Email</label>
+                <label htmlFor="email">{t('auth.signup.email')}</label>
                 <input
                   type="email"
                   name="email"
@@ -36,7 +39,7 @@ export default function Signup() {
               </div>
 
               <div>
-                <label htmlFor="password">Password</label>
+                <label htmlFor="password">{t('auth.signup.password')}</label>
                 <input
                   type="password"
                   name="password"
@@ -48,7 +51,9 @@ export default function Signup() {
               </div>
 
               <div>
-                <label htmlFor="passwordConfirmation">Confirm password</label>
+                <label htmlFor="passwordConfirmation">
+                  {t('auth.signup.passwordConfirmation')}
+                </label>
                 <input
                   type="password"
                   name="passwordConfirmation"
@@ -61,7 +66,7 @@ export default function Signup() {
 
               <div>
                 <button type="submit" className="button">
-                  Sign up
+                  {t('auth.signup.submit')}
                 </button>
               </div>
             </>

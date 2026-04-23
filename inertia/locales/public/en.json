@@ -1,1 +1,35 @@
-{}
+{
+  "nav": {
+    "signup": "Sign up",
+    "login": "Log in",
+    "logout": "Log out"
+  },
+  "auth": {
+    "login": {
+      "title": "Login",
+      "subtitle": "Enter your details below to login to your account",
+      "email": "Email",
+      "password": "Password",
+      "submit": "Login"
+    },
+    "signup": {
+      "title": "Sign up",
+      "subtitle": "Enter your details below to create your account",
+      "fullName": "Full name",
+      "email": "Email",
+      "password": "Password",
+      "passwordConfirmation": "Confirm password",
+      "submit": "Sign up"
+    }
+  },
+  "errors": {
+    "notFound": "Page not found",
+    "serverError": "Something went wrong"
+  },
+  "home": {
+    "hero": {
+      "title": "Welcome to Anta",
+      "subtitle": "The ETE community digital library"
+    }
+  }
+}

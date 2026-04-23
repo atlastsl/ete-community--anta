@@ -3,8 +3,12 @@ import { toast, Toaster } from 'sonner'
 import { usePage } from '@inertiajs/react'
 import { ReactElement, useEffect } from 'react'
 import { Form, Link } from '@adonisjs/inertia/react'
+import { useTranslation } from 'react-i18next'
+import { LanguageSwitcher } from '~/components/language_switcher'
 
 export default function Layout({ children }: { children: ReactElement<Data.SharedProps> }) {
+  const { t } = useTranslation('public')
+
   useEffect(() => {
     toast.dismiss()
   }, [usePage().url])
@@ -44,15 +48,16 @@ export default function Layout({ children }: { children: ReactElement<Data.Share
                 <>
                   <span>{children.props.user.initials}</span>
                   <Form route="session.destroy">
-                    <button type="submit"> Logout </button>
+                    <button type="submit">{t('nav.logout')}</button>
                   </Form>
                 </>
               ) : (
                 <>
-                  <Link route="new_account.create">Signup</Link>
-                  <Link route="session.create">Login</Link>
+                  <Link route="new_account.create">{t('nav.signup')}</Link>
+                  <Link route="session.create">{t('nav.login')}</Link>
                 </>
               )}
+              <LanguageSwitcher />
             </nav>
           </div>
         </div>
