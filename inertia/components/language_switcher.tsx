@@ -1,21 +1,23 @@
 import { useTranslation } from 'react-i18next'
 
-const LANGS = ['fr', 'en'] as const
+const LANGS = [
+  { value: 'fr', label: 'Français' },
+  { value: 'en', label: 'English' },
+] as const
 
 export function LanguageSwitcher() {
   const { i18n } = useTranslation()
 
   return (
-    <div>
-      {LANGS.map((lang) => (
-        <button
-          key={lang}
-          onClick={() => i18n.changeLanguage(lang)}
-          aria-current={i18n.language === lang ? 'true' : undefined}
-        >
-          {lang.toUpperCase()}
-        </button>
+    <select
+      value={i18n.language}
+      onChange={(e) => i18n.changeLanguage(e.target.value)}
+    >
+      {LANGS.map(({ value, label }) => (
+        <option key={value} value={value}>
+          {label}
+        </option>
       ))}
-    </div>
+    </select>
   )
 }
