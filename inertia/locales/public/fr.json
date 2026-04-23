@@ -1,1 +1,35 @@
-{}
+{
+  "nav": {
+    "signup": "S'inscrire",
+    "login": "Se connecter",
+    "logout": "Se déconnecter"
+  },
+  "auth": {
+    "login": {
+      "title": "Connexion",
+      "subtitle": "Entrez vos identifiants pour accéder à votre compte",
+      "email": "Adresse e-mail",
+      "password": "Mot de passe",
+      "submit": "Se connecter"
+    },
+    "signup": {
+      "title": "Inscription",
+      "subtitle": "Entrez vos informations pour créer votre compte",
+      "fullName": "Nom complet",
+      "email": "Adresse e-mail",
+      "password": "Mot de passe",
+      "passwordConfirmation": "Confirmer le mot de passe",
+      "submit": "Créer un compte"
+    }
+  },
+  "errors": {
+    "notFound": "Page introuvable",
+    "serverError": "Une erreur s'est produite"
+  },
+  "home": {
+    "hero": {
+      "title": "Bienvenue sur Anta",
+      "subtitle": "La bibliothèque numérique communautaire de l'ETE"
+    }
+  }
+}

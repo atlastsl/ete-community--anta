@@ -1,1 +1,12 @@
-{}
+{
+  "common": {
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "create": "Créer",
+    "back": "Retour",
+    "loading": "Chargement…",
+    "confirm": "Confirmer"
+  }
+}

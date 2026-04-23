@@ -1,11 +1,14 @@
 import { Form } from '@adonisjs/inertia/react'
+import { useTranslation } from 'react-i18next'
 
 export default function Login() {
+  const { t } = useTranslation('public')
+
   return (
     <div className="form-container">
       <div>
-        <h1> Login </h1>
-        <p>Enter your details below to login to your account</p>
+        <h1>{t('auth.login.title')}</h1>
+        <p>{t('auth.login.subtitle')}</p>
       </div>
 
       <div>
@@ -13,7 +16,7 @@ export default function Login() {
           {({ errors }) => (
             <>
               <div>
-                <label htmlFor="email">Email</label>
+                <label htmlFor="email">{t('auth.login.email')}</label>
                 <input
                   type="email"
                   name="email"
@@ -25,7 +28,7 @@ export default function Login() {
               </div>
 
               <div>
-                <label htmlFor="password">Password</label>
+                <label htmlFor="password">{t('auth.login.password')}</label>
                 <input
                   type="password"
                   name="password"
@@ -37,7 +40,7 @@ export default function Login() {
 
               <div>
                 <button type="submit" className="button">
-                  Login
+                  {t('auth.login.submit')}
                 </button>
               </div>
             </>
