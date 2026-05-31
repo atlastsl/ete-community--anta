@@ -97,8 +97,10 @@ NFR15: Priorité stabilité sous usage normal ; pas de montée en charge extrêm
 - **Variables d'environnement** : `.env.example` documentant toutes les variables requises (DB, R2, mail, session, 2FA)
 - **Configuration R2** : `config/drive.ts` avec driver S3 Cloudflare R2 (endpoint, bucket, credentials) ; `FileStorageService` gère upload, suppression et URL signées (TTL 1h)
 - **Configuration mail** : `config/mail.ts` avec Resend (principal) + Mailgun (fallback) via `@adonisjs/mail`
-- **CI/CD GitHub Actions** : 3 workflows de déploiement sélectif — `deploy-public.yml` (chemin inertia/pages/public/**), `deploy-admin.yml` (chemin inertia/pages/admin/**), `deploy-full.yml` (chemin app/models/**, database/**)
-- **Infrastructure serveur** : VPS Hetzner CX21, Nginx (reverse proxy), PM2 + pm2-logrotate, Let's Encrypt (Certbot)
+- **Branches Git** : `master` (production), `development` (centralisation des updates), `staging` (test/démo, connectée à Render) — chaque story part d'une branche depuis `development`, merge sur `development` après validation locale, PR `development → staging` pour déploiement test
+- **Hébergement phase initiale** : Render Free Tier (auto-deploy depuis `staging`) — keep-alive via cron externe (14 min)
+- **Hébergement phase finale (Epic 8)** : VPS (Hetzner CX21), Nginx, PM2 + pm2-logrotate, Let's Encrypt (Certbot)
+- **CI/CD** : Phase initiale — `ci.yml` (lint + tests sur PR vers `development` et `staging`) ; Phase finale (Epic 8) — 3 workflows de déploiement sélectif depuis `master`
 - **Session timeout** : 2 heures d'inactivité (configurable)
 - **Enum ProductionStatus** : Source de vérité unique — `'draft' | 'published' | 'unpublished'` — jamais de strings en dur
 - **ActivityLogService** : Service centralisé pour tous les logs admin — actions : `login | create | update | publish | unpublish | delete | password_reset`
@@ -186,9 +188,9 @@ FR43: Epic 3 — Réinitialisation du mot de passe admin (super admin)
 
 ### Epic 1 : Fondations Techniques
 
-L'équipe peut démarrer le développement sur une base de projet cohérente, configurée et déployable — stack initialisée, base de données migrée, infrastructure opérationnelle, CI/CD en place.
+L'équipe peut démarrer le développement sur une base de projet cohérente, configurée et déployable — stack initialisée, base de données migrée, branches Git configurées, environnement de test Render opérationnel.
 **FRs couverts :** FR34 (seeder super admin)
-**NFRs :** NFR4 (HTTPS), NFR13 (infrastructure 99%)
+**NFRs :** NFR4 (HTTPS via Render)
 **UX-DRs :** UX-DR15 (design system tokens Tailwind v4 + shadcn/ui)
 
 ### Epic 2 : Authentification Admin & Sécurité des Accès
@@ -231,11 +233,17 @@ Un administrateur peut consulter les statistiques par production et en vue agré
 **FRs couverts :** FR27, FR28, FR29
 **Dépend de :** Epic 4 (productions créées), Epic 6 (vues et téléchargements enregistrés)
 
+### Epic 8 : Migration VPS (Production)
+
+L'application est migrée de Render vers un VPS autonome avec Nginx, PM2, Let's Encrypt et un CI/CD sélectif par chemin — permettant un hébergement production performant, stable et maîtrisé.
+**NFRs :** NFR4 (HTTPS), NFR13 (disponibilité 99%)
+**Dépend de :** Tous les epics fonctionnels validés sur Render
+
 ---
 
 ## Epic 1 : Fondations Techniques
 
-L'équipe peut démarrer le développement sur une base de projet cohérente, configurée et déployable — stack initialisée, base de données migrée, infrastructure opérationnelle, CI/CD en place.
+L'équipe peut démarrer le développement sur une base de projet cohérente, configurée et déployable — stack initialisée, base de données migrée, branches Git configurées, environnement de test Render opérationnel.
 
 ### Story 1.1 : Initialisation du projet AdonisJS + Inertia + React
 
@@ -436,37 +444,45 @@ Afin que tous les composants utilisent une palette cohérente, une typographie u
 
 ---
 
-### Story 1.8 : Infrastructure et CI/CD
+### Story 1.8 : Configuration des branches Git et déploiement Render
 
 En tant que développeur,
-Je veux le serveur configuré (Nginx, PM2, Let's Encrypt) et trois workflows GitHub Actions en place,
-Afin que les déploiements soient automatisés, sécurisés et sélectifs selon les chemins modifiés (NFR4, NFR13).
+Je veux un dépôt Git configuré avec trois branches (master, development, staging) et un environnement de test/démo déployé automatiquement sur Render depuis staging,
+Afin que l'équipe puisse développer par story, tester localement, puis déployer en un clic vers un environnement partagé.
 
 **Acceptance Criteria:**
 
-**Given** le VPS Hetzner CX21 est provisionné
-**When** Nginx, PM2 et Certbot sont configurés
-**Then** l'application est accessible via HTTPS sur le domaine configuré
-**And** HTTP redirige automatiquement vers HTTPS (NFR4)
-**And** `pm2-logrotate` est activé pour la rotation des logs
+**Given** le projet est initialisé sur le dépôt Git
+**When** les branches sont créées
+**Then** trois branches existent : `master` (production), `development` (centralisation des updates), `staging` (test/démo connectée à Render)
+**And** `development` est la branche par défaut du dépôt
 
-**Given** du code est poussé sur la branche principale
-**When** seuls des fichiers dans `inertia/pages/public/**` ou `app/controllers/public/**` sont modifiés
-**Then** uniquement le workflow `deploy-public.yml` se déclenche (rebuild bundle public + rechargement PM2 partiel)
+**Given** les branches sont configurées
+**When** un développeur démarre une nouvelle story
+**Then** il crée une branche depuis `development` (ex. `feat/1.2-migrations`)
+**And** après validation locale, il merge sa branche vers `development`
 
-**When** seuls des fichiers dans `inertia/pages/admin/**` ou `app/controllers/admin/**` sont modifiés
-**Then** uniquement le workflow `deploy-admin.yml` se déclenche
+**Given** du code est prêt à être testé en ligne
+**When** une PR `development → staging` est créée et mergée
+**Then** Render détecte le push sur `staging` et déclenche un auto-deploy
+**And** l'application est accessible via HTTPS sur l'URL Render (TLS automatique — NFR4)
 
-**When** des fichiers dans `app/models/**` ou `database/migrations/**` sont modifiés
-**Then** le workflow `deploy-full.yml` se déclenche (migration + redéploiement complet)
+**Given** un service Web Render est créé
+**When** la configuration est définie
+**Then** le build command est : `npm install && node ace build`
+**And** le start command est : `node ace migration:run --force && node build/bin/server.js`
+**And** les variables d'environnement sont configurées (DB Supabase, R2, mail, session, 2FA)
+**And** la branche surveillée est `staging`
 
-**Given** l'infrastructure est configurée
-**When** `node ace migration:run --force` est exécuté en production
-**Then** les migrations s'appliquent sans erreur et PM2 redémarre l'application
+**Given** Render Free Tier endort l'app après 15 min d'inactivité
+**When** un service de monitoring externe (cron-job.org) est configuré
+**Then** un ping HTTP est envoyé toutes les 14 minutes vers l'URL Render
+**And** l'application reste active sans cold starts
 
-**Given** les tests Japa sont en place
-**When** `node ace test` est exécuté dans le workflow CI
-**Then** les tests passent avant tout déploiement (gate CI)
+**Given** le workflow `ci.yml` est créé dans `.github/workflows/`
+**When** une PR est ouverte vers `development` ou `staging`
+**Then** les étapes lint + tests (`node ace test`) sont exécutées
+**And** la PR ne peut être mergée que si le workflow CI passe (gate CI)
 
 ---
 
@@ -1667,3 +1683,82 @@ Afin de garantir la fiabilité des métriques et la sécurité des données d'ac
 - Logs d'activité filtrés par admin → résultats corrects
 - Logs d'activité filtrés par type d'action → résultats corrects
 - Accès logs d'activité en tant qu'admin (rôle admin) → 403
+
+---
+
+## Epic 8 : Migration VPS (Production)
+
+L'application est migrée de Render vers un VPS autonome avec Nginx, PM2, Let's Encrypt et un CI/CD sélectif par chemin — permettant un hébergement production performant, stable et maîtrisé.
+
+### Story 8.1 : Provisionnement VPS et configuration serveur
+
+En tant que développeur,
+Je veux un VPS configuré avec Nginx, PM2 et Let's Encrypt,
+Afin que l'application soit accessible en production via HTTPS sur un serveur maîtrisé (NFR4, NFR13).
+
+**Acceptance Criteria:**
+
+**Given** un VPS (type Hetzner CX21 — 2 vCPU, 4 Go RAM) est provisionné
+**When** Nginx, PM2 et Certbot sont installés et configurés
+**Then** l'application AdonisJS est servie via Nginx en reverse proxy
+**And** HTTPS est actif avec un certificat Let's Encrypt valide
+**And** HTTP redirige automatiquement vers HTTPS (NFR4)
+**And** `pm2-logrotate` est activé pour la rotation des logs
+
+**Given** les variables d'environnement sont configurées sur le serveur
+**When** `node ace migration:run --force` est exécuté
+**Then** les migrations s'appliquent sans erreur sur la base PostgreSQL Supabase
+**And** PM2 démarre l'application via `ecosystem.config.js`
+
+**Given** l'application tourne sur le VPS
+**When** un utilisateur accède au domaine configuré
+**Then** le site est accessible et fonctionnel, identique à l'environnement Render
+
+---
+
+### Story 8.2 : CI/CD sélectif et workflow de production
+
+En tant que développeur,
+Je veux trois workflows GitHub Actions de déploiement sélectif par chemin depuis la branche master,
+Afin que les déploiements en production soient automatisés et optimisés selon les fichiers modifiés.
+
+**Acceptance Criteria:**
+
+**Given** du code est poussé sur `master` (via PR `staging → master`)
+**When** seuls des fichiers dans `inertia/pages/public/**` ou `app/controllers/public/**` sont modifiés
+**Then** uniquement le workflow `deploy-public.yml` se déclenche (rebuild bundle public + rechargement PM2 partiel)
+
+**When** seuls des fichiers dans `inertia/pages/admin/**` ou `app/controllers/admin/**` sont modifiés
+**Then** uniquement le workflow `deploy-admin.yml` se déclenche
+
+**When** des fichiers dans `app/models/**`, `database/migrations/**`, `app/services/**` ou `config/**` sont modifiés
+**Then** le workflow `deploy-full.yml` se déclenche (build complet + migration + redémarrage PM2)
+
+**Given** le workflow de production est en place
+**When** le flux complet est suivi
+**Then** le chemin est : branche story → merge `development` → PR `development → staging` (test Render) → PR `staging → master` (déploiement VPS)
+
+**Given** les tests Japa sont en place
+**When** `node ace test` est exécuté dans le workflow CI
+**Then** les tests passent avant tout déploiement (gate CI)
+
+---
+
+### Story 8.3 : Décommissionnement Render
+
+En tant que développeur,
+Je veux décommissionner l'environnement Render et mettre à jour la configuration,
+Afin que le VPS soit l'unique environnement de production et que les coûts Render soient éliminés.
+
+**Acceptance Criteria:**
+
+**Given** le VPS est opérationnel et validé
+**When** la migration est confirmée
+**Then** le service Render est supprimé ou suspendu
+**And** le cron de keep-alive (cron-job.org) est désactivé
+**And** la branche `staging` peut être conservée pour un futur environnement de staging sur le VPS (optionnel)
+
+**Given** le DNS est configuré
+**When** le domaine principal pointe vers le VPS
+**Then** le trafic est routé vers le VPS et non plus vers Render
+**And** le certificat Let's Encrypt est actif et renouvelable automatiquement

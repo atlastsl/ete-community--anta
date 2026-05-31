@@ -137,7 +137,11 @@ anta/
 └── tsconfig.json
 ```
 
-### Stratégie CI/CD — Déploiement Sélectif
+### Stratégie CI/CD
+
+**Phase initiale (Render) :** Auto-deploy depuis la branche `staging` — Render rebuild l'intégralité de l'app à chaque push. Pas de déploiement sélectif par chemin en phase dev/démo.
+
+**Phase finale (VPS — Epic 8) :** GitHub Actions avec déploiement sélectif par chemin depuis `master` :
 
 ```yaml
 # Règles de déclenchement par chemin modifié
@@ -360,22 +364,53 @@ AdonisJS injecte `<title>`, `<meta name="description">`, `<meta property="og:*">
 
 ### 6. Infrastructure et Déploiement
 
+#### Phase initiale — Dev/Démo (Render)
+
+| Composant         | Choix                                                                         |
+| ----------------- | ----------------------------------------------------------------------------- |
+| Hébergement       | Render Free Tier (512 Mo RAM, 0.1 vCPU)                                       |
+| TLS               | Automatique (Render)                                                          |
+| Déploiement       | Auto-deploy depuis la branche `staging` via intégration GitHub                |
+| Stockage fichiers | Cloudflare R2 (voir section 2)                                                |
+| Keep-alive        | Service de monitoring externe (cron-job.org) — ping toutes les 14 min         |
+
+**Stratégie de branches Git :**
+
+| Branche       | Rôle                                                                 |
+| ------------- | -------------------------------------------------------------------- |
+| `master`      | Production — reflète le code déployé en production (VPS, phase finale) |
+| `development` | Centralisation des updates — branche cible des merges de stories     |
+| `staging`     | Test/démo — connectée à Render, mise à jour via PR `development → staging` |
+
+**Workflow de développement :**
+
+1. Chaque story démarre sur une nouvelle branche créée depuis `development`
+2. Développement + tests locaux sur la branche de story
+3. Merge de la branche de story vers `development`
+4. Quand prêt à déployer en test : PR `development` → `staging`
+5. Render auto-deploy depuis `staging`
+
+**Séquence de démarrage (Render) :**
+
+```bash
+# Build command (Render)
+npm install && node ace build
+# Start command (Render)
+node ace migration:run --force && node build/bin/server.js
+```
+
+#### Phase finale — Production (VPS) — Epic 8
+
 | Composant         | Choix                                                           |
 | ----------------- | --------------------------------------------------------------- |
-| Hébergement       | VPS Hetzner CX21 (2 vCPU, 4 Go RAM)                             |
+| Hébergement       | VPS (type Hetzner CX21 — 2 vCPU, 4 Go RAM)                      |
 | Reverse proxy     | Nginx                                                           |
 | Process manager   | PM2 (avec `pm2-logrotate`)                                      |
 | TLS               | Let's Encrypt (Certbot)                                         |
-| CI/CD             | GitHub Actions (ou GitLab CI) — déploiement sélectif par chemin |
+| CI/CD             | GitHub Actions — déploiement depuis `master`                    |
 | Stockage fichiers | Cloudflare R2 (voir section 2)                                  |
 
-**Séquence de démarrage :**
-
-```bash
-# Build + migration + démarrage
-node ace migration:run --force
-pm2 start ecosystem.config.js
-```
+La migration vers VPS est planifiée dans l'Epic 8, après validation complète sur l'environnement Render.
 
 ---
 
@@ -650,9 +685,10 @@ anta/
 │
 ├── .github/
 │   └── workflows/
-│       ├── deploy-public.yml        # Rebuild bundle public (chemin : inertia/pages/public/**)
-│       ├── deploy-admin.yml         # Rebuild bundle admin (chemin : inertia/pages/admin/**)
-│       └── deploy-full.yml          # Redéploiement complet (chemin : app/models/**, database/**)
+│       ├── ci.yml                   # Lint + tests sur chaque PR (development, staging)
+│       ├── deploy-public.yml        # [Phase VPS] Rebuild bundle public (chemin : inertia/pages/public/**)
+│       ├── deploy-admin.yml         # [Phase VPS] Rebuild bundle admin (chemin : inertia/pages/admin/**)
+│       └── deploy-full.yml          # [Phase VPS] Redéploiement complet (chemin : app/models/**, database/**)
 │
 ├── app/
 │   ├── controllers/
@@ -864,6 +900,15 @@ FileUploader.tsx → POST /admin/files (multipart)
 ```
 
 #### Workflow CI/CD
+
+**Phase initiale (Render) :**
+
+```yaml
+ci.yml: # Déclenché sur PR vers development et staging
+  → lint → tests → gate CI (aucun déploiement — Render auto-deploy depuis staging)
+```
+
+**Phase finale (VPS — Epic 8) :**
 
 ```yaml
 deploy-public.yml: # inertia/pages/public/**, app/controllers/public/**

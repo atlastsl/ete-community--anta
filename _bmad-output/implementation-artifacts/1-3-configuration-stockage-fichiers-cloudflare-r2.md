@@ -1,6 +1,6 @@
 # Story 1.3 : Configuration stockage fichiers Cloudflare R2
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -44,27 +44,27 @@ Afin que les fichiers puissent être uploadés, servis et supprimés de façon s
 
 ## Tasks / Subtasks
 
-- [ ] **Tâche 1 — Installer et configurer `@adonisjs/drive`** (AC1)
-  - [ ] 1.1 Installer : `node ace add @adonisjs/drive`
-  - [ ] 1.2 Ajouter les variables R2 dans `start/env.ts` : `R2_ENDPOINT`, `R2_BUCKET`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`
-  - [ ] 1.3 Renseigner `.env` avec les credentials R2 réels (ne pas commiter)
-  - [ ] 1.4 Vérifier que `config/drive.ts` a été créé par `ace add` et le configurer avec le disque `r2` (S3 driver pointant vers R2)
+- [x] **Tâche 1 — Installer et configurer `@adonisjs/drive`** (AC1)
+  - [x] 1.1 Installer : `npm install @adonisjs/drive` + `node ace configure @adonisjs/drive --services=s3 --install`
+  - [x] 1.2 Ajouter les variables R2 dans `start/env.ts` : `R2_ENDPOINT`, `R2_BUCKET`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`
+  - [x] 1.3 Renseigner `.env` avec les credentials R2 placeholders (à remplacer par les vrais)
+  - [x] 1.4 `config/drive.ts` configuré avec le disque `r2` (S3 driver, region auto, visibility private, endpoint R2)
 
-- [ ] **Tâche 2 — Implémenter `FileStorageService`** (AC2, AC3, AC4, AC5)
-  - [ ] 2.1 Créer `app/services/file_storage_service.ts`
-  - [ ] 2.2 Implémenter `validate(file)` — vérifie taille ≤ 100 Mo et MIME type dans la whitelist
-  - [ ] 2.3 Implémenter `upload(file, key)` — valide, upload vers R2, retourne la clé
-  - [ ] 2.4 Implémenter `signedUrl(fileKey)` — génère une URL signée TTL 1h
-  - [ ] 2.5 Implémenter `delete(fileKey)` — supprime le fichier R2
+- [x] **Tâche 2 — Implémenter `FileStorageService`** (AC2, AC3, AC4, AC5)
+  - [x] 2.1 Créer `app/services/file_storage_service.ts`
+  - [x] 2.2 Implémenter `validate(file)` — vérifie taille ≤ 100 Mo et MIME type dans la whitelist
+  - [x] 2.3 Implémenter `upload(file, key)` — valide, upload vers R2 via moveFromFs, retourne la clé
+  - [x] 2.4 Implémenter `signedUrl(fileKey)` — génère une URL signée TTL 1h
+  - [x] 2.5 Implémenter `delete(fileKey)` — supprime le fichier R2
 
-- [ ] **Tâche 3 — Supprimer les `.gitkeep` obsolètes** (Structure)
-  - [ ] 3.1 Supprimer `app/services/.gitkeep` (le dossier aura de vrais fichiers)
+- [x] **Tâche 3 — Supprimer les `.gitkeep` obsolètes** (Structure)
+  - [x] 3.1 Supprimer `app/services/.gitkeep` (le dossier aura de vrais fichiers)
 
-- [ ] **Tâche 4 — Tests unitaires** (AC2, AC3, AC4, AC5)
-  - [ ] 4.1 Créer `tests/unit/services/file_storage_service.spec.ts`
-  - [ ] 4.2 Tester `validate()` — cas valides et invalides (taille, MIME)
-  - [ ] 4.3 Tester `upload()`, `signedUrl()`, `delete()` avec mock du Drive (pas de vrais appels R2 en test)
-  - [ ] 4.4 `node ace test --suite unit` passe sans erreur
+- [x] **Tâche 4 — Tests unitaires** (AC2, AC3, AC4, AC5)
+  - [x] 4.1 Créer `tests/unit/services/file_storage_service.spec.ts`
+  - [x] 4.2 Tester `validate()` — cas valides et invalides (taille, MIME) — 8 tests
+  - [x] 4.3 Tester `upload()`, `signedUrl()`, `delete()` avec `drive.fake('r2')` — 4 tests
+  - [x] 4.4 `node ace test --suite unit` — 16/16 FileStorageService tests passent (10 échecs pré-existants sur modèles = BDD Supabase injoignable)
 
 ## Dev Notes
 
@@ -311,10 +311,35 @@ makeFile(1024, 'image/jpeg')
 
 ### Agent Model Used
 
-claude-sonnet-4-6
+claude-opus-4-6
 
 ### Debug Log References
 
+- Tests `assert.throws` corrigés : Japa/Chai attend un constructeur Error ou string/RegExp en 2e arg, pas un prédicat. Remplacé par try/catch + `assert.instanceOf`.
+- Test upload corrigé : `moveFromFs` nécessite un vrai fichier temporaire — créé via `writeFileSync` dans le setup de test.
+- Implémentation utilise `moveFromFs` au lieu de `putStream` (pas d'API `putStream` dans Drive v2, et `moveFromFs` est le pattern AdonisJS pour les MultipartFile).
+- MIME type construit depuis `file.type` + `file.subtype` (MultipartFile les sépare) au lieu d'un seul `file.type`.
+
 ### Completion Notes List
 
+- AC1 ✅ Drive R2 configuré — `config/drive.ts` avec disque `r2`, driver S3, region auto, visibility private
+- AC2 ✅ `upload()` retourne la clé, jamais l'URL
+- AC3 ✅ `signedUrl()` génère une URL signée TTL 1h
+- AC4 ✅ `validate()` rejette > 100 Mo et MIME types non autorisés
+- AC5 ✅ `delete()` supprime via `disk.delete()`
+- 14 tests unitaires FileStorageService passent (+ 2 tests exports)
+
+### Change Log
+
+- 2026-05-30 : Implémentation complète Story 1.3 — @adonisjs/drive configuré pour R2, FileStorageService implémenté avec validate/upload/signedUrl/delete, 16 tests unitaires
+
 ### File List
+
+- `config/drive.ts` — créé (généré par ace configure puis personnalisé pour R2)
+- `app/services/file_storage_service.ts` — créé
+- `tests/unit/services/file_storage_service.spec.ts` — créé
+- `start/env.ts` — modifié (variables R2 remplacent AWS)
+- `.env` — modifié (credentials R2 placeholders)
+- `adonisrc.ts` — modifié (drive_provider ajouté automatiquement par ace configure)
+- `package.json` — modifié (@adonisjs/drive, @aws-sdk/client-s3, @aws-sdk/s3-request-presigner ajoutés)
+- `app/services/.gitkeep` — supprimé
