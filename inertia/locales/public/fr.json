@@ -1,1 +1,18 @@
-{}
+{
+  "nav": {
+    "home": "Accueil",
+    "search": "Rechercher",
+    "privacy_policy": "Politique de confidentialité"
+  },
+  "actions": {
+    "search": "Rechercher",
+    "filter": "Filtrer",
+    "clear_filters": "Effacer les filtres",
+    "download": "Télécharger"
+  },
+  "language_switcher": {
+    "fr": "Français",
+    "en": "English",
+    "label": "Changer de langue"
+  }
+}

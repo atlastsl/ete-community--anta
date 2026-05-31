@@ -1,10 +1,12 @@
 import './css/app.css'
 import { ReactElement } from 'react'
 import { client } from './client'
-import Layout from '~/layouts/default'
+import PublicLayout from '~/layouts/PublicLayout'
+import { publicI18n } from '~/lib/i18n/public'
 import { Data } from '@generated/data'
 import { createRoot } from 'react-dom/client'
 import { createInertiaApp } from '@inertiajs/react'
+import { I18nextProvider } from 'react-i18next'
 import { TuyauProvider } from '@adonisjs/inertia/react'
 import { resolvePageComponent } from '@adonisjs/inertia/helpers'
 
@@ -16,14 +18,16 @@ createInertiaApp({
     return resolvePageComponent(
       `./pages/${name}.tsx`,
       import.meta.glob('./pages/**/*.tsx'),
-      (page: ReactElement<Data.SharedProps>) => <Layout children={page} />
+      (page: ReactElement<Data.SharedProps>) => <PublicLayout children={page} />
     )
   },
   setup({ el, App, props }) {
     createRoot(el).render(
-      <TuyauProvider client={client}>
-        <App {...props} />
-      </TuyauProvider>
+      <I18nextProvider i18n={publicI18n}>
+        <TuyauProvider client={client}>
+          <App {...props} />
+        </TuyauProvider>
+      </I18nextProvider>
     )
   },
   progress: {

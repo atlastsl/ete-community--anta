@@ -21,6 +21,9 @@ const dbConfig = defineConfig({
         user: env.get('DB_USER'),
         password: env.get('DB_PASSWORD', ''),
         database: env.get('DB_DATABASE'),
+        // SSL requis par le pooler Supabase (DB_SSL=true), désactivé en CI/local
+        // sur un PostgreSQL sans SSL (DB_SSL absent → false).
+        ssl: env.get('DB_SSL') ? { rejectUnauthorized: false } : false,
       },
 
       migrations: {

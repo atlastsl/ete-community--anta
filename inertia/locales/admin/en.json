@@ -1,1 +1,19 @@
-{}
+{
+  "nav": {
+    "productions": "Productions",
+    "statistics": "Statistics",
+    "users": "Users",
+    "logout": "Sign out"
+  },
+  "actions": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "publish": "Publish",
+    "delete": "Delete"
+  },
+  "language_switcher": {
+    "fr": "Français",
+    "en": "English",
+    "label": "Change language"
+  }
+}

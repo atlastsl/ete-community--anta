@@ -1,0 +1,92 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [development, staging, master]
+  push:
+    branches: [development, staging]
+
+jobs:
+  test:
+    name: Lint & Test
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: anta_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    env:
+      # === Node ===
+      TZ: UTC
+      NODE_ENV: test
+      PORT: 3333
+      HOST: localhost
+      LOG_LEVEL: info
+
+      # === App ===
+      APP_KEY: ci-test-app-key-32-chars-minimum-required
+      APP_URL: http://localhost:3333
+      APP_NAME: Anta
+      VITE_APP_NAME: Anta
+
+      # === Session ===
+      SESSION_DRIVER: cookie
+
+      # === Database (PostgreSQL service container ci-dessus) ===
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_DATABASE: anta_test
+
+      # === Cloudflare R2 — stubs (les tests utilisent drive.fake('r2')) ===
+      R2_ENDPOINT: https://placeholder.r2.cloudflarestorage.com
+      R2_BUCKET: anta-test
+      R2_ACCESS_KEY_ID: placeholder
+      R2_SECRET_ACCESS_KEY: placeholder
+
+      # === Email — stubs (les tests utilisent mail.fake()) ===
+      MAIL_MAILER: resend
+      MAIL_FROM_NAME: Anta
+      MAIL_FROM_ADDRESS: noreply@anta.community
+      RESEND_API_KEY: placeholder
+      MAILGUN_API_KEY: placeholder
+      MAILGUN_DOMAIN: mg.anta.community
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run migrations
+        run: node ace migration:run --force
+
+      - name: Lint
+        run: npm run lint
+
+      # Typecheck après les migrations : le boot ace a généré les types `@generated/*`
+      # (codegen Inertia/Tuyau). Attrape les ruptures de build avant le déploiement Render.
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Run unit tests
+        run: node ace test --suite unit

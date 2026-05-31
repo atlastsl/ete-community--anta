@@ -1,0 +1,84 @@
+# Blueprint Render pour Anta — environnement staging/démo
+# Doc officielle : https://render.com/docs/blueprint-spec
+#
+# Workflow :
+#   1. Pousser sur la branche `staging` déclenche un auto-deploy
+#   2. Build → Migrations PostgreSQL → Démarrage du serveur AdonisJS
+#   3. Render Free Tier = 512 MB RAM, sleep après 15 min d'inactivité (cron-job.org keep-alive)
+
+services:
+  - type: web
+    name: anta-staging
+    runtime: node
+    plan: free
+    region: oregon
+    branch: staging
+    buildCommand: npm install && node ace build
+    startCommand: node ace migration:run --force && node build/bin/server.js
+    healthCheckPath: /
+    autoDeploy: true
+    envVars:
+      # === Variables non-sensibles (commitées dans ce fichier) ===
+      - key: NODE_ENV
+        value: production
+      - key: TZ
+        value: UTC
+      - key: PORT
+        value: 10000
+      - key: HOST
+        value: 0.0.0.0
+      - key: LOG_LEVEL
+        value: info
+      - key: APP_NAME
+        value: Anta
+      - key: VITE_APP_NAME
+        value: Anta
+      - key: SESSION_DRIVER
+        value: cookie
+      - key: DB_SSL
+        value: true
+      - key: MAIL_MAILER
+        value: resend
+      - key: MAIL_FROM_NAME
+        value: Anta
+      - key: MAIL_FROM_ADDRESS
+        value: noreply@anta.community
+      - key: MAILGUN_DOMAIN
+        value: mg.anta.community
+
+      # === Secrets à remplir manuellement dans le dashboard Render ===
+      # sync: false → Render ne les écrase pas et les masque dans l'UI
+      - key: APP_KEY
+        sync: false
+      - key: APP_URL
+        sync: false
+
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_DATABASE
+        sync: false
+
+      - key: R2_ENDPOINT
+        sync: false
+      - key: R2_BUCKET
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+
+      - key: RESEND_API_KEY
+        sync: false
+      - key: MAILGUN_API_KEY
+        sync: false
+
+      - key: SUPER_ADMIN_EMAIL
+        sync: false
+      - key: SUPER_ADMIN_PASSWORD
+        sync: false
