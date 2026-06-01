@@ -16,7 +16,10 @@ services:
     # --include=dev : NODE_ENV=production fait sauter les devDependencies à npm install,
     # mais `node ace build` (assembler, tsc, vite, ts-exec) en a besoin. Forcer leur install.
     buildCommand: npm install --include=dev && node ace build
-    startCommand: node ace migration:run --force && node build/bin/server.js
+    # Le serveur DOIT tourner depuis build/ : sinon AdonisJS cherche le manifest Vite
+    # dans public/assets (racine) au lieu de build/public/assets → "Missing manifest file".
+    # Migrations lancées depuis la racine (ace TS via ts-exec) avant de basculer dans build/.
+    startCommand: node ace migration:run --force && cd build && node bin/server.js
     healthCheckPath: /
     autoDeploy: true
     envVars:
