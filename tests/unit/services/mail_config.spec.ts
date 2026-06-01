@@ -1,7 +1,7 @@
 import { test } from '@japa/runner'
 import mail from '@adonisjs/mail/services/main'
 
-test.group('Mail config | default mailer (Resend)', (group) => {
+test.group('Mail config | default mailer (Mailgun)', (group) => {
   group.each.setup(() => {
     mail.fake()
     return () => mail.restore()
@@ -30,30 +30,30 @@ test.group('Mail config | default mailer (Resend)', (group) => {
     })
 
     fake.messages.assertSent((message) => {
-      message.assertFrom('noreply@mg.anta.community', 'Anta')
+      message.assertFrom('contact@mg.anta.peraha.com', 'Anta')
       return true
     })
   })
 })
 
-test.group('Mail config | mailer alternatif (Mailgun)', (group) => {
+test.group('Mail config | mailer alternatif (Resend)', (group) => {
   group.each.setup(() => {
     mail.fake()
     return () => mail.restore()
   })
 
-  test('envoie via mail.use("mailgun") sans modifier le code métier', async () => {
+  test('envoie via mail.use("resend") sans modifier le code métier', async () => {
     const fake = mail.fake()
-    await mail.use('mailgun').send((message) => {
+    await mail.use('resend').send((message) => {
       message
         .to('test@example.com')
-        .subject('Via Mailgun')
-        .html('<p>Sent through Mailgun</p>')
+        .subject('Via Resend')
+        .html('<p>Sent through Resend</p>')
     })
 
     fake.messages.assertSent({
       to: 'test@example.com',
-      subject: 'Via Mailgun',
+      subject: 'Via Resend',
     })
   })
 })

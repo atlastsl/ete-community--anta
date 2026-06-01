@@ -43,13 +43,13 @@ services:
       - key: DB_SSL
         value: true
       - key: MAIL_MAILER
-        value: resend
+        value: mailgun
       - key: MAIL_FROM_NAME
         value: Anta
       - key: MAIL_FROM_ADDRESS
-        value: noreply@mg.anta.community
+        value: contact@mg.anta.peraha.com
       - key: MAILGUN_DOMAIN
-        value: mg.anta.community
+        value: mg.anta.peraha.com
 
       # === Secrets à remplir manuellement dans le dashboard Render ===
       # sync: false → Render ne les écrase pas et les masque dans l'UI
