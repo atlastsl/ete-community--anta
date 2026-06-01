@@ -13,7 +13,9 @@ services:
     plan: free
     region: oregon
     branch: staging
-    buildCommand: npm install && node ace build
+    # --include=dev : NODE_ENV=production fait sauter les devDependencies à npm install,
+    # mais `node ace build` (assembler, tsc, vite, ts-exec) en a besoin. Forcer leur install.
+    buildCommand: npm install --include=dev && node ace build
     startCommand: node ace migration:run --force && node build/bin/server.js
     healthCheckPath: /
     autoDeploy: true
