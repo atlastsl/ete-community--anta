@@ -62,12 +62,17 @@ Afin que l'équipe puisse développer par story, tester localement, puis déploy
 
 ## Tasks / Subtasks
 
-- [ ] **Tâche 1 — Créer les branches Git** (AC1) — ⚠️ **À FAIRE PAR L'UTILISATEUR**
-  - [ ] 1.1 Committer les Stories 1.3 → 1.7 selon le script suggéré dans Dev Notes (7 commits proposés)
-  - [ ] 1.2-1.5 Créer `development` et `staging`, pousser, changer default branch (voir Dev Notes)
+- [x] **Tâche 1 — Créer les branches Git** (AC1) ✅ FAIT (2026-05-31)
+  - [x] 1.1 Epic 1 commité en 3 commits sur `master` (chore untrack / feat foundations / docs)
+  - [x] 1.2-1.3 Branches `development` et `staging` créées depuis `master`
+  - [x] 1.4 Les 3 branches poussées sur origin (fix SSL : `git config http.sslBackend schannel` — réseau ULAVAL)
+  - [x] 1.5 Branche par défaut GitHub → `development` (via `gh api`)
 
-- [ ] **Tâche 2 — Protections de branches** (AC1) — ⚠️ **À FAIRE PAR L'UTILISATEUR** (UI GitHub)
-  - [ ] 2.1-2.2 Protection `master` (PR + review) et `development` (CI gate) — UI GitHub Settings → Branches
+- [x] **Tâche 2 — Protections de branches** (AC1) ✅ FAIT (2026-05-31)
+  - [x] Repo rendu **public** (choix utilisateur) après scan de sécurité confirmant zéro secret dans l'historique (`.env` jamais tracké, APP_KEY/DB passwords absents)
+  - [x] `master` : PR obligatoire (0 review — adapté dev solo, évite le deadlock self-approval) + gate CI `Lint & Test`
+  - [x] `development` : PR obligatoire + gate CI `Lint & Test`
+  - [ ] ⚠️ À vérifier après la 1ère PR : que le contexte de check s'appelle bien `Lint & Test` (sinon ajuster dans Settings → Branches, sinon les PR resteraient bloquées)
 
 - [x] **Tâche 3 — `render.yaml` Blueprint** (AC3)
   - [x] 3.1 `render.yaml` créé à la racine
@@ -95,11 +100,13 @@ Afin que l'équipe puisse développer par story, tester localement, puis déploy
   - [x] 6.6 Tests Documentation : README + git-workflow + deployment-render existent et référencent les bons éléments (3 tests)
   - [x] 6.7 `node ace test --suite unit` — **74/74 tests passent** (15 nouveaux + 59 existants)
 
-- [ ] **Tâche 7 — Setup Render** (AC3, AC5) — ⚠️ **À FAIRE PAR L'UTILISATEUR**
-  - [ ] 7.1-7.6 Compte Render + Blueprint + secrets + premier deploy + mettre à jour `APP_URL` (cf. `_docs/deployment-render.md`)
+- [x] **Tâche 7 — Setup Render** (AC3, AC5) ✅ DÉPLOYÉ ET LIVE (2026-06-01)
+  - [x] Service `anta-staging` créé via Blueprint, secrets remplis, **https://anta-staging.onrender.com** live
+  - [x] 4 fixes de déploiement appliqués (voir Debug Log / memory) : `.npmrc include=dev`, `.adonisjs` committé, build/start commands corrigés
+  - [ ] ⚠️ Mettre à jour `APP_URL` dans Render avec l'URL réelle si pas déjà fait
 
 - [ ] **Tâche 8 — Keep-alive cron-job.org** (AC documenté) — ⚠️ **À FAIRE PAR L'UTILISATEUR**
-  - [ ] 8.1-8.3 Compte cron-job.org + job ping toutes les 14 min (cf. `_docs/deployment-render.md`)
+  - [ ] 8.1-8.3 Compte cron-job.org + job GET `https://anta-staging.onrender.com/` toutes les 14 min (cf. `_docs/deployment-render.md`)
 
 ## Dev Notes
 
