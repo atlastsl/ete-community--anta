@@ -30,7 +30,7 @@ test.group('Mail config | default mailer (Resend)', (group) => {
     })
 
     fake.messages.assertSent((message) => {
-      message.assertFrom('noreply@anta.community', 'Anta')
+      message.assertFrom('noreply@mg.anta.community', 'Anta')
       return true
     })
   })

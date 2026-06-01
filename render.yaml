@@ -47,7 +47,7 @@ services:
       - key: MAIL_FROM_NAME
         value: Anta
       - key: MAIL_FROM_ADDRESS
-        value: noreply@anta.community
+        value: noreply@mg.anta.community
       - key: MAILGUN_DOMAIN
         value: mg.anta.community
 

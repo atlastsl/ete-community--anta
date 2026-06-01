@@ -26,7 +26,9 @@ test.group('Infrastructure | render.yaml', () => {
     assert.include(svc.buildCommand, 'npm install')
     assert.include(svc.buildCommand, 'node ace build')
     assert.include(svc.startCommand, 'migration:run')
-    assert.include(svc.startCommand, 'build/bin/server.js')
+    // Le serveur tourne depuis build/ (cd build && node bin/server.js) pour le manifest Vite
+    assert.include(svc.startCommand, 'cd build')
+    assert.include(svc.startCommand, 'bin/server.js')
   })
 
   test('les secrets sont marqués sync: false (pas de leak)', ({ assert }) => {
