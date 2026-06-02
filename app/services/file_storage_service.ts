@@ -1,5 +1,5 @@
 import drive from '@adonisjs/drive/services/main'
-import { MultipartFile } from '@adonisjs/core/bodyparser'
+import { type MultipartFile } from '@adonisjs/core/bodyparser'
 
 export const ALLOWED_MIME_TYPES = [
   'application/pdf',
@@ -35,7 +35,10 @@ export default class FileStorageService {
 
     const mimeType = file.type && file.subtype ? `${file.type}/${file.subtype}` : null
 
-    if (!mimeType || !ALLOWED_MIME_TYPES.includes(mimeType as (typeof ALLOWED_MIME_TYPES)[number])) {
+    if (
+      !mimeType ||
+      !ALLOWED_MIME_TYPES.includes(mimeType as (typeof ALLOWED_MIME_TYPES)[number])
+    ) {
       throw new FileValidationError(
         `Type de fichier non autorisé : ${mimeType ?? 'inconnu'}. Types acceptés : pdf, epub, mp4, mp3, aac`
       )

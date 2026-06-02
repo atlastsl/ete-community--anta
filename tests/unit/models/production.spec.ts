@@ -66,12 +66,29 @@ test.group('Production model', (group) => {
     assert.isTrue(result.has_vector)
   })
 
-  test('GIN index is used for full-text search queries', async ({ assert }) => {
-    const explain = await db.rawQuery(
-      "EXPLAIN SELECT * FROM productions WHERE search_vector @@ to_tsquery('simple', 'test')"
+  test('GIN index exists on productions.search_vector', async ({ assert }) => {
+    // On vérifie la STRUCTURE (l'index a été créé par la migration), pas le PLANNER —
+    // PostgreSQL préfère Seq Scan sur table vide / petite (rollback transactionnel
+    // laisse la table à 0 ligne), donc un EXPLAIN ne montrerait pas l'index dans ce contexte.
+    const result = await db.rawQuery(
+      `SELECT indexname, indexdef
+       FROM pg_indexes
+       WHERE schemaname = 'public'
+         AND tablename = 'productions'
+         AND indexname = 'idx_productions_search_vector'`
     )
-    const plan = explain.rows.map((r: Record<string, string>) => r['QUERY PLAN']).join('\n')
-    assert.include(plan, 'idx_productions_search_vector')
+
+    assert.equal(result.rows.length, 1, 'idx_productions_search_vector doit exister')
+    assert.include(
+      result.rows[0].indexdef.toLowerCase(),
+      'using gin',
+      "l'index doit être de type GIN"
+    )
+    assert.include(
+      result.rows[0].indexdef.toLowerCase(),
+      'search_vector',
+      "l'index doit couvrir la colonne search_vector"
+    )
   })
 
   test('hasMany files relationship works', async ({ assert }) => {

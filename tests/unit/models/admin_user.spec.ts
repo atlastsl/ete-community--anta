@@ -20,9 +20,7 @@ test.group('AdminUser model', (group) => {
     assert.equal(user.email, 'test-admin@anta.test')
     assert.equal(user.role, 'admin')
     assert.isTrue(user.isActive)
-    assert.isFalse(user.totpEnabled)
     assert.isFalse(user.passwordChanged)
-    assert.isNull(user.totpSecret)
     assert.isNull(user.createdById)
   })
 

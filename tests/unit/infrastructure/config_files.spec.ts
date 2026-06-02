@@ -85,6 +85,20 @@ test.group('Infrastructure | GitHub Actions CI', () => {
       'step migration absent'
     )
   })
+
+  test('CI exécute la suite functional (Story 2.6 — gate auth admin)', ({ assert }) => {
+    const steps = ci.jobs.test.steps.map((s: any) => s.run || '')
+    // La suite est un argument positionnel (`node ace test <suites...>`) ; le flag
+    // `--suite` n'existe pas et faisait tourner TOUTES les suites dans le step unit.
+    assert.isTrue(
+      steps.some((s: string) => /node ace test\s+unit(\s|$)/.test(s)),
+      'suite unit doit être lancée explicitement'
+    )
+    assert.isTrue(
+      steps.some((s: string) => /node ace test\s+functional(\s|$)/.test(s)),
+      'suite functional doit être lancée — sinon les tests middleware/login/change-password/logout sont ignorés en CI'
+    )
+  })
 })
 
 test.group('Infrastructure | .gitignore', () => {
@@ -131,5 +145,40 @@ test.group('Infrastructure | Documentation', () => {
     const content = readFileSync(r('_docs/deployment-render.md'), 'utf-8')
     assert.include(content, 'cron-job.org')
     assert.include(content, 'render.com')
+  })
+})
+
+test.group('Infrastructure | config/session.ts (Story 2.4)', () => {
+  const sessionConfigSource = readFileSync(r('config/session.ts'), 'utf-8')
+
+  test('age est configurable via SESSION_AGE avec défaut 2h (NFR6)', ({ assert }) => {
+    assert.match(
+      sessionConfigSource,
+      /age:\s*env\.get\(['"]SESSION_AGE['"],\s*['"]2h['"]\)/,
+      "config/session.ts doit lire SESSION_AGE avec défaut '2h'"
+    )
+  })
+
+  test('clearWithBrowser est désactivé (session persistante au-delà de la fermeture)', ({
+    assert,
+  }) => {
+    assert.match(sessionConfigSource, /clearWithBrowser:\s*false/)
+  })
+
+  test('cookie httpOnly est activé (protection XSS)', ({ assert }) => {
+    assert.match(sessionConfigSource, /httpOnly:\s*true/)
+  })
+
+  test('cookie sameSite est lax (défense en profondeur contre CSRF)', ({ assert }) => {
+    assert.match(sessionConfigSource, /sameSite:\s*['"]lax['"]/)
+  })
+
+  test('cookie secure est activé en production', ({ assert }) => {
+    assert.match(sessionConfigSource, /secure:\s*app\.inProduction/)
+  })
+
+  test('SESSION_AGE est déclaré comme variable optionnelle dans start/env.ts', ({ assert }) => {
+    const envSource = readFileSync(r('start/env.ts'), 'utf-8')
+    assert.match(envSource, /SESSION_AGE:\s*Env\.schema\.string\.optional\(\)/)
   })
 })

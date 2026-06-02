@@ -1,0 +1,9 @@
+# robots.txt — Anta
+# Bibliothèque numérique académique
+# Story 2.5 — Exclusion du panel admin de l'indexation (FR37)
+
+User-agent: *
+Disallow: /admin/
+
+# Pages publiques (Stories 5.x) — indexation autorisée par défaut
+Allow: /

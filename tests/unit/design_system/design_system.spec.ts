@@ -37,9 +37,9 @@ test.group('Design system | Tailwind v4 CSS', () => {
     assert.include(css, '@layer base')
   })
 
-  test('app.css documente le ratio WCAG AAA pour amber-900', ({ assert }) => {
+  test('app.css documente l’accessibilité (WCAG) et applique un focus visible', ({ assert }) => {
     assert.include(css, 'WCAG')
-    assert.include(css, '8.1:1')
+    assert.include(css, ':focus-visible')
   })
 })
 
@@ -73,8 +73,9 @@ test.group('Design system | shadcn/ui', () => {
 test.group('Design system | Edge layout', () => {
   const edge = readFileSync(r('resources/views/inertia_layout.edge'), 'utf-8')
 
-  test('html a un attribut lang="fr"', ({ assert }) => {
-    assert.include(edge, '<html lang="fr"')
+  test('html a un attribut lang dynamique avec fallback fr (SEO Story 5.5)', ({ assert }) => {
+    assert.include(edge, '<html lang="{{')
+    assert.include(edge, "'fr'")
   })
 
   test('favicon référencé', ({ assert }) => {

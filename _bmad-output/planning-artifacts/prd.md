@@ -56,7 +56,7 @@ Un administrateur enregistre et publie une production de façon autonome, sans a
 
 - Recherche fonctionnelle et réactive sur l'ensemble des métadonnées
 - Zéro perte de fichier lors des téléversements et téléchargements
-- Panel admin accessible exclusivement aux comptes autorisés avec 2FA
+- Panel admin accessible exclusivement aux comptes autorisés (auth email + mot de passe)
 - Disponibilité 99% du site public
 
 ---
@@ -95,7 +95,7 @@ Un administrateur enregistre et publie une production de façon autonome, sans a
 
 **Persona :** Fatou, administratrice d'Anta, reçoit un livre numérique d'un membre basé à Paris.
 
-**Situation :** Elle se connecte au panel admin avec ses identifiants et son 2FA.
+**Situation :** Elle se connecte au panel admin avec ses identifiants.
 
 **Action :** Elle crée une nouvelle production, remplit les métadonnées (titre, auteur, catégorie, domaine, sous-domaine, langue, date, éditeur, résumé, tags, pays), téléverse le PDF. Elle enregistre en brouillon, vérifie, puis publie. La production est immédiatement visible sur le site public.
 
@@ -111,9 +111,9 @@ Un administrateur enregistre et publie une production de façon autonome, sans a
 
 **Situation :** Un nouveau membre est désigné pour alimenter la bibliothèque.
 
-**Action :** Le super admin crée un compte admin (email + mot de passe provisoire). Le nouvel admin peut immédiatement se connecter et enregistrer des productions après activation de son 2FA. Le super admin peut aussi désactiver un compte existant et consulter les statistiques d'activité des admins.
+**Action :** Le super admin crée un compte admin (email + mot de passe provisoire). Le nouvel admin peut immédiatement se connecter et enregistrer des productions après avoir défini son mot de passe permanent. Le super admin peut aussi désactiver un compte existant et consulter les statistiques d'activité des admins.
 
-**Exigences révélées :** FR27–FR31, FR37
+**Exigences révélées :** FR27–FR30, FR37
 
 ---
 
@@ -138,7 +138,7 @@ Fichiers > 100 Mo : lien externe uniquement, aucun hébergement.
 ### Sécurité et Conformité RGPD
 
 - Données admin collectées : email + mot de passe uniquement.
-- 2FA obligatoire pour tous les comptes admin dès la première connexion.
+- Mot de passe permanent défini à la première connexion (mot de passe provisoire à usage unique).
 - Conformité RGPD : politique de confidentialité publiée, droit de suppression des comptes admin.
 
 ### Accessibilité
@@ -181,7 +181,7 @@ AdonisJS génère côté serveur les balises meta (title, description, Open Grap
 
 **Site public :** page d'accueil avec productions récentes, barre de recherche full-text, filtres par métadonnées (catégorie, domaine, sous-domaine, auteur, langue, pays, licence), page de détail avec lecteur intégré et téléchargement, compteurs de vues et téléchargements (public).
 
-**Panel admin :** authentification email + mot de passe + 2FA obligatoire, formulaire de création/édition de production (toutes métadonnées + fichiers/liens), workflow brouillon → publication, statistiques par production et agrégées, gestion des comptes admin.
+**Panel admin :** authentification email + mot de passe, formulaire de création/édition de production (toutes métadonnées + fichiers/liens), workflow brouillon → publication, statistiques par production et agrégées, gestion des comptes admin.
 
 **Super admin :** compte unique initialisé à la création, gestion des accès admin, statistiques d'activité des admins.
 
@@ -202,7 +202,6 @@ AdonisJS génère côté serveur les balises meta (title, description, Open Grap
 | Risque                   | Niveau | Mitigation                                     |
 | ------------------------ | ------ | ---------------------------------------------- |
 | Stockage fichiers lourds | Faible | Fichiers > 100 Mo exclus de l'hébergement      |
-| 2FA implémentation       | Faible | Librairies TOTP éprouvées pour AdonisJS        |
 | Adoption utilisateurs    | Nul    | Outil interne, communauté identifiée           |
 | Ressources limitées      | Faible | MVP minimal ; statistiques simplifiables en V1 |
 
@@ -256,7 +255,6 @@ AdonisJS génère côté serveur les balises meta (title, description, Open Grap
 ### Gestion des Comptes et Accès
 
 - **FR30 :** Un administrateur peut s'authentifier sur le panel admin avec son email et son mot de passe
-- **FR31 :** Le système impose l'activation du 2FA à tout compte administrateur dès sa première connexion
 - **FR32 :** Le super administrateur peut créer un compte administrateur
 - **FR33 :** Le super administrateur peut désactiver un compte administrateur
 - **FR34 :** Le super administrateur dispose d'un compte unique, initialisé à la création du site
@@ -303,10 +301,9 @@ AdonisJS génère côté serveur les balises meta (title, description, Open Grap
 ### Sécurité
 
 - Toutes les communications chiffrées via HTTPS (site public et panel admin)
-- Mots de passe hashés en base de données (bcrypt ou équivalent)
+- Mots de passe hashés en base de données (scrypt — défaut AdonisJS, plus moderne que bcrypt)
 - Sessions admin avec expiration automatique après inactivité
 - Protection CSRF activée sur toutes les actions du panel admin
-- 2FA obligatoire pour tous les comptes admin (TOTP via authenticator app)
 - Logs de connexion et d'activité admin conservés dans le système
 
 ### Stockage

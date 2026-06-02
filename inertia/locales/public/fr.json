@@ -1,4 +1,12 @@
 {
+  "a11y": {
+    "skip_to_content": "Aller au contenu principal"
+  },
+  "pagination": {
+    "label": "Pagination",
+    "previous": "Précédent",
+    "next": "Suivant"
+  },
   "nav": {
     "home": "Accueil",
     "search": "Rechercher",
@@ -14,5 +22,96 @@
     "fr": "Français",
     "en": "English",
     "label": "Changer de langue"
+  },
+  "footer": {
+    "copyright": "© Anta — Communauté ETE",
+    "about": "Anta est la bibliothèque numérique de la communauté ETE : un espace ouvert pour découvrir, rechercher et consulter les productions de la communauté.",
+    "explore": "Explorer",
+    "contact": "Contact",
+    "nav_label": "Liens de pied de page"
+  },
+  "home": {
+    "tagline": "Anta, la bibliothèque numérique de la communauté ETE",
+    "hero_eyebrow": "Bibliothèque numérique",
+    "hero_subtitle": "Découvrez, recherchez et consultez les productions de la communauté.",
+    "search_placeholder": "Rechercher une production...",
+    "empty": "Aucune production publiée pour le moment.",
+    "sections": {
+      "most_viewed": "Les plus consultées",
+      "recent": "Récemment ajoutées"
+    }
+  },
+  "search": {
+    "label": "Rechercher une production",
+    "submit": "Rechercher",
+    "clear": "Effacer la recherche"
+  },
+  "filters": {
+    "label": "Filtres de recherche",
+    "title": "Filtres",
+    "author_search": "Rechercher un auteur...",
+    "filter_by": "Filtrer par {{label}}",
+    "dimensions": {
+      "category": "Catégorie",
+      "domain": "Domaine",
+      "subdomain": "Sous-domaine",
+      "author": "Auteur",
+      "language": "Langue",
+      "country": "Pays",
+      "license": "Licence"
+    }
+  },
+  "production_card": {
+    "by": "Par",
+    "views": "{{count}} vues",
+    "downloads": "{{count}} téléchargements",
+    "published_at": "Publié le {{date}}"
+  },
+  "productions": {
+    "heading": "Catalogue des productions",
+    "results_count": "{{count}} résultat(s)",
+    "no_results": "Aucune production trouvée.",
+    "no_results_for": "Aucune production trouvée pour « {{term}} »",
+    "reset_filters": "Réinitialiser les filtres",
+    "approximate_notice": "Aucun résultat exact pour « {{term}} ». Voici des productions proches :"
+  },
+  "sort": {
+    "label": "Trier par",
+    "relevance": "Pertinence",
+    "date": "Date",
+    "views": "Vues",
+    "downloads": "Téléchargements"
+  },
+  "listing": {
+    "view_label": "Affichage",
+    "view_list": "Vue liste",
+    "view_grid": "Vue grille"
+  },
+  "privacy": {
+    "title": "Politique de confidentialité",
+    "intro": {
+      "heading": "Introduction",
+      "body": "Le site Anta (ci-après « le Site ») est une bibliothèque numérique communautaire. Nous nous engageons à protéger la vie privée des visiteurs. Cette politique décrit les données collectées, leur finalité et vos droits."
+    },
+    "data_collected": {
+      "heading": "Données collectées",
+      "body": "Le Site collecte uniquement les données suivantes : un cookie de préférence de langue (i18n_lang) stockant votre choix entre français et anglais ; des statistiques de consultation anonymes (nombre de vues et de téléchargements par production, sans identification du visiteur). Aucun compte utilisateur visiteur n'est créé, aucune donnée personnelle n'est demandée aux visiteurs."
+    },
+    "data_usage": {
+      "heading": "Utilisation des données",
+      "body": "Le cookie de langue sert exclusivement à afficher le site dans la langue choisie lors de votre prochaine visite. Les statistiques de consultation permettent de mesurer l'intérêt pour les productions et d'améliorer le catalogue."
+    },
+    "data_retention": {
+      "heading": "Durée de conservation",
+      "body": "Le cookie de langue est conservé pendant un an. Les statistiques de consultation sont conservées de manière agrégée et anonyme sans limite de durée."
+    },
+    "rights": {
+      "heading": "Vos droits",
+      "body": "Conformément au Règlement Général sur la Protection des Données (RGPD), vous disposez d'un droit d'accès, de rectification et de suppression de vos données. Vous pouvez supprimer le cookie de langue à tout moment via les paramètres de votre navigateur."
+    },
+    "contact": {
+      "heading": "Contact",
+      "body": "Pour toute question relative à cette politique, vous pouvez nous contacter à l'adresse : contact@anta.community"
+    }
   }
 }

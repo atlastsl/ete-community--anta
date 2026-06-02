@@ -1,5 +1,5 @@
-import { BaseModel, column, hasMany } from '@adonisjs/lucid/orm'
-import type { HasMany } from '@adonisjs/lucid/types/relations'
+import { BaseModel, column, hasMany, belongsTo } from '@adonisjs/lucid/orm'
+import type { HasMany, BelongsTo } from '@adonisjs/lucid/types/relations'
 import { DateTime } from 'luxon'
 import hash from '@adonisjs/core/services/hash'
 import { compose } from '@adonisjs/core/helpers'
@@ -30,14 +30,11 @@ export default class AdminUser extends compose(BaseModel, AuthFinder) {
   @column()
   declare isActive: boolean
 
-  @column({ serializeAs: null })
-  declare totpSecret: string | null
-
-  @column()
-  declare totpEnabled: boolean
-
   @column()
   declare passwordChanged: boolean
+
+  @column()
+  declare sessionVersion: number
 
   @column()
   declare createdById: string | null
@@ -47,6 +44,9 @@ export default class AdminUser extends compose(BaseModel, AuthFinder) {
 
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime | null
+
+  @belongsTo(() => AdminUser, { foreignKey: 'createdById' })
+  declare createdBy: BelongsTo<typeof AdminUser>
 
   @hasMany(() => AdminActivityLog)
   declare activityLogs: HasMany<typeof AdminActivityLog>

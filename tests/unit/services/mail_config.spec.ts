@@ -1,5 +1,6 @@
 import { test } from '@japa/runner'
 import mail from '@adonisjs/mail/services/main'
+import env from '#start/env'
 
 test.group('Mail config | default mailer (Mailgun)', (group) => {
   group.each.setup(() => {
@@ -10,10 +11,7 @@ test.group('Mail config | default mailer (Mailgun)', (group) => {
   test('envoie un email via le mailer par défaut', async () => {
     const fake = mail.fake()
     await mail.send((message) => {
-      message
-        .to('test@example.com')
-        .subject('Email de test')
-        .html('<p>Hello Anta</p>')
+      message.to('test@example.com').subject('Email de test').html('<p>Hello Anta</p>')
     })
 
     fake.messages.assertSent({
@@ -29,8 +27,13 @@ test.group('Mail config | default mailer (Mailgun)', (group) => {
       message.to('user@example.com').subject('From global').html('<p>Test</p>')
     })
 
+    // Piloté par l'env (MAIL_FROM_ADDRESS/NAME) plutôt qu'une adresse en dur :
+    // la valeur diffère entre local, CI et prod (Mailgun) — on vérifie le câblage,
+    // pas une adresse figée.
+    const expectedFrom = env.get('MAIL_FROM_ADDRESS')
+    const expectedName = env.get('MAIL_FROM_NAME')
     fake.messages.assertSent((message) => {
-      message.assertFrom('contact@mg.anta.peraha.com', 'Anta')
+      message.assertFrom(expectedFrom, expectedName)
       return true
     })
   })
@@ -45,10 +48,7 @@ test.group('Mail config | mailer alternatif (Resend)', (group) => {
   test('envoie via mail.use("resend") sans modifier le code métier', async () => {
     const fake = mail.fake()
     await mail.use('resend').send((message) => {
-      message
-        .to('test@example.com')
-        .subject('Via Resend')
-        .html('<p>Sent through Resend</p>')
+      message.to('test@example.com').subject('Via Resend').html('<p>Sent through Resend</p>')
     })
 
     fake.messages.assertSent({

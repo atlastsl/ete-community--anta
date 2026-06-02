@@ -2,6 +2,7 @@ import { BaseModel, column, belongsTo } from '@adonisjs/lucid/orm'
 import type { BelongsTo } from '@adonisjs/lucid/types/relations'
 import { DateTime } from 'luxon'
 import Production from '#models/production'
+import type { LinkType } from '#enums/link_type'
 
 export default class ProductionLink extends BaseModel {
   static table = 'production_links'
@@ -16,7 +17,7 @@ export default class ProductionLink extends BaseModel {
   declare url: string
 
   @column()
-  declare linkType: 'embed' | 'simple'
+  declare linkType: LinkType
 
   @column()
   declare label: string | null

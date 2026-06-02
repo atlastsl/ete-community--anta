@@ -20,6 +20,8 @@ export default class InertiaMiddleware extends BaseInertiaMiddleware {
      */
     const error = session?.flashMessages.get('error') as string
     const success = session?.flashMessages.get('success') as string
+    // Mot de passe provisoire exposé au super admin uniquement si l'envoi d'email a échoué.
+    const tempPassword = session?.flashMessages.get('tempPassword') as string
 
     /**
      * Data shared with all Inertia pages. Make sure you are using
@@ -30,6 +32,7 @@ export default class InertiaMiddleware extends BaseInertiaMiddleware {
       flash: ctx.inertia.always({
         error,
         success,
+        tempPassword,
       }),
       user: ctx.inertia.always(auth?.user ? UserTransformer.transform(auth.user) : undefined),
     }

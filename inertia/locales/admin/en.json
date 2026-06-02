@@ -15,5 +15,262 @@
     "fr": "Français",
     "en": "English",
     "label": "Change language"
+  },
+  "layout": {
+    "mobile_warning": "Please use the admin panel on a computer."
+  },
+  "role": {
+    "admin": "Admin",
+    "super_admin": "Super Admin"
+  },
+  "errors": {
+    "forbidden": "Access denied.",
+    "account_inactive": "This account is disabled."
+  },
+  "pagination": {
+    "label": "Pagination",
+    "previous": "Previous",
+    "next": "Next"
+  },
+  "productions": {
+    "title": "Productions",
+    "create_button": "Create a production",
+    "create_title": "Create a production",
+    "edit_title": "Edit production",
+    "draft_saved": "Draft saved.",
+    "update_success": "Changes saved.",
+    "auto_unpublished": "Changes saved. The production was unpublished because it is now incomplete.",
+    "published": "Production published.",
+    "unpublish_success": "Production unpublished.",
+    "delete_success": "Production deleted.",
+    "publish": {
+      "incomplete": "Cannot publish: required fields are missing."
+    },
+    "unpublish_modal": {
+      "title": "Unpublish this production?",
+      "description": "The production will no longer be visible on the public site. It will return to draft.",
+      "confirm": "Unpublish"
+    },
+    "delete_modal": {
+      "title": "Delete this production?",
+      "description": "This action is irreversible. The production and its associated files will be permanently deleted.",
+      "confirm": "Delete permanently"
+    },
+    "form": {
+      "sections": {
+        "general": "General information",
+        "content": "Content",
+        "rights": "Rights & Licence",
+        "optional": "Additional information",
+        "files": "Files & Links"
+      },
+      "fields": {
+        "title": "Title",
+        "authors": "Author(s)",
+        "authors_hint": "Separate with commas",
+        "category": "Category",
+        "domain": "Domain",
+        "subdomain": "Subdomain",
+        "subdomain_hint": "Separate with commas",
+        "language": "Language",
+        "country": "Country of publication",
+        "summary": "Summary",
+        "tags": "Tags",
+        "tags_hint": "Separate with commas",
+        "work_published_at": "Work publication date",
+        "license": "Licence status",
+        "journal": "Journal",
+        "publisher": "Publisher",
+        "isbnDoiIssn": "ISBN / DOI / ISSN",
+        "institution": "Affiliation institution"
+      },
+      "license": {
+        "member": "Member production",
+        "free_license": "Free licence",
+        "external_link": "External link (copyright)"
+      },
+      "errors": {
+        "title_required": "Title is required.",
+        "title_too_long": "Title is too long (255 characters maximum).",
+        "required_to_publish": "Required to publish."
+      },
+      "files_placeholder": "Adding files and links will be available after saving the draft.",
+      "chip_hint": "Type then Enter to add",
+      "remove_chip": "Remove {{label}}",
+      "country_placeholder": "Select a country",
+      "country_group_africa": "Africa",
+      "country_group_other": "Other countries",
+      "save_draft": "Save draft",
+      "save": "Save",
+      "publish": "Publish"
+    },
+    "completion": {
+      "summary": "{{filled}}/{{total}} fields — {{missing}} required to publish",
+      "complete": "All required fields are filled.",
+      "missing_label": "Missing fields:",
+      "file_or_link": "At least one file or link is required to publish."
+    },
+    "files": {
+      "drop_hint": "Drag a file here or browse (PDF, EPUB, MP4, MP3, AAC — max 100 MB)",
+      "browse": "Browse",
+      "uploading": "Uploading…",
+      "uploaded": "File added.",
+      "deleted": "File deleted.",
+      "delete": "Delete file",
+      "errors": {
+        "too_large": "File too large. Maximum 100 MB.",
+        "unsupported_format": "Unsupported format. Accepted formats: PDF, EPUB, MP4, MP3, AAC.",
+        "no_file": "No file received.",
+        "invalid": "Invalid file or format not allowed.",
+        "one_at_a_time": "One file at a time."
+      }
+    },
+    "links": {
+      "add_button": "Add a link",
+      "added": "Link added.",
+      "deleted": "Link deleted.",
+      "delete": "Delete link",
+      "url": "URL",
+      "url_placeholder": "https://…",
+      "type": "Type",
+      "type_embed": "Embed",
+      "type_simple": "Simple link",
+      "label": "Label (optional)",
+      "confirm": "Add",
+      "cancel": "Cancel",
+      "empty": "No external links.",
+      "errors": {
+        "invalid_url": "Invalid URL. Please enter a full URL (https://…)."
+      }
+    },
+    "empty_title": "No productions",
+    "empty_description": "Start by creating one.",
+    "search_placeholder": "Search a production…",
+    "last_published_by": "Published by {{email}} on {{date}}",
+    "unknown_admin": "unknown administrator",
+    "filter": {
+      "label": "Filter by status",
+      "all": "All statuses",
+      "clear": "Reset"
+    },
+    "table": {
+      "title": "Title",
+      "authors": "Author(s)",
+      "category": "Category",
+      "status": "Status",
+      "updated_at": "Updated",
+      "actions": "Actions"
+    },
+    "status": {
+      "draft": "Draft",
+      "published": "Published",
+      "unpublished": "Unpublished"
+    },
+    "actions": {
+      "edit": "Edit",
+      "unpublish": "Unpublish",
+      "delete": "Delete"
+    }
+  },
+  "users": {
+    "title": "Users",
+    "create_button": "Create an administrator",
+    "create_title": "Create an administrator",
+    "create_success": "Account created. An invitation email has been sent.",
+    "create_success_no_email": "Account created, but the email could not be sent. Please share the password manually.",
+    "empty_title": "No administrators",
+    "empty_description": "Create the first account to build your team.",
+    "form": {
+      "email": "Email address",
+      "email_placeholder": "admin@example.com",
+      "submit": "Create account",
+      "help": "A temporary password will be automatically generated and sent by email."
+    },
+    "errors": {
+      "email_taken": "This email address is already in use.",
+      "email_required": "Email address is required.",
+      "email_invalid": "Email address is not valid."
+    },
+    "table": {
+      "email": "Email",
+      "role": "Role",
+      "status": "Status",
+      "created_at": "Created",
+      "created_by": "Created by",
+      "actions": "Actions"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "deactivate_button": "Deactivate",
+    "reactivate_button": "Reactivate",
+    "deactivate_success": "Account deactivated.",
+    "reactivate_success": "Account reactivated.",
+    "self_deactivate_error": "You cannot deactivate your own account.",
+    "self_reset_error": "You cannot reset your own password here.",
+    "protected_super_admin": "This action is not allowed on a super administrator account.",
+    "temp_password_label": "Temporary password to share",
+    "deactivate_modal": {
+      "title": "Deactivate this account?",
+      "description": "This administrator will no longer be able to sign in. Their productions will be kept.",
+      "confirm": "Deactivate"
+    },
+    "reset_password_button": "Reset password",
+    "reset_password_success": "Password reset. An email has been sent.",
+    "reset_password_success_no_email": "Password reset, but the email could not be sent. Please share the password manually.",
+    "reset_password_modal": {
+      "title": "Reset password?",
+      "description": "A new temporary password will be generated and sent by email. The administrator will need to change it on their next sign-in.",
+      "confirm": "Reset"
+    },
+    "delete_button": "Delete",
+    "delete_success": "Account permanently deleted.",
+    "self_delete_error": "You cannot delete your own account.",
+    "delete_modal": {
+      "title": "Permanently delete this account?",
+      "description": "This action is irreversible. The account and associated activity logs will be deleted. Productions created by this administrator will be kept.",
+      "confirm": "Delete permanently"
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Sign in",
+      "subtitle": "Access the Anta admin panel",
+      "fields": {
+        "email": "Email",
+        "password": "Password"
+      },
+      "submit": "Sign in",
+      "submitting": "Signing in…",
+      "errors": {
+        "invalid_credentials": "Invalid email or password.",
+        "account_inactive": "This account is disabled.",
+        "email_required": "Email is required.",
+        "email_format": "Invalid email format.",
+        "password_required": "Password is required."
+      }
+    },
+    "logout": {
+      "success": "You have been signed out."
+    },
+    "change_password": {
+      "title": "Set your password",
+      "subtitle": "You must set a new password before accessing the panel.",
+      "fields": {
+        "password": "New password",
+        "password_confirmation": "Confirmation"
+      },
+      "hint": "Minimum 12 characters.",
+      "submit": "Update",
+      "submitting": "Updating…",
+      "success": "Your password has been updated.",
+      "errors": {
+        "password_required": "Password is required.",
+        "password_too_short": "Password must be at least 12 characters.",
+        "password_too_long": "Password is too long.",
+        "confirmation_mismatch": "Passwords do not match."
+      }
+    }
   }
 }

@@ -56,7 +56,6 @@ FR27: Un administrateur peut consulter les statistiques (vues, téléchargements
 FR28: Un administrateur peut consulter une vue agrégée des statistiques de l'ensemble de la bibliothèque
 FR29: Le super administrateur peut consulter les statistiques d'activité des administrateurs : productions enregistrées par admin, productions modifiées par admin, logs de connexion
 FR30: Un administrateur peut s'authentifier sur le panel admin avec son email et son mot de passe
-FR31: Le système impose l'activation du 2FA à tout compte administrateur dès sa première connexion
 FR32: Le super administrateur peut créer un compte administrateur
 FR33: Le super administrateur peut désactiver un compte administrateur
 FR34: Le super administrateur dispose d'un compte unique, initialisé à la création du site (via seeder)
@@ -76,10 +75,9 @@ NFR1: Chargement initial du site public < 3 secondes sur connexion standard
 NFR2: Réponse aux recherches et filtres < 1 seconde pour le 95e percentile sous charge normale
 NFR3: Téléversement : taille maximale 100 Mo par fichier ; formats acceptés : PDF, EPUB, MP4, MP3, AAC
 NFR4: Toutes les communications chiffrées via HTTPS (site public et panel admin)
-NFR5: Mots de passe hashés en base de données (bcrypt)
+NFR5: Mots de passe hashés en base de données (scrypt — défaut AdonisJS)
 NFR6: Sessions admin avec expiration automatique après 2 heures d'inactivité (configurable via variable d'environnement)
 NFR7: Protection CSRF activée sur toutes les actions du panel admin
-NFR8: 2FA obligatoire pour tous les comptes admin (TOTP via authenticator app)
 NFR9: Logs de connexion et d'activité admin conservés dans le système
 NFR10: Fichiers hébergés : PDF, EPUB, MP4, MP3, AAC ≤ 100 Mo
 NFR11: Fichiers > 100 Mo ou contenus sous copyright : lien externe uniquement, aucun hébergement
@@ -94,7 +92,7 @@ NFR15: Priorité stabilité sous usage normal ; pas de montée en charge extrêm
 - **Migrations PostgreSQL** : 7 tables à créer — `admin_users`, `productions`, `production_files`, `production_links`, `stats_views`, `stats_downloads`, `admin_activity_logs`
 - **Trigger tsvector** : Trigger PostgreSQL sur `productions` mettant à jour `search_vector` (GIN index) sur INSERT/UPDATE — couverture : title, summary, authors, tags, category, domain, subdomain, language
 - **Seeder super admin** : `SuperAdminSeeder.ts` — initialise le compte super_admin unique (FR34)
-- **Variables d'environnement** : `.env.example` documentant toutes les variables requises (DB, R2, mail, session, 2FA)
+- **Variables d'environnement** : `.env.example` documentant toutes les variables requises (DB, R2, mail, session)
 - **Configuration R2** : `config/drive.ts` avec driver S3 Cloudflare R2 (endpoint, bucket, credentials) ; `FileStorageService` gère upload, suppression et URL signées (TTL 1h)
 - **Configuration mail** : `config/mail.ts` avec Resend (principal) + Mailgun (fallback) via `@adonisjs/mail`
 - **Branches Git** : `master` (production), `development` (centralisation des updates), `staging` (test/démo, connectée à Render) — chaque story part d'une branche depuis `development`, merge sur `development` après validation locale, PR `development → staging` pour déploiement test
@@ -107,8 +105,8 @@ NFR15: Priorité stabilité sous usage normal ; pas de montée en charge extrêm
 - **Double validation** : VineJS côté serveur + Zod côté client (mêmes règles, duplication intentionnelle)
 - **Internationalisation** : Structure `inertia/locales/{public,admin}/{fr,en}.json` — tous les textes via `react-i18next`, jamais de strings en dur dans les composants
 - **Bouncer policies** : `admin` (role admin OU super_admin), `superAdmin` (super_admin uniquement)
-- **Middleware auth** : `AdminMiddleware` + `TwoFactorMiddleware` (vérifie `totp_enabled`) + `SuperAdminMiddleware`
-- **Flux première connexion** : Mot de passe provisoire → changement obligatoire (`password_changed = false`) → activation 2FA → dashboard
+- **Middleware auth** : `AdminMiddleware` (auth + redirect change-password si `password_changed = false`) + `SuperAdminMiddleware`
+- **Flux première connexion** : Mot de passe provisoire → changement obligatoire (`password_changed = false`) → dashboard
 - **Tests** : `tests/unit/` (services, validators) et `tests/functional/` (contrôleurs) via Japa
 - **Vite double entry point** : `inertia/app/app.tsx` (public) + `inertia/app/admin.tsx` (admin)
 
@@ -170,7 +168,6 @@ FR27: Epic 7 — Statistiques par production (panel admin)
 FR28: Epic 7 — Vue agrégée des statistiques
 FR29: Epic 7 — Statistiques d'activité des admins (super admin)
 FR30: Epic 2 — Authentification email + mot de passe
-FR31: Epic 2 — Activation 2FA obligatoire à la première connexion
 FR32: Epic 3 — Création d'un compte admin (super admin)
 FR33: Epic 3 — Désactivation d'un compte admin (super admin)
 FR34: Epic 1 — Super admin initial via seeder
@@ -195,9 +192,9 @@ L'équipe peut démarrer le développement sur une base de projet cohérente, co
 
 ### Epic 2 : Authentification Admin & Sécurité des Accès
 
-Un administrateur peut se connecter de façon sécurisée, définir son mot de passe permanent à la première connexion, et activer son 2FA obligatoire avant d'accéder au panel.
-**FRs couverts :** FR30, FR31, FR37, FR42
-**NFRs :** NFR5 (bcrypt), NFR6 (session timeout 2h), NFR7 (CSRF), NFR8 (2FA TOTP)
+Un administrateur peut se connecter de façon sécurisée et définir son mot de passe permanent à la première connexion avant d'accéder au panel. _Note : 2FA TOTP retiré du MVP (2026-05-31) — réintroduction possible en Phase 2._
+**FRs couverts :** FR30, FR37, FR42
+**NFRs :** NFR5 (scrypt), NFR6 (session timeout 2h), NFR7 (CSRF)
 **UX-DRs :** UX-DR18 (sidebar admin + badge rôle), UX-DR22 (responsive admin + warning mobile)
 
 ### Epic 3 : Gestion des Comptes Admin — Super Admin
@@ -238,6 +235,9 @@ Un administrateur peut consulter les statistiques par production et en vue agré
 L'application est migrée de Render vers un VPS autonome avec Nginx, PM2, Let's Encrypt et un CI/CD sélectif par chemin — permettant un hébergement production performant, stable et maîtrisé.
 **NFRs :** NFR4 (HTTPS), NFR13 (disponibilité 99%)
 **Dépend de :** Tous les epics fonctionnels validés sur Render
+
+**Durcissement CI/CD inclus dans cet epic :**
+- **Réparer la suite de tests fonctionnels en CI** (actuellement `continue-on-error`, ~80/142 échecs en CI propre). Cause racine probable : `db.beginGlobalTransaction()` non propagé au serveur HTTP in-process → `loginAs()` KO → cascade. Détail complet et pistes dans `_bmad-output/implementation-artifacts/deferred-work.md` (section « TICKET — Suite fonctionnelle incompatible avec la CI »). Une fois corrigé : retirer `continue-on-error` du step `Run functional tests` dans `.github/workflows/ci.yml`.
 
 ---
 
@@ -370,7 +370,7 @@ Afin que l'application soit amorçable sans intervention manuelle en base de don
 
 **Given** la base de données est migrée
 **When** `node ace db:seed --files SuperAdminSeeder` est exécuté
-**Then** un enregistrement existe dans `admin_users` avec `role = 'super_admin'`, `is_active = true`, `totp_enabled = false`, `password_changed = false`, `password_hash` généré via bcrypt
+**Then** un enregistrement existe dans `admin_users` avec `role = 'super_admin'`, `is_active = true`, `password_changed = false`, `password_hash` généré via scrypt
 
 **Given** le seeder a déjà été exécuté
 **When** il est exécuté à nouveau
@@ -471,7 +471,7 @@ Afin que l'équipe puisse développer par story, tester localement, puis déploy
 **When** la configuration est définie
 **Then** le build command est : `npm install && node ace build`
 **And** le start command est : `node ace migration:run --force && node build/bin/server.js`
-**And** les variables d'environnement sont configurées (DB Supabase, R2, mail, session, 2FA)
+**And** les variables d'environnement sont configurées (DB Supabase, R2, mail, session)
 **And** la branche surveillée est `staging`
 
 **Given** Render Free Tier endort l'app après 15 min d'inactivité
@@ -488,7 +488,9 @@ Afin que l'équipe puisse développer par story, tester localement, puis déploy
 
 ## Epic 2 : Authentification Admin & Sécurité des Accès
 
-Un administrateur peut se connecter de façon sécurisée, définir son mot de passe permanent à la première connexion, et activer son 2FA obligatoire avant d'accéder au panel.
+Un administrateur peut se connecter de façon sécurisée et définir son mot de passe permanent à la première connexion avant d'accéder au panel.
+
+> **Note — 2FA retiré du MVP (2026-05-31)** : le 2FA TOTP a été jugé trop contraignant pour le MVP. Le périmètre Epic 2 ne couvre plus que login + changement mot de passe première connexion. Le 2FA pourra être réintroduit en Phase 2.
 
 ### Story 2.1 : Middleware d'authentification et layouts admin
 
@@ -501,10 +503,6 @@ Afin que toutes les routes admin soient protégées et que l'interface reflète 
 **Given** un utilisateur non authentifié tente d'accéder à `/admin/*`
 **When** `AdminMiddleware` s'exécute
 **Then** il est redirigé vers `/admin/login`
-
-**Given** un utilisateur authentifié avec `totp_enabled = false` tente d'accéder au dashboard
-**When** `TwoFactorMiddleware` s'exécute
-**Then** il est redirigé vers la page d'activation 2FA
 
 **Given** un utilisateur authentifié avec `password_changed = false` tente d'accéder au dashboard
 **When** `AdminMiddleware` s'exécute
@@ -546,10 +544,9 @@ Afin d'accéder au panel admin de façon sécurisée (FR30, NFR5, NFR7).
 
 **Given** l'administrateur saisit un email et un mot de passe valides
 **When** le formulaire est soumis
-**Then** les credentials sont vérifiés en base (bcrypt compare)
+**Then** les credentials sont vérifiés en base (scrypt verify)
 **And** si `password_changed = false`, redirection vers `/admin/auth/change-password`
-**And** si `password_changed = true` et `totp_enabled = false`, redirection vers `/admin/auth/setup-2fa`
-**And** si `password_changed = true` et `totp_enabled = true`, redirection vers `/admin/auth/verify-2fa`
+**And** si `password_changed = true`, redirection vers `/admin/productions` (dashboard)
 
 **Given** l'administrateur saisit des credentials invalides
 **When** le formulaire est soumis
@@ -580,9 +577,9 @@ Afin de sécuriser mon compte avant d'accéder au panel (FR42, NFR5).
 
 **Given** l'admin est sur la page de changement de mot de passe
 **When** il saisit un nouveau mot de passe et une confirmation identique
-**Then** le nouveau mot de passe est hashé (bcrypt) et sauvegardé
+**Then** le nouveau mot de passe est hashé (scrypt) et sauvegardé
 **And** `password_changed` passe à `true` en base de données
-**And** il est redirigé vers `/admin/auth/setup-2fa`
+**And** il est redirigé vers le dashboard `/admin/productions`
 
 **Given** l'admin saisit deux mots de passe différents
 **When** le formulaire est soumis
@@ -594,60 +591,17 @@ Afin de sécuriser mon compte avant d'accéder au panel (FR42, NFR5).
 
 **Given** `password_changed = true` sur le compte
 **When** l'admin tente d'accéder à `/admin/auth/change-password`
-**Then** il est redirigé vers le dashboard (ou vers setup-2fa si 2FA non activé)
+**Then** il est redirigé vers le dashboard `/admin/productions`
 
 ---
 
-### Story 2.4 : Activation 2FA obligatoire (première connexion)
+### Story 2.4 : Gestion de session (expiration et déconnexion)
 
-En tant qu'administrateur ayant défini son mot de passe,
-Je veux activer mon authentification à deux facteurs via une app TOTP,
-Afin de sécuriser définitivement mon compte avant d'accéder au panel (FR31, NFR8).
-
-**Acceptance Criteria:**
-
-**Given** un admin avec `password_changed = true` et `totp_enabled = false` est authentifié
-**When** il accède à `/admin/auth/setup-2fa`
-**Then** un QR code TOTP est affiché (généré via `@adonisjs/2fa` + `qrcode`)
-**And** la clé secrète TOTP est affichée en texte pour saisie manuelle
-**And** un champ de saisie du code de vérification est présent
-
-**Given** l'admin a scanné le QR code avec son app authenticator
-**When** il saisit le code TOTP valide (6 chiffres) et soumet
-**Then** le code est vérifié contre le secret TOTP
-**And** `totp_enabled` passe à `true` et `totp_secret` est persisté en base
-**And** il est redirigé vers le dashboard admin
-
-**Given** l'admin saisit un code TOTP invalide ou expiré
-**When** le formulaire est soumis
-**Then** un message d'erreur s'affiche : "Code invalide. Vérifiez l'heure de votre appareil."
-**And** il reste sur la page d'activation
-
-**Given** `totp_enabled = true` sur le compte
-**When** l'admin tente d'accéder à `/admin/auth/setup-2fa`
-**Then** il est redirigé vers le dashboard
-
----
-
-### Story 2.5 : Vérification 2FA (connexions suivantes)
-
-En tant qu'administrateur dont le compte est complètement configuré,
-Je veux vérifier mon code TOTP après chaque connexion email/mot de passe,
-Afin que mon accès au panel soit protégé par une double authentification (NFR8, NFR6).
+En tant qu'administrateur connecté,
+Je veux que ma session expire automatiquement après inactivité et que je puisse me déconnecter manuellement,
+Afin de réduire le risque d'accès non autorisé à un poste laissé sans surveillance (NFR6).
 
 **Acceptance Criteria:**
-
-**Given** un admin avec `totp_enabled = true` a saisi des credentials valides
-**When** l'authentification email/MDP réussit
-**Then** il est redirigé vers `/admin/auth/verify-2fa` et non directement vers le dashboard
-
-**Given** l'admin est sur la page de vérification 2FA
-**When** il saisit le code TOTP valide de son app authenticator
-**Then** la session est créée et il est redirigé vers le dashboard
-
-**Given** l'admin saisit un code TOTP invalide
-**When** le formulaire est soumis
-**Then** un message d'erreur s'affiche et il reste sur la page de vérification
 
 **Given** une session admin est active
 **When** 2 heures d'inactivité s'écoulent (NFR6)
@@ -655,12 +609,16 @@ Afin que mon accès au panel soit protégé par une double authentification (NFR
 **And** la prochaine requête redirige vers `/admin/login`
 
 **Given** un admin est connecté
-**When** il clique sur "Se déconnecter"
+**When** il clique sur "Se déconnecter" (POST `/admin/logout` avec CSRF)
 **Then** la session est détruite côté serveur et il est redirigé vers `/admin/login`
+
+**Given** un admin se reconnecte après une expiration de session
+**When** il fournit des credentials valides (et `password_changed = true`)
+**Then** il accède directement au dashboard sans flux d'onboarding
 
 ---
 
-### Story 2.6 : Exclusion du panel admin de l'indexation
+### Story 2.5 : Exclusion du panel admin de l'indexation
 
 En tant que responsable SEO,
 Je veux que le panel admin soit invisible pour les moteurs de recherche,
@@ -678,7 +636,7 @@ Afin que les pages d'administration n'apparaissent jamais dans les résultats de
 
 ---
 
-### Story 2.7 : Tests fonctionnels authentification
+### Story 2.6 : Tests fonctionnels authentification
 
 En tant que développeur,
 Je veux une suite de tests fonctionnels couvrant tous les flux d'authentification,
@@ -690,18 +648,18 @@ Afin de garantir la sécurité des accès à chaque modification du code.
 **When** `node ace test` est exécuté
 **Then** les scénarios suivants passent :
 
-- Login avec credentials valides → redirection correcte selon état du compte
+- Login avec credentials valides + `password_changed = true` → redirection dashboard
+- Login avec credentials valides + `password_changed = false` → redirection change-password
 - Login avec credentials invalides → message d'erreur générique
 - Login avec compte désactivé → accès refusé
-- Flux première connexion complet (MDP → 2FA → dashboard)
-- Vérification 2FA valide → accès accordé
-- Vérification 2FA invalide → accès refusé
+- Changement de mot de passe : nouveau MDP valide → `password_changed = true` + redirection dashboard
+- Changement de mot de passe : MDP < 12 caractères → erreur de validation
+- Changement de mot de passe : confirmation différente → erreur de validation
 - Accès route admin sans authentification → redirection login
 - Accès route super admin avec rôle admin → 403
 - Expiration de session → redirection login
+- Logout → session détruite + redirection login
 - Protection CSRF → rejet si token absent
-
-**And** `tests/unit/services/TwoFactorService.spec.ts` couvre la génération et la validation TOTP
 
 ---
 
@@ -777,8 +735,8 @@ Afin qu'il puisse se connecter et gérer les productions après avoir configuré
 
 **Given** le super admin saisit un email valide et soumet
 **When** le formulaire est traité
-**Then** un enregistrement `admin_users` est créé avec `role = 'admin'`, `is_active = true`, `password_changed = false`, `totp_enabled = false`, `created_by_id` = id du super admin
-**And** un mot de passe provisoire sécurisé (16 caractères aléatoires) est généré et hashé (bcrypt)
+**Then** un enregistrement `admin_users` est créé avec `role = 'admin'`, `is_active = true`, `password_changed = false`, `created_by_id` = id du super admin
+**And** un mot de passe provisoire sécurisé (16 caractères aléatoires) est généré et hashé (scrypt)
 **And** un email d'invitation est envoyé à l'adresse avec le mot de passe provisoire en clair
 **And** l'action est loguée via `ActivityLogService.log({ actionType: 'create', resourceType: 'admin_user' })`
 

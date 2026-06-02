@@ -1,11 +1,17 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="{{ page.props.meta ? page.props.meta.locale : 'fr' }}">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title inertia>
-      Anta
-    </title>
+
+    {{-- Meta SEO injectés côté serveur (FR36) — visibles par les crawlers avant hydratation React --}}
+    <title inertia>{{ page.props.meta ? page.props.meta.title : 'Anta' }}</title>
+    @if(page.props.meta)
+      <meta name="description" content="{{ page.props.meta.description }}" />
+      <meta property="og:title" content="{{ page.props.meta.ogTitle }}" />
+      <meta property="og:description" content="{{ page.props.meta.ogDescription }}" />
+      <meta property="og:type" content="{{ page.props.meta.ogType }}" />
+    @end
 
     <link rel="icon" type="image/png" href="/favicon.png" />
 

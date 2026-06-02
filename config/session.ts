@@ -21,9 +21,10 @@ const sessionConfig = defineConfig({
 
   /**
    * Define how long to keep the session data alive without
-   * any activity.
+   * any activity. Configurable via SESSION_AGE env var (NFR6).
+   * Format `parse-duration` (ex. '2h', '30m', '1d').
    */
-  age: '2h',
+  age: env.get('SESSION_AGE', '2h'),
 
   /**
    * Configuration for session cookie and the
