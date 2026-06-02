@@ -22,3 +22,20 @@
 - **`down()` de la migration subdomain→jsonb est destructif** : `subdomain TYPE varchar USING (subdomain->>0)` ne garde que le 1er élément (perte des sous-domaines multiples au rollback) ; `[]` → NULL. Inhérent à un repli tableau→scalaire ; documenté. Action éventuelle : logguer un avertissement dans `down()`.
 - **Sous-domaine requis mais champ masqué quand domaine vide — faible impact** : le champ sous-domaine (ChipField) n'est rendu que si `domain` non vide ; si l'admin vide `domain` après avoir saisi des sous-domaines, les valeurs `data.subdomain` persistent (cachées) et sont comptées « remplies ». Sans gravité (domaine requis → publication bloquée de toute façon), mais données orphelines possibles au save brouillon. Action : vider `subdomain` quand `domain` devient vide, ou afficher le champ toujours.
 - **Publier avant Enregistrer (Edit) invite une action qui échoue — pré-existant** : le bouton Publier s'active sur l'état du formulaire client ; cliquer Publier sans Enregistrer envoie un POST sans données → le serveur revalide la ligne persistée (incomplète) et flashe `publish.incomplete`. Sûr (garde serveur) mais UX trompeuse. Action : désactiver Publier tant que le brouillon a des modifications non enregistrées.
+
+## TICKET — Suite fonctionnelle incompatible avec la CI (Postgres propre) [PRIORITÉ]
+
+**Statut** : step `Run functional tests` marqué `continue-on-error: true` dans `.github/workflows/ci.yml` (non bloquant) le 2026-06-02. À retirer une fois corrigé.
+
+**Symptôme** : en CI (Postgres fraîchement migré) la suite functional échoue à **80/142** ; en local (Supabase) elle passe (26 échecs = pollution données). La suite n'avait **jamais** tourné en CI propre car la commande `node ace test --suite unit` (flag `--suite` inexistant) faisait tourner toutes les suites dans le step « unit » — corrigé en positionnel (`node ace test unit` / `functional`).
+
+**Cause racine probable** : `db.beginGlobalTransaction()` (dans `each.setup` des tests fonctionnels) ne se propage pas à la connexion du **serveur HTTP in-process** (`testUtils.httpServer().start()`) dans l'environnement CI. Conséquence : les enregistrements créés dans la transaction du test (ex. `AdminUser.create()`) sont **invisibles** à la requête HTTP → `auth.authenticateUsing(['web'])` (admin_middleware.ts:17) échoue (user introuvable) → redirect `/admin/login` (ou `/`) → cascade : aucune écriture admin, assertions `null` (`expected null to not equal null`, `Cannot read properties of null (reading 'id')`), redirections inattendues.
+
+**Erreurs dominantes en CI** : `expected '/' to deeply equal '/admin/(productions|users|login)'` (25+), `expected null to not equal null` (7), `Target cannot be null or undefined` (6), `expected '/admin/login' to deeply equal '/admin/productions'` (4), CSRF `E_BAD_CSRF_TOKEN` absents, HTML Inertia sans nom de page.
+
+**Pistes de correction** :
+1. Vérifier la propagation de la transaction globale au serveur HTTP : pool de connexions Lucid (`config/database.ts` — `pool.min/max`), forcer `min:1,max:1` en test, ou utiliser `testUtils.db().truncate()` / migrations fraîches par test plutôt que des transactions globales.
+2. Reproduire en local avec un Postgres propre (Docker `postgres:16`) pour itérer sans aller-retour CI.
+3. Vérifier que `loginAs()` (authApiClient + sessionApiClient, SESSION_DRIVER=cookie) établit bien la session dans ce contexte.
+
+**Fichiers** : `tests/bootstrap.ts` (plugins + configureSuite httpServer), `tests/functional/**` (each.setup beginGlobalTransaction), `config/database.ts`, `app/middleware/admin_middleware.ts`.
