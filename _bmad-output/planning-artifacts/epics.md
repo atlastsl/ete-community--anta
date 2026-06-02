@@ -236,6 +236,9 @@ L'application est migrée de Render vers un VPS autonome avec Nginx, PM2, Let's 
 **NFRs :** NFR4 (HTTPS), NFR13 (disponibilité 99%)
 **Dépend de :** Tous les epics fonctionnels validés sur Render
 
+**Durcissement CI/CD inclus dans cet epic :**
+- **Réparer la suite de tests fonctionnels en CI** (actuellement `continue-on-error`, ~80/142 échecs en CI propre). Cause racine probable : `db.beginGlobalTransaction()` non propagé au serveur HTTP in-process → `loginAs()` KO → cascade. Détail complet et pistes dans `_bmad-output/implementation-artifacts/deferred-work.md` (section « TICKET — Suite fonctionnelle incompatible avec la CI »). Une fois corrigé : retirer `continue-on-error` du step `Run functional tests` dans `.github/workflows/ci.yml`.
+
 ---
 
 ## Epic 1 : Fondations Techniques
