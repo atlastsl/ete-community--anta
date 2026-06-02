@@ -37,9 +37,9 @@ test.group('Design system | Tailwind v4 CSS', () => {
     assert.include(css, '@layer base')
   })
 
-  test('app.css documente le ratio WCAG AAA pour amber-900', ({ assert }) => {
+  test('app.css documente l’accessibilité (WCAG) et applique un focus visible', ({ assert }) => {
     assert.include(css, 'WCAG')
-    assert.include(css, '8.1:1')
+    assert.include(css, ':focus-visible')
   })
 })
 
