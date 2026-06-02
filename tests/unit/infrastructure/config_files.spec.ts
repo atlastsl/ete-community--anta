@@ -88,12 +88,14 @@ test.group('Infrastructure | GitHub Actions CI', () => {
 
   test('CI exécute la suite functional (Story 2.6 — gate auth admin)', ({ assert }) => {
     const steps = ci.jobs.test.steps.map((s: any) => s.run || '')
+    // La suite est un argument positionnel (`node ace test <suites...>`) ; le flag
+    // `--suite` n'existe pas et faisait tourner TOUTES les suites dans le step unit.
     assert.isTrue(
-      steps.some((s: string) => s.includes('node ace test --suite unit')),
+      steps.some((s: string) => /node ace test\s+unit(\s|$)/.test(s)),
       'suite unit doit être lancée explicitement'
     )
     assert.isTrue(
-      steps.some((s: string) => s.includes('node ace test --suite functional')),
+      steps.some((s: string) => /node ace test\s+functional(\s|$)/.test(s)),
       'suite functional doit être lancée — sinon les tests middleware/login/change-password/logout sont ignorés en CI'
     )
   })
