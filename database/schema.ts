@@ -8,7 +8,14 @@ import { BaseModel, column } from '@adonisjs/lucid/orm'
 import { DateTime } from 'luxon'
 
 export class AdminActivityLogSchema extends BaseModel {
-  static $columns = ['actionType', 'adminUserId', 'createdAt', 'id', 'resourceId', 'resourceType'] as const
+  static $columns = [
+    'actionType',
+    'adminUserId',
+    'createdAt',
+    'id',
+    'resourceId',
+    'resourceType',
+  ] as const
   $columns = AdminActivityLogSchema.$columns
   @column()
   declare actionType: string
@@ -25,7 +32,18 @@ export class AdminActivityLogSchema extends BaseModel {
 }
 
 export class AdminUserSchema extends BaseModel {
-  static $columns = ['createdAt', 'createdById', 'email', 'id', 'isActive', 'passwordChanged', 'passwordHash', 'role', 'totpEnabled', 'totpSecret', 'updatedAt'] as const
+  static $columns = [
+    'createdAt',
+    'createdById',
+    'email',
+    'id',
+    'isActive',
+    'passwordChanged',
+    'passwordHash',
+    'role',
+    'sessionVersion',
+    'updatedAt',
+  ] as const
   $columns = AdminUserSchema.$columns
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
@@ -44,64 +62,23 @@ export class AdminUserSchema extends BaseModel {
   @column()
   declare role: any
   @column()
-  declare totpEnabled: boolean
-  @column()
-  declare totpSecret: string | null
-  @column.dateTime({ autoCreate: true, autoUpdate: true })
-  declare updatedAt: DateTime | null
-}
-
-export class MemberSchema extends BaseModel {
-  static $columns = ['bureauRole', 'city', 'country', 'createdAt', 'deactivatedAt', 'email', 'expertiseDomains', 'filiereEnspy', 'firstName', 'id', 'isBureauActive', 'lastName', 'latitude', 'linkedinUrl', 'longitude', 'northAmericaJob', 'northAmericaSchoolPath', 'photoUrl', 'promotionEnspy', 'slug', 'telegram', 'updatedAt'] as const
-  $columns = MemberSchema.$columns
-  @column()
-  declare bureauRole: string | null
-  @column()
-  declare city: string | null
-  @column()
-  declare country: string | null
-  @column.dateTime({ autoCreate: true })
-  declare createdAt: DateTime
-  @column.dateTime()
-  declare deactivatedAt: DateTime | null
-  @column()
-  declare email: string | null
-  @column()
-  declare expertiseDomains: any | null
-  @column()
-  declare filiereEnspy: string | null
-  @column()
-  declare firstName: string | null
-  @column({ isPrimary: true })
-  declare id: number
-  @column()
-  declare isBureauActive: boolean
-  @column()
-  declare lastName: string
-  @column()
-  declare latitude: string | null
-  @column()
-  declare linkedinUrl: string | null
-  @column()
-  declare longitude: string | null
-  @column()
-  declare northAmericaJob: string | null
-  @column()
-  declare northAmericaSchoolPath: string | null
-  @column()
-  declare photoUrl: string | null
-  @column()
-  declare promotionEnspy: string | null
-  @column()
-  declare slug: string
-  @column()
-  declare telegram: string | null
+  declare sessionVersion: number
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime | null
 }
 
 export class ProductionFileSchema extends BaseModel {
-  static $columns = ['createdAt', 'fileKey', 'id', 'mimeType', 'originalName', 'productionId', 'sizeBytes', 'storageProvider', 'updatedAt'] as const
+  static $columns = [
+    'createdAt',
+    'fileKey',
+    'id',
+    'mimeType',
+    'originalName',
+    'productionId',
+    'sizeBytes',
+    'storageProvider',
+    'updatedAt',
+  ] as const
   $columns = ProductionFileSchema.$columns
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
@@ -124,7 +101,15 @@ export class ProductionFileSchema extends BaseModel {
 }
 
 export class ProductionLinkSchema extends BaseModel {
-  static $columns = ['createdAt', 'id', 'label', 'linkType', 'productionId', 'updatedAt', 'url'] as const
+  static $columns = [
+    'createdAt',
+    'id',
+    'label',
+    'linkType',
+    'productionId',
+    'updatedAt',
+    'url',
+  ] as const
   $columns = ProductionLinkSchema.$columns
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
@@ -143,7 +128,30 @@ export class ProductionLinkSchema extends BaseModel {
 }
 
 export class ProductionSchema extends BaseModel {
-  static $columns = ['antaPublishedAt', 'authors', 'category', 'createdAt', 'createdById', 'domain', 'id', 'institution', 'isbnDoiIssn', 'journal', 'language', 'licenseStatus', 'publicationCountry', 'publisher', 'searchVector', 'status', 'subdomain', 'summary', 'tags', 'title', 'updatedAt', 'workPublishedAt'] as const
+  static $columns = [
+    'antaPublishedAt',
+    'authors',
+    'category',
+    'createdAt',
+    'createdById',
+    'domain',
+    'id',
+    'institution',
+    'isbnDoiIssn',
+    'journal',
+    'language',
+    'licenseStatus',
+    'publicationCountry',
+    'publisher',
+    'searchVector',
+    'status',
+    'subdomain',
+    'summary',
+    'tags',
+    'title',
+    'updatedAt',
+    'workPublishedAt',
+  ] as const
   $columns = ProductionSchema.$columns
   @column.dateTime()
   declare antaPublishedAt: DateTime | null
@@ -178,7 +186,7 @@ export class ProductionSchema extends BaseModel {
   @column()
   declare status: any
   @column()
-  declare subdomain: string | null
+  declare subdomain: any
   @column()
   declare summary: string | null
   @column()
@@ -189,17 +197,6 @@ export class ProductionSchema extends BaseModel {
   declare updatedAt: DateTime | null
   @column.date()
   declare workPublishedAt: DateTime | null
-}
-
-export class RateLimitSchema extends BaseModel {
-  static $columns = ['expire', 'key', 'points'] as const
-  $columns = RateLimitSchema.$columns
-  @column()
-  declare expire: bigint | number | null
-  @column({ isPrimary: true })
-  declare key: string
-  @column()
-  declare points: number
 }
 
 export class StatsDownloadSchema extends BaseModel {
@@ -228,25 +225,4 @@ export class StatsViewSchema extends BaseModel {
   declare recordedAt: DateTime
   @column()
   declare sessionId: string | null
-}
-
-export class UserSchema extends BaseModel {
-  static $columns = ['createdAt', 'email', 'fullName', 'id', 'isActive', 'password', 'role', 'updatedAt'] as const
-  $columns = UserSchema.$columns
-  @column.dateTime({ autoCreate: true })
-  declare createdAt: DateTime
-  @column()
-  declare email: string
-  @column()
-  declare fullName: string | null
-  @column({ isPrimary: true })
-  declare id: number
-  @column()
-  declare isActive: boolean
-  @column({ serializeAs: null })
-  declare password: string
-  @column()
-  declare role: string
-  @column.dateTime({ autoCreate: true, autoUpdate: true })
-  declare updatedAt: DateTime | null
 }

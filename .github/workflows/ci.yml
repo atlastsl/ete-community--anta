@@ -90,3 +90,6 @@ jobs:
 
       - name: Run unit tests
         run: node ace test --suite unit
+
+      - name: Run functional tests
+        run: node ace test --suite functional

@@ -1,21 +1,49 @@
 @import "tailwindcss";
 
-/* === Palette Anta ===
- * Définit les couleurs de marque utilisables via les classes Tailwind :
- *   bg-primary, text-primary, border-primary, etc.
- *
- * Note WCAG : amber-900 (#78350f) atteint un ratio de contraste 8.1:1
- * sur fond stone-50 (#fafaf9) — conforme AAA pour texte normal ET grand.
- * Peut donc être utilisé indifféremment en TEXTE ou en FOND décoratif.
+/* === Palette Anta + tokens shadcn/ui ===
+ * Couleurs de marque + jeu complet des tokens sémantiques utilisés par les
+ * composants shadcn (bg-popover, bg-card, text-muted-foreground, border-input,
+ * ring-ring, bg-secondary, bg-destructive…). Sans eux, ces classes résolvent vers
+ * une variable indéfinie → fonds transparents, bordures = couleur du texte, etc.
+ * Tous mappés sur la palette stone (neutre) + green-700 (marque).
  */
 @theme {
-  --color-primary: oklch(0.5278 0.1413 150.0);          /* green-700  #15803d */
-  --color-accent: oklch(0.3742 0.0866 41.7);            /* amber-900  #78350f */
-  --color-background: oklch(0.9851 0.0014 95.0);        /* stone-50   #fafaf9 */
-  --color-text-secondary: oklch(0.4452 0.0107 79.0);    /* stone-600  #57534e */
+  /* Marque */
+  --color-primary: oklch(0.5278 0.1413 150.0); /* green-700  #15803d */
+  --color-primary-foreground: #ffffff;
+  --color-background: oklch(0.9851 0.0014 95.0); /* stone-50   #fafaf9 */
+  --color-foreground: oklch(0.2755 0.0066 79.0); /* stone-900  ~#1c1917 */
+  --color-text-secondary: oklch(0.4452 0.0107 79.0); /* stone-600  #57534e */
+
+  /* Surfaces */
+  --color-card: #ffffff;
+  --color-card-foreground: #1c1917;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #1c1917;
+
+  /* Neutres / états */
+  --color-secondary: #f5f5f4; /* stone-100 */
+  --color-secondary-foreground: #1c1917;
+  --color-muted: #f5f5f4; /* stone-100 */
+  --color-muted-foreground: #78716c; /* stone-500 */
+  --color-accent: #f5f5f4; /* stone-100 — hover neutre (remplace l'amber qui rendait les hovers marron) */
+  --color-accent-foreground: #1c1917;
+  --color-destructive: #dc2626; /* red-600 */
+
+  /* Bordures & focus */
+  --color-border: #e7e5e4; /* stone-200 */
+  --color-input: #d6d3d1; /* stone-300 */
+  --color-ring: oklch(0.5278 0.1413 150.0); /* green-700 */
 }
 
 @layer base {
+  /* Convention shadcn : couleur de bordure par défaut (Tailwind v4 = currentColor sinon). */
+  *,
+  ::after,
+  ::before {
+    border-color: var(--color-border);
+  }
+
   html {
     background-color: var(--color-background);
     color: oklch(0.2755 0.0066 79.0);
@@ -30,5 +58,20 @@
   h2 {
     font-family: 'Playfair Display', Georgia, serif;
     font-weight: 600;
+  }
+
+  /* Focus visible global (UX-DR20 / WCAG 2.1 AA) — anneau vert sur tout élément
+   * focusé au clavier, équivalent à `ring-2 ring-green-700 ring-offset-2`. */
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+}
+
+@layer components {
+  /* Police de titre (Playfair Display) pour les éléments hors h1/h2 — ex. titres de ProductionCard. */
+  .font-display {
+    font-family: 'Playfair Display', Georgia, serif;
   }
 }

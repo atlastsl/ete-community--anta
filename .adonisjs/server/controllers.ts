@@ -4,6 +4,19 @@
  */
 
 export const controllers = {
+  admin: {
+    Auth: () => import('#controllers/admin/auth_controller'),
+    Dashboard: () => import('#controllers/admin/dashboard_controller'),
+    Files: () => import('#controllers/admin/files_controller'),
+    Links: () => import('#controllers/admin/links_controller'),
+    Productions: () => import('#controllers/admin/productions_controller'),
+    Users: () => import('#controllers/admin/users_controller'),
+  },
   NewAccount: () => import('#controllers/new_account_controller'),
+  public: {
+    Home: () => import('#controllers/public/home_controller'),
+    Pages: () => import('#controllers/public/pages_controller'),
+    Productions: () => import('#controllers/public/productions_controller'),
+  },
   Session: () => import('#controllers/session_controller'),
 }

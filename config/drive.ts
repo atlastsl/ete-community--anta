@@ -1,8 +1,15 @@
 import env from '#start/env'
+import app from '@adonisjs/core/services/app'
 import { defineConfig, services } from '@adonisjs/drive'
 
 const driveConfig = defineConfig({
   default: 'r2',
+
+  // Disque factice utilisé par les tests (`drive.fake('r2')`) — stocke les fichiers
+  // dans un dossier tmp local au lieu de R2. Sans effet en production.
+  fakes: {
+    location: app.tmpPath('drive-fakes'),
+  },
 
   services: {
     r2: services.s3({

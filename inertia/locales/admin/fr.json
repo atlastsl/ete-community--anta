@@ -15,5 +15,262 @@
     "fr": "Français",
     "en": "English",
     "label": "Changer de langue"
+  },
+  "layout": {
+    "mobile_warning": "Veuillez utiliser le panel admin sur un ordinateur."
+  },
+  "role": {
+    "admin": "Admin",
+    "super_admin": "Super Admin"
+  },
+  "errors": {
+    "forbidden": "Accès refusé.",
+    "account_inactive": "Ce compte est désactivé."
+  },
+  "pagination": {
+    "label": "Pagination",
+    "previous": "Précédent",
+    "next": "Suivant"
+  },
+  "productions": {
+    "title": "Productions",
+    "create_button": "Créer une production",
+    "create_title": "Créer une production",
+    "edit_title": "Modifier la production",
+    "draft_saved": "Brouillon enregistré.",
+    "update_success": "Modifications enregistrées.",
+    "auto_unpublished": "Modifications enregistrées. La production a été dépubliée car elle est désormais incomplète.",
+    "published": "Production publiée.",
+    "unpublish_success": "Production dépubliée.",
+    "delete_success": "Production supprimée.",
+    "publish": {
+      "incomplete": "Publication impossible : des champs obligatoires sont manquants."
+    },
+    "unpublish_modal": {
+      "title": "Dépublier cette production ?",
+      "description": "La production ne sera plus visible sur le site public. Elle repassera en brouillon.",
+      "confirm": "Dépublier"
+    },
+    "delete_modal": {
+      "title": "Supprimer cette production ?",
+      "description": "Cette action est irréversible. La production et ses fichiers associés seront supprimés définitivement.",
+      "confirm": "Supprimer définitivement"
+    },
+    "form": {
+      "sections": {
+        "general": "Informations générales",
+        "content": "Contenu",
+        "rights": "Droits & Licence",
+        "optional": "Informations complémentaires",
+        "files": "Fichiers & Liens"
+      },
+      "fields": {
+        "title": "Titre",
+        "authors": "Auteur(s)",
+        "authors_hint": "Séparez par des virgules",
+        "category": "Catégorie",
+        "domain": "Domaine",
+        "subdomain": "Sous-domaine",
+        "subdomain_hint": "Séparez par des virgules",
+        "language": "Langue",
+        "country": "Pays de publication",
+        "summary": "Résumé",
+        "tags": "Tags",
+        "tags_hint": "Séparez par des virgules",
+        "work_published_at": "Date de publication de l'œuvre",
+        "license": "Statut de licence",
+        "journal": "Journal / Revue",
+        "publisher": "Éditeur",
+        "isbnDoiIssn": "ISBN / DOI / ISSN",
+        "institution": "Institution d'affiliation"
+      },
+      "license": {
+        "member": "Production membre",
+        "free_license": "Licence libre",
+        "external_link": "Lien externe (copyright)"
+      },
+      "errors": {
+        "title_required": "Le titre est requis.",
+        "title_too_long": "Le titre est trop long (255 caractères maximum).",
+        "required_to_publish": "Requis pour publier."
+      },
+      "files_placeholder": "L'ajout de fichiers et de liens sera disponible après l'enregistrement du brouillon.",
+      "chip_hint": "Tapez puis Entrée pour ajouter",
+      "remove_chip": "Retirer {{label}}",
+      "country_placeholder": "Sélectionnez un pays",
+      "country_group_africa": "Afrique",
+      "country_group_other": "Autres pays",
+      "save_draft": "Enregistrer brouillon",
+      "save": "Enregistrer",
+      "publish": "Publier"
+    },
+    "completion": {
+      "summary": "{{filled}}/{{total}} champs — {{missing}} requis pour publier",
+      "complete": "Tous les champs requis sont remplis.",
+      "missing_label": "Champs manquants :",
+      "file_or_link": "Au moins un fichier ou un lien est requis pour publier."
+    },
+    "files": {
+      "drop_hint": "Glissez un fichier ici ou parcourez (PDF, EPUB, MP4, MP3, AAC — max 100 Mo)",
+      "browse": "Parcourir",
+      "uploading": "Envoi en cours…",
+      "uploaded": "Fichier ajouté.",
+      "deleted": "Fichier supprimé.",
+      "delete": "Supprimer le fichier",
+      "errors": {
+        "too_large": "Fichier trop volumineux. Maximum 100 Mo.",
+        "unsupported_format": "Format non supporté. Formats acceptés : PDF, EPUB, MP4, MP3, AAC.",
+        "no_file": "Aucun fichier reçu.",
+        "invalid": "Fichier invalide ou format non autorisé.",
+        "one_at_a_time": "Un seul fichier à la fois."
+      }
+    },
+    "links": {
+      "add_button": "Ajouter un lien",
+      "added": "Lien ajouté.",
+      "deleted": "Lien supprimé.",
+      "delete": "Supprimer le lien",
+      "url": "URL",
+      "url_placeholder": "https://…",
+      "type": "Type",
+      "type_embed": "Embed",
+      "type_simple": "Lien simple",
+      "label": "Libellé (optionnel)",
+      "confirm": "Ajouter",
+      "cancel": "Annuler",
+      "empty": "Aucun lien externe.",
+      "errors": {
+        "invalid_url": "URL invalide. Veuillez saisir une URL complète (https://…)."
+      }
+    },
+    "empty_title": "Aucune production",
+    "empty_description": "Commencez par en créer une.",
+    "search_placeholder": "Rechercher une production…",
+    "last_published_by": "Publié par {{email}} le {{date}}",
+    "unknown_admin": "administrateur inconnu",
+    "filter": {
+      "label": "Filtrer par statut",
+      "all": "Tous les statuts",
+      "clear": "Réinitialiser"
+    },
+    "table": {
+      "title": "Titre",
+      "authors": "Auteur(s)",
+      "category": "Catégorie",
+      "status": "Statut",
+      "updated_at": "Modifié le",
+      "actions": "Actions"
+    },
+    "status": {
+      "draft": "Brouillon",
+      "published": "Publié",
+      "unpublished": "Dépublié"
+    },
+    "actions": {
+      "edit": "Modifier",
+      "unpublish": "Dépublier",
+      "delete": "Supprimer"
+    }
+  },
+  "users": {
+    "title": "Utilisateurs",
+    "create_button": "Créer un administrateur",
+    "create_title": "Créer un administrateur",
+    "create_success": "Compte créé. Un email d'invitation a été envoyé.",
+    "create_success_no_email": "Compte créé, mais l'envoi de l'email a échoué. Transmettez le mot de passe manuellement.",
+    "empty_title": "Aucun administrateur",
+    "empty_description": "Créez le premier compte pour constituer votre équipe.",
+    "form": {
+      "email": "Adresse email",
+      "email_placeholder": "admin@example.com",
+      "submit": "Créer le compte",
+      "help": "Un mot de passe provisoire sera généré automatiquement et envoyé par email."
+    },
+    "errors": {
+      "email_taken": "Cette adresse email est déjà utilisée.",
+      "email_required": "L'adresse email est requise.",
+      "email_invalid": "L'adresse email n'est pas valide."
+    },
+    "table": {
+      "email": "Email",
+      "role": "Rôle",
+      "status": "Statut",
+      "created_at": "Créé le",
+      "created_by": "Créé par",
+      "actions": "Actions"
+    },
+    "status": {
+      "active": "Actif",
+      "inactive": "Inactif"
+    },
+    "deactivate_button": "Désactiver",
+    "reactivate_button": "Réactiver",
+    "deactivate_success": "Compte désactivé.",
+    "reactivate_success": "Compte réactivé.",
+    "self_deactivate_error": "Vous ne pouvez pas désactiver votre propre compte.",
+    "self_reset_error": "Vous ne pouvez pas réinitialiser votre propre mot de passe ici.",
+    "protected_super_admin": "Action impossible sur un compte super administrateur.",
+    "temp_password_label": "Mot de passe provisoire à transmettre",
+    "deactivate_modal": {
+      "title": "Désactiver ce compte ?",
+      "description": "Cet administrateur ne pourra plus se connecter. Ses productions seront conservées.",
+      "confirm": "Désactiver"
+    },
+    "reset_password_button": "Réinitialiser MDP",
+    "reset_password_success": "Mot de passe réinitialisé. Un email a été envoyé.",
+    "reset_password_success_no_email": "Mot de passe réinitialisé, mais l'envoi de l'email a échoué. Transmettez le mot de passe manuellement.",
+    "reset_password_modal": {
+      "title": "Réinitialiser le mot de passe ?",
+      "description": "Un nouveau mot de passe provisoire sera généré et envoyé par email. L'administrateur devra le changer à sa prochaine connexion.",
+      "confirm": "Réinitialiser"
+    },
+    "delete_button": "Supprimer",
+    "delete_success": "Compte supprimé définitivement.",
+    "self_delete_error": "Vous ne pouvez pas supprimer votre propre compte.",
+    "delete_modal": {
+      "title": "Supprimer définitivement ce compte ?",
+      "description": "Cette action est irréversible. Le compte et les logs d'activité associés seront supprimés. Les productions créées par cet administrateur seront conservées.",
+      "confirm": "Supprimer définitivement"
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Connexion",
+      "subtitle": "Accédez au panel d'administration Anta",
+      "fields": {
+        "email": "Email",
+        "password": "Mot de passe"
+      },
+      "submit": "Se connecter",
+      "submitting": "Connexion…",
+      "errors": {
+        "invalid_credentials": "Email ou mot de passe incorrect.",
+        "account_inactive": "Ce compte est désactivé.",
+        "email_required": "L'email est requis.",
+        "email_format": "Format d'email invalide.",
+        "password_required": "Le mot de passe est requis."
+      }
+    },
+    "logout": {
+      "success": "Vous êtes déconnecté."
+    },
+    "change_password": {
+      "title": "Définir votre mot de passe",
+      "subtitle": "Vous devez définir un nouveau mot de passe avant d'accéder au panel.",
+      "fields": {
+        "password": "Nouveau mot de passe",
+        "password_confirmation": "Confirmation"
+      },
+      "hint": "Minimum 12 caractères.",
+      "submit": "Mettre à jour",
+      "submitting": "Mise à jour…",
+      "success": "Votre mot de passe a été mis à jour.",
+      "errors": {
+        "password_required": "Le mot de passe est requis.",
+        "password_too_short": "Le mot de passe doit contenir au moins 12 caractères.",
+        "password_too_long": "Le mot de passe est trop long.",
+        "confirmation_mismatch": "Les mots de passe ne correspondent pas."
+      }
+    }
   }
 }

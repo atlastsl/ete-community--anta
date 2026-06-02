@@ -53,9 +53,7 @@ test.group('Translations | content', () => {
     for (const [name, file] of Object.entries(allFiles)) {
       const flatten = (obj: JsonTree): unknown[] =>
         Object.values(obj).flatMap((v) =>
-          v !== null && typeof v === 'object' && !Array.isArray(v)
-            ? flatten(v as JsonTree)
-            : [v]
+          v !== null && typeof v === 'object' && !Array.isArray(v) ? flatten(v as JsonTree) : [v]
         )
       for (const value of flatten(file)) {
         assert.isString(value, `${name} contient une valeur non-string`)

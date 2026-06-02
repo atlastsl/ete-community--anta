@@ -12,10 +12,10 @@ const appName = import.meta.env.VITE_APP_NAME || 'Anta Admin'
 createInertiaApp({
   title: (title) => (title ? `${title} - ${appName}` : appName),
   resolve: (name) => {
-    return resolvePageComponent(
-      `./pages/admin/${name}.tsx`,
-      import.meta.glob('./pages/admin/**/*.tsx')
-    )
+    // Les contrôleurs rendent le nom complet (ex. 'admin/Productions/Index'),
+    // donc on résout `./pages/${name}.tsx` (PAS `./pages/admin/${name}` → double 'admin/').
+    // Glob large pour résoudre aussi les pages d'erreur sur une route /admin/*.
+    return resolvePageComponent(`./pages/${name}.tsx`, import.meta.glob('./pages/**/*.tsx'))
   },
   setup({ el, App, props }) {
     createRoot(el).render(

@@ -36,7 +36,7 @@ _Ce document se construit de façon collaborative, étape par étape. Les sectio
 | Consultation et Téléchargement | FR10–FR16 | Lecteurs intégrés (PDF/EPUB/MP4/MP3/AAC), téléchargement direct, compteurs publics  |
 | Gestion des Productions        | FR17–FR24 | CRUD complet avec workflow brouillon → publié → dépublié, validation conditionnelle |
 | Statistiques et Métriques      | FR25–FR29 | Enregistrement de vues (délai 10s côté client), stats par production et agrégées    |
-| Gestion des Comptes            | FR30–FR34 | Auth email/mot de passe + 2FA TOTP, gestion des rôles (admin / super admin)         |
+| Gestion des Comptes            | FR30, FR32–FR34 | Auth email/mot de passe, gestion des rôles (admin / super admin)                  |
 | Métadonnées Système            | FR35      | Trois niveaux de dates par production (publique / interne / publication Anta)       |
 | Référencement                  | FR36–FR37 | SSR partiel — meta tags injectés côté serveur, panel admin noindexé                 |
 | Conformité                     | FR38–FR39 | Politique de confidentialité, suppression de comptes admin (RGPD)                   |
@@ -44,7 +44,7 @@ _Ce document se construit de façon collaborative, étape par étape. Les sectio
 **Exigences Non-Fonctionnelles :**
 
 - Chargement < 3s ; recherche < 1s (95e percentile) — impose une indexation efficace des métadonnées
-- HTTPS, bcrypt, CSRF, sessions avec expiration, 2FA TOTP obligatoire
+- HTTPS, scrypt (hash mot de passe), CSRF, sessions avec expiration
 - Fichiers hébergés ≤ 100 Mo ; intégrité garantie
 - Disponibilité 99% ; stabilité sous charge communautaire moyenne
 
@@ -52,7 +52,7 @@ _Ce document se construit de façon collaborative, étape par étape. Les sectio
 
 - Domaine principal : Full-stack web (MPA)
 - Niveau de complexité : Faible
-- Composants architecturaux : ~8 (API AdonisJS, site public React, panel admin React, stockage fichiers, base de données, module auth/2FA, moteur de recherche/filtres, système de statistiques)
+- Composants architecturaux : ~8 (API AdonisJS, site public React, panel admin React, stockage fichiers, base de données, module auth, moteur de recherche/filtres, système de statistiques)
 
 ### Contraintes et Dépendances Techniques
 
@@ -64,7 +64,7 @@ _Ce document se construit de façon collaborative, étape par étape. Les sectio
 
 ### Préoccupations Transversales
 
-1. **Authentification et Autorisation** — 2FA TOTP, sessions, CSRF, séparation des rôles admin / super admin
+1. **Authentification et Autorisation** — sessions, CSRF, séparation des rôles admin / super admin
 2. **Stockage et Service de Fichiers** — upload admin + serving public, 5 formats, 100 Mo max
 3. **Modèle de Données des Métadonnées** — 16+ champs, statuts, dates multiples — central pour la recherche, l'affichage et les formulaires admin
 4. **Moteur de Recherche et Filtres** — performance < 1s sur l'ensemble des métadonnées
@@ -196,10 +196,10 @@ production_links
 └── label
 
 admin_users
-├── id, email, password_hash (bcrypt)
+├── id, email, password_hash (scrypt)
 ├── role (admin | super_admin)
 ├── is_active
-├── totp_secret, totp_enabled
+├── password_changed
 └── created_by_id → admin_users.id
 
 stats_views
@@ -264,25 +264,24 @@ to_tsvector('simple', coalesce(title,'') || ' ' || coalesce(summary,'') || ...)
 | Composant            | Solution                                                          |
 | -------------------- | ----------------------------------------------------------------- |
 | Sessions             | AdonisJS Auth (session-based)                                     |
-| 2FA TOTP             | `@adonisjs/2fa` (principal) + `otplib` + `qrcode` (fallback)      |
 | Autorisation (rôles) | AdonisJS Bouncer (admin vs super_admin)                           |
-| Hashage mot de passe | bcrypt (intégré AdonisJS Auth)                                    |
+| Hashage mot de passe | scrypt (défaut AdonisJS 6, zéro dépendance, plus moderne que bcrypt) |
 | Protection CSRF      | Middleware CSRF AdonisJS (activé sur toutes les routes admin)     |
 | Expiration session   | 2 heures d'inactivité (configurable via variable d'environnement) |
 
 **Flux première connexion (ordre obligatoire) :**
 
-1. Admin créé par super admin → mot de passe provisoire + `totp_enabled = false` + `password_changed = false`
+1. Admin créé par super admin → mot de passe provisoire + `password_changed = false`
 2. Première connexion (email + mot de passe provisoire) → redirection forcée page changement de mot de passe
 3. Définition nouveau mot de passe → `password_changed = true`
-4. Redirection forcée vers page activation 2FA
-5. Affichage QR code → scan → vérification code → `totp_enabled = true`
-6. Accès au dashboard
-7. Connexions suivantes : email + mot de passe → puis code TOTP
+4. Accès au dashboard
+5. Connexions suivantes : email + mot de passe
 
 **Reset mot de passe (super admin) :**
 
 - Super admin génère un nouveau mot de passe provisoire → `password_changed = false` → email envoyé → l'admin resuit le flux étape 2-3 à sa prochaine connexion
+
+> **Note — 2FA différé** : le 2FA TOTP a été retiré du MVP (décision 2026-05-31). Les colonnes `totp_secret`/`totp_enabled` ont été supprimées de la table `admin_users` via migration de drop. Le 2FA pourra être réintroduit en Phase 2 si nécessaire.
 
 **Guards AdonisJS Bouncer :**
 
@@ -466,7 +465,7 @@ app/controllers/
 │   ├── ProductionsController.ts  # Listing + détail + search
 │   └── StatsController.ts        # Enregistrement vues (10s) + téléchargements
 └── admin/
-    ├── AuthController.ts          # Login + 2FA
+    ├── AuthController.ts          # Login + changement mot de passe (1ère connexion)
     ├── ProductionsController.ts   # CRUD + workflow brouillon/publié
     ├── FilesController.ts         # Upload R2
     ├── StatsController.ts         # Stats par production + agrégées
@@ -487,7 +486,7 @@ inertia/
 │   └── admin/
 │       ├── Auth/
 │       │   ├── Login.tsx
-│       │   └── TwoFactor.tsx
+│       │   └── ChangePassword.tsx
 │       ├── Productions/
 │       │   ├── Index.tsx
 │       │   ├── Create.tsx
@@ -657,14 +656,13 @@ L'ordre ci-dessous minimise les dépendances bloquantes :
 | --- | -------------------------------------------------------------------- | ----------- |
 | 1   | Init projet AdonisJS + Inertia + React                               | —           |
 | 2   | Migrations PostgreSQL (toutes les tables)                            | Étape 1     |
-| 3   | Auth admin (session + bcrypt + CSRF)                                 | Étape 2     |
-| 4   | 2FA TOTP (activation obligatoire 1ère connexion)                     | Étape 3     |
-| 5   | Gestion R2 + upload fichiers                                         | Étape 1     |
-| 6   | CRUD Productions (brouillon → publié)                                | Étapes 2, 5 |
-| 7   | Site public (listing + détail + recherche tsvector)                  | Étape 6     |
-| 8   | Statistiques (vues 10s + téléchargements)                            | Étape 7     |
-| 9   | Panel admin stats + logs activité super admin                        | Étapes 6, 8 |
-| 10  | SEO (meta tags SSR partiel) + conformité (politique confidentialité) | Étape 7     |
+| 3   | Auth admin (session + scrypt + CSRF + changement mot de passe 1ère connexion) | Étape 2     |
+| 4   | Gestion R2 + upload fichiers                                         | Étape 1     |
+| 5   | CRUD Productions (brouillon → publié)                                | Étapes 2, 4 |
+| 6   | Site public (listing + détail + recherche tsvector)                  | Étape 5     |
+| 7   | Statistiques (vues 10s + téléchargements)                            | Étape 6     |
+| 8   | Panel admin stats + logs activité super admin                        | Étapes 5, 7 |
+| 9   | SEO (meta tags SSR partiel) + conformité (politique confidentialité) | Étape 6     |
 
 ## Structure du Projet & Frontières Architecturales
 
@@ -697,18 +695,16 @@ anta/
 │   │   │   ├── ProductionsController.ts # FR1–FR8, FR10–FR16 — search, listing, détail
 │   │   │   └── StatsController.ts       # FR25–FR26 — enregistrement vues + téléchargements
 │   │   └── admin/
-│   │       ├── AuthController.ts         # FR30–FR31 — login + 2FA
+│   │       ├── AuthController.ts         # FR30, FR42 — login + changement mot de passe 1ère connexion
 │   │       ├── ProductionsController.ts  # FR17–FR24 — CRUD + workflow brouillon/publié
 │   │       ├── FilesController.ts        # FR18 — upload R2
 │   │       ├── StatsController.ts        # FR27–FR29 — stats par production, agrégées, activité admins
 │   │       └── UsersController.ts        # FR32–FR34, FR39 — gestion comptes + suppression
 │   │
 │   ├── middleware/
-│   │   ├── auth/
-│   │   │   ├── AdminMiddleware.ts        # Guard admin + super_admin
-│   │   │   ├── SuperAdminMiddleware.ts   # Guard super_admin uniquement
-│   │   │   └── TwoFactorMiddleware.ts    # Redirect si 2FA non activé
-│   │   └── SilentAuthMiddleware.ts
+│   │   ├── admin_middleware.ts           # Guard admin + super_admin + redirect change-password
+│   │   ├── super_admin_middleware.ts     # Guard super_admin uniquement
+│   │   └── silent_auth_middleware.ts
 │   │
 │   ├── models/
 │   │   ├── Production.ts                 # FR17–FR24, FR35 — modèle principal + relations
@@ -724,13 +720,12 @@ anta/
 │   │   ├── SearchService.ts              # Logique full-text tsvector + filtres
 │   │   ├── FileStorageService.ts         # Upload/delete/URL signée R2
 │   │   ├── StatsService.ts               # Enregistrement + agrégation stats
-│   │   ├── ActivityLogService.ts         # Centralisation logs admin
-│   │   └── TwoFactorService.ts           # Génération/validation TOTP
+│   │   └── ActivityLogService.ts         # Centralisation logs admin
 │   │
 │   ├── validators/
 │   │   ├── ProductionValidator.ts        # VineJS — création/édition production
 │   │   ├── FileUploadValidator.ts        # Taille max, whitelist MIME
-│   │   └── AuthValidator.ts              # Login, 2FA
+│   │   └── AuthValidator.ts              # Login + changement mot de passe
 │   │
 │   └── enums/
 │       ├── ProductionStatus.ts           # 'draft' | 'published' | 'unpublished'
@@ -780,7 +775,7 @@ anta/
 │   │   └── admin/
 │   │       ├── Auth/
 │   │       │   ├── Login.tsx             # FR30
-│   │       │   └── TwoFactor.tsx         # FR31 — activation + vérification TOTP
+│   │       │   └── ChangePassword.tsx    # FR42 — changement mot de passe 1ère connexion
 │   │       ├── Productions/
 │   │       │   ├── Index.tsx             # FR22–FR24 — liste + actions
 │   │       │   ├── Create.tsx            # FR17–FR21 — formulaire création
@@ -854,7 +849,7 @@ anta/
 | Périmètre   | Préfixe         | Middleware                                | FR couverts                     |
 | ----------- | --------------- | ----------------------------------------- | ------------------------------- |
 | Site public | `/`             | Aucun                                     | FR1–FR16, FR25–FR26, FR36, FR38 |
-| Panel admin | `/admin/`       | `AdminMiddleware` + `TwoFactorMiddleware` | FR17–FR29, FR37, FR39           |
+| Panel admin | `/admin/`       | `AdminMiddleware`                         | FR17–FR29, FR37, FR39           |
 | Super admin | `/admin/users/` | `SuperAdminMiddleware`                    | FR29, FR32–FR34, FR39           |
 
 #### Flux de Données
@@ -873,7 +868,6 @@ React (Inertia props) ←→ Controllers ←→ Services ←→ Models (Lucid) �
 | ---------------- | ---------------------------------------------------------- |
 | Cloudflare R2    | `app/services/FileStorageService.ts` via `@adonisjs/drive` |
 | Resend / Mailgun | `config/mail.ts` via `@adonisjs/mail`                      |
-| 2FA TOTP         | `app/services/TwoFactorService.ts` via `@adonisjs/2fa`     |
 
 #### Flux Clés
 

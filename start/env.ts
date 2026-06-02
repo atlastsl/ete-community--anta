@@ -33,6 +33,9 @@ export default await Env.create(new URL('../', import.meta.url), {
 
   // Session
   SESSION_DRIVER: Env.schema.enum(['cookie', 'memory', 'database'] as const),
+  // Durée d'inactivité avant expiration (NFR6). Format `parse-duration`
+  // (ex. '2h', '30m', '1d'). Défaut : '2h' (cf. config/session.ts).
+  SESSION_AGE: Env.schema.string.optional(),
 
   // Cloudflare R2
   R2_ENDPOINT: Env.schema.string({ format: 'url', tld: false }),

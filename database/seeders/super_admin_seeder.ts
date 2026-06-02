@@ -41,14 +41,13 @@ export class SuperAdminSeederLogic {
         passwordHash: password,
         role: 'super_admin',
         isActive: true,
-        totpEnabled: false,
         passwordChanged: false,
       })
       return { action: 'created', email }
     }
 
     // Idempotence : ne touche au compte QUE si le mot de passe a changé.
-    // Préserve volontairement is_active, totp_enabled, totp_secret — l'admin peut les avoir modifiés.
+    // Préserve volontairement is_active — l'admin peut l'avoir modifié.
     const passwordUnchanged = await hash.verify(existing.passwordHash, password)
     if (passwordUnchanged) {
       return { action: 'unchanged', email }

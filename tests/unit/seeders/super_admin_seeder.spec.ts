@@ -26,10 +26,8 @@ test.group('SuperAdminSeeder', (group) => {
     const admin = await AdminUser.findByOrFail('email', TEST_EMAIL)
     assert.equal(admin.role, 'super_admin')
     assert.isTrue(admin.isActive)
-    assert.isFalse(admin.totpEnabled)
     assert.isFalse(admin.passwordChanged)
     assert.isNull(admin.createdById)
-    assert.isNull(admin.totpSecret)
     assert.isTrue(await hash.verify(admin.passwordHash, TEST_PASSWORD))
   })
 
@@ -57,8 +55,6 @@ test.group('SuperAdminSeeder', (group) => {
     // Simule un admin qui aurait changé son mot de passe via le panel
     const admin = await AdminUser.findByOrFail('email', TEST_EMAIL)
     admin.passwordChanged = true
-    admin.totpEnabled = true
-    admin.totpSecret = 'fake_totp_secret'
     admin.isActive = false
     await admin.save()
 
@@ -77,8 +73,6 @@ test.group('SuperAdminSeeder', (group) => {
     assert.isFalse(reloaded.passwordChanged, 'doit être remis à false pour forcer un changement')
 
     // Préservation des champs métier modifiés par l'admin
-    assert.isTrue(reloaded.totpEnabled, 'totpEnabled doit être préservé')
-    assert.equal(reloaded.totpSecret, 'fake_totp_secret', 'totpSecret doit être préservé')
     assert.isFalse(reloaded.isActive, 'isActive doit être préservé (le seeder ne réactive pas)')
   })
 

@@ -6,6 +6,8 @@ import type { LicenseStatus } from '#enums/license_status'
 import AdminUser from '#models/admin_user'
 import ProductionFile from '#models/production_file'
 import ProductionLink from '#models/production_link'
+import StatsView from '#models/stats_view'
+import StatsDownload from '#models/stats_download'
 
 export default class Production extends BaseModel {
   @column({ isPrimary: true })
@@ -35,8 +37,11 @@ export default class Production extends BaseModel {
   @column()
   declare domain: string | null
 
-  @column()
-  declare subdomain: string | null
+  @column({
+    prepare: (value: string[]) => JSON.stringify(value),
+    consume: (value: string | string[]) => (typeof value === 'string' ? JSON.parse(value) : value),
+  })
+  declare subdomain: string[]
 
   @column()
   declare language: string | null
@@ -85,4 +90,10 @@ export default class Production extends BaseModel {
 
   @hasMany(() => ProductionLink)
   declare links: HasMany<typeof ProductionLink>
+
+  @hasMany(() => StatsView)
+  declare statsViews: HasMany<typeof StatsView>
+
+  @hasMany(() => StatsDownload)
+  declare statsDownloads: HasMany<typeof StatsDownload>
 }

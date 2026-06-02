@@ -73,8 +73,9 @@ test.group('Design system | shadcn/ui', () => {
 test.group('Design system | Edge layout', () => {
   const edge = readFileSync(r('resources/views/inertia_layout.edge'), 'utf-8')
 
-  test('html a un attribut lang="fr"', ({ assert }) => {
-    assert.include(edge, '<html lang="fr"')
+  test('html a un attribut lang dynamique avec fallback fr (SEO Story 5.5)', ({ assert }) => {
+    assert.include(edge, '<html lang="{{')
+    assert.include(edge, "'fr'")
   })
 
   test('favicon référencé', ({ assert }) => {

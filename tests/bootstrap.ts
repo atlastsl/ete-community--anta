@@ -7,7 +7,10 @@ import { dbAssertions } from '@adonisjs/lucid/plugins/db'
 import testUtils from '@adonisjs/core/services/test_utils'
 import { browserClient } from '@japa/browser-client'
 import { authBrowserClient } from '@adonisjs/auth/plugins/browser_client'
+import { authApiClient } from '@adonisjs/auth/plugins/api_client'
 import { sessionBrowserClient } from '@adonisjs/session/plugins/browser_client'
+import { sessionApiClient } from '@adonisjs/session/plugins/api_client'
+import { shieldApiClient } from '@adonisjs/shield/plugins/api_client'
 
 /**
  * This file is imported by the "bin/test.ts" entrypoint file
@@ -22,6 +25,9 @@ export const plugins: Config['plugins'] = [
   apiClient(),
   pluginAdonisJS(app),
   dbAssertions(app),
+  sessionApiClient(app),
+  authApiClient(app),
+  shieldApiClient(),
   browserClient({ runInSuites: ['browser'] }),
   sessionBrowserClient(app),
   authBrowserClient(app),

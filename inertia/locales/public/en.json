@@ -1,4 +1,12 @@
 {
+  "a11y": {
+    "skip_to_content": "Skip to main content"
+  },
+  "pagination": {
+    "label": "Pagination",
+    "previous": "Previous",
+    "next": "Next"
+  },
   "nav": {
     "home": "Home",
     "search": "Search",
@@ -14,5 +22,96 @@
     "fr": "Français",
     "en": "English",
     "label": "Change language"
+  },
+  "footer": {
+    "copyright": "© Anta — ETE Community",
+    "about": "Anta is the digital library of the ETE community: an open space to discover, search and read the community's productions.",
+    "explore": "Explore",
+    "contact": "Contact",
+    "nav_label": "Footer links"
+  },
+  "home": {
+    "tagline": "Anta, the digital library of the ETE community",
+    "hero_eyebrow": "Digital library",
+    "hero_subtitle": "Discover, search and read the community's productions.",
+    "search_placeholder": "Search for a production...",
+    "empty": "No production published yet.",
+    "sections": {
+      "most_viewed": "Most viewed",
+      "recent": "Recently added"
+    }
+  },
+  "search": {
+    "label": "Search for a production",
+    "submit": "Search",
+    "clear": "Clear search"
+  },
+  "filters": {
+    "label": "Search filters",
+    "title": "Filters",
+    "author_search": "Search an author...",
+    "filter_by": "Filter by {{label}}",
+    "dimensions": {
+      "category": "Category",
+      "domain": "Domain",
+      "subdomain": "Subdomain",
+      "author": "Author",
+      "language": "Language",
+      "country": "Country",
+      "license": "License"
+    }
+  },
+  "production_card": {
+    "by": "By",
+    "views": "{{count}} views",
+    "downloads": "{{count}} downloads",
+    "published_at": "Published on {{date}}"
+  },
+  "productions": {
+    "heading": "Production catalogue",
+    "results_count": "{{count}} result(s)",
+    "no_results": "No production found.",
+    "no_results_for": "No production found for \"{{term}}\"",
+    "reset_filters": "Reset filters",
+    "approximate_notice": "No exact match for \"{{term}}\". Here are some close productions:"
+  },
+  "sort": {
+    "label": "Sort by",
+    "relevance": "Relevance",
+    "date": "Date",
+    "views": "Views",
+    "downloads": "Downloads"
+  },
+  "listing": {
+    "view_label": "Display",
+    "view_list": "List view",
+    "view_grid": "Grid view"
+  },
+  "privacy": {
+    "title": "Privacy Policy",
+    "intro": {
+      "heading": "Introduction",
+      "body": "The Anta website (hereinafter \"the Site\") is a community digital library. We are committed to protecting the privacy of our visitors. This policy describes the data we collect, its purpose, and your rights."
+    },
+    "data_collected": {
+      "heading": "Data collected",
+      "body": "The Site only collects the following data: a language preference cookie (i18n_lang) storing your choice between French and English; anonymous viewing statistics (number of views and downloads per production, without visitor identification). No visitor user accounts are created, and no personal data is requested from visitors."
+    },
+    "data_usage": {
+      "heading": "Use of data",
+      "body": "The language cookie is used solely to display the site in your chosen language on your next visit. Viewing statistics are used to measure interest in productions and improve the catalogue."
+    },
+    "data_retention": {
+      "heading": "Data retention",
+      "body": "The language cookie is retained for one year. Viewing statistics are retained in aggregate and anonymous form indefinitely."
+    },
+    "rights": {
+      "heading": "Your rights",
+      "body": "In accordance with the General Data Protection Regulation (GDPR), you have the right to access, rectify, and delete your data. You can delete the language cookie at any time through your browser settings."
+    },
+    "contact": {
+      "heading": "Contact",
+      "body": "For any questions regarding this policy, you can contact us at: contact@anta.community"
+    }
   }
 }

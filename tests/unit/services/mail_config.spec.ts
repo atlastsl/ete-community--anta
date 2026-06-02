@@ -10,10 +10,7 @@ test.group('Mail config | default mailer (Mailgun)', (group) => {
   test('envoie un email via le mailer par défaut', async () => {
     const fake = mail.fake()
     await mail.send((message) => {
-      message
-        .to('test@example.com')
-        .subject('Email de test')
-        .html('<p>Hello Anta</p>')
+      message.to('test@example.com').subject('Email de test').html('<p>Hello Anta</p>')
     })
 
     fake.messages.assertSent({
@@ -45,10 +42,7 @@ test.group('Mail config | mailer alternatif (Resend)', (group) => {
   test('envoie via mail.use("resend") sans modifier le code métier', async () => {
     const fake = mail.fake()
     await mail.use('resend').send((message) => {
-      message
-        .to('test@example.com')
-        .subject('Via Resend')
-        .html('<p>Sent through Resend</p>')
+      message.to('test@example.com').subject('Via Resend').html('<p>Sent through Resend</p>')
     })
 
     fake.messages.assertSent({
