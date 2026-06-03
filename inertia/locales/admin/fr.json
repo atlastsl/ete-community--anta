@@ -3,7 +3,8 @@
     "productions": "Productions",
     "statistics": "Statistiques",
     "users": "Utilisateurs",
-    "logout": "Se déconnecter"
+    "logout": "Se déconnecter",
+    "activity": "Activité"
   },
   "actions": {
     "save": "Enregistrer",
@@ -148,6 +149,17 @@
     "search_placeholder": "Rechercher une production…",
     "last_published_by": "Publié par {{email}} le {{date}}",
     "unknown_admin": "administrateur inconnu",
+    "stats": {
+      "heading": "Statistiques",
+      "views": "Vues",
+      "downloads": "Téléchargements",
+      "first_published": "Première publication",
+      "last_modified": "Dernière modification",
+      "evolution_30d": "Vues — 30 derniers jours",
+      "empty": "Aucune statistique disponible pour cette production.",
+      "day_views": "{{date}} : {{count}} vue(s)",
+      "date": "Date"
+    },
     "filter": {
       "label": "Filtrer par statut",
       "all": "Tous les statuts",
@@ -271,6 +283,41 @@
         "password_too_long": "Le mot de passe est trop long.",
         "confirmation_mismatch": "Les mots de passe ne correspondent pas."
       }
+    }
+  },
+  "stats": {
+    "heading": "Statistiques",
+    "total_published": "Productions publiées",
+    "total_views": "Vues totales",
+    "total_downloads": "Téléchargements totaux",
+    "top_viewed": "Plus consultées",
+    "top_downloaded": "Plus téléchargées",
+    "col_title": "Titre",
+    "col_views": "Vues",
+    "col_downloads": "Téléchargements",
+    "col_date": "Date",
+    "evolution_30d": "Évolution — 30 derniers jours",
+    "empty": "Aucune donnée disponible pour cette période."
+  },
+  "activity": {
+    "heading": "Logs d'activité",
+    "filter_admin": "Administrateur",
+    "filter_action": "Type d'action",
+    "all": "Tous",
+    "clear": "Réinitialiser",
+    "col_admin": "Administrateur",
+    "col_action": "Action",
+    "col_resource": "Ressource",
+    "col_date": "Date",
+    "empty": "Aucune action enregistrée.",
+    "action": {
+      "login": "Connexion",
+      "create": "Création",
+      "update": "Modification",
+      "publish": "Publication",
+      "unpublish": "Dépublication",
+      "delete": "Suppression",
+      "password_reset": "Réinit. mot de passe"
     }
   }
 }

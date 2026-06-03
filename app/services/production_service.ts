@@ -37,6 +37,38 @@ const REQUIRED_STRING_FIELDS = [
 
 export default class ProductionService {
   /**
+   * Slug de base dérivé d'un titre : translittération ASCII (accents retirés), minuscules,
+   * non-alphanumériques → tirets, longueur max ~80. Fallback `'production'` si vide.
+   * ⚠️ Doit rester identique au `slugify` de la migration `add_slug_to_productions_table`.
+   */
+  static generateSlug(title: string): string {
+    const base = (title ?? '')
+      .normalize('NFD')
+      .replace(new RegExp('[\\u0300-\\u036f]', 'g'), '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 80)
+      .replace(/-+$/g, '')
+    return base || 'production'
+  }
+
+  /**
+   * Slug unique en base : `generateSlug(title)`, puis suffixe `-2`, `-3`… en cas de collision.
+   * Appelé par le hook `@beforeCreate` du modèle Production (toute création passe par là).
+   */
+  static async generateUniqueSlug(title: string): Promise<string> {
+    const base = this.generateSlug(title)
+    let candidate = base
+    let n = 2
+    while (await Production.findBy('slug', candidate)) {
+      candidate = `${base}-${n}`
+      n++
+    }
+    return candidate
+  }
+
+  /**
    * Valeurs distinctes existantes (TOUTES statuts confondues) pour suggérer la saisie
    * dans le formulaire admin et éviter les variantes d'orthographe d'une même valeur.
    */

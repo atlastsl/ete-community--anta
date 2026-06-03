@@ -35,8 +35,10 @@ const shieldConfig = defineConfig({
     /**
      * Route patterns to exclude from CSRF checks.
      * Useful for external webhooks or API endpoints.
+     * `/stats/view` : beacon de vue public fire-and-forget (Story 6.4) — la CSRF n'y est
+     * pas une frontière de sécurité (compteur de vues). Les formulaires admin restent protégés.
      */
-    exceptRoutes: [],
+    exceptRoutes: ['/stats/view'],
 
     /**
      * Expose an encrypted XSRF-TOKEN cookie for frontend HTTP clients.

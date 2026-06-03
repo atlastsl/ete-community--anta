@@ -40,3 +40,18 @@
 3. Vérifier que `loginAs()` (authApiClient + sessionApiClient, SESSION_DRIVER=cookie) établit bien la session dans ce contexte.
 
 **Fichiers** : `tests/bootstrap.ts` (plugins + configureSuite httpServer), `tests/functional/**` (each.setup beginGlobalTransaction), `config/database.ts`, `app/middleware/admin_middleware.ts`.
+
+## Deferred from: code review Epic 6 (stories 6.1-6.5) (2026-06-02)
+
+- **Course TOCTOU sur l'unicité du slug** : `generateUniqueSlug` (check) puis insert via hook `@beforeCreate`, hors transaction/verrou. Deux créations concurrentes de même titre → la 2e viole `productions_slug_unique` → 500 non géré (`admin/productions_controller.store`). Faible proba (petite équipe admin) ; l'index protège l'intégrité. Action : try/catch sur la unique-violation + régénération du suffixe (ou advisory lock).
+- **Compteur de téléchargement optimiste sur-compte en cas d'échec** : `MediaViewer` incrémente le compteur au clic (`<a href>`) sans observer l'issue ; si le serveur renvoie 404 ou si R2 échoue (aucun `recordDownload`), l'UI affiche +1 à tort jusqu'au rechargement. Le compteur de vues, lui, est correctement gated sur `res.ok`. Action : retirer l'incrément optimiste du download, ou le confirmer via une réponse observable.
+- **Inflation des vues / dédup / rate-limit** : `POST /stats/view` (exempté CSRF, sans auth ni rate-limit) insère 1 vue par requête, sans dédup par session/IP → compteur trivialement gonflable. Inhérent à un compteur public. Dédup → **Epic 7** (agrégation/métriques) ; rate-limiting → **Epic 8** (infra). Documenté.
+- **iframe embed `allow-scripts` + `allow-same-origin`** : combinaison qui affaiblit le sandbox sur une URL externe (curée par l'admin). Risque accepté/documenté (nécessaire pour la plupart des embeds type YouTube). Réévaluer si on autorise des embeds non fiables.
+- **Duplication `slugify`** (migration `add_slug_to_productions_table` ↔ `ProductionService.generateSlug`) : identiques aujourd'hui, sans source partagée ni test d'équivalence → risque de divergence si l'une est éditée. Action éventuelle : test d'égalité ou extraction d'un helper partagé importable par la migration.
+
+## Deferred from: code review Epic 7 (stories 7.1-7.4) (2026-06-02)
+
+- **Top-10 / agrégats = sous-requêtes corrélées (perf)** : `StatsService.libraryStats` lance ~7 requêtes par chargement du dashboard (3 `count`, 2 top-10 avec `withAggregate` corrélé par production publiée, 2 scans 30j). Même pattern que `home_controller.publishedWithCounts` — OK à l'échelle communautaire actuelle. Action si le volume croît : index sur `stats_views(production_id)`/`stats_downloads(production_id)`, ou table d'agrégats matérialisée / cache.
+- **Seeder démo : pic d'évolution sur un seul jour** : `production_demo_seeder` insère les `stats_views`/`stats_downloads` sans date → la colonne prend `default now()` → toute l'évolution 30j s'affiche en un pic le jour du seed. Artefact démo (pas de données prod). Action éventuelle : répartir `recorded_at`/`downloaded_at` sur les 30-60 derniers jours dans le seeder pour une démo réaliste.
+- **Fuseau horaire des stats (robustesse)** : le bucketing 30j repose sur la cohérence de zone Luxon entre `DateTime.now()` (squelette) et `recordedAt` hydraté par Lucid (vérifié cohérent par défaut, même zone process). Action de robustesse (non urgent) : fixer explicitement la zone (ex. UTC) côté Lucid + service pour éviter toute dérive si la config TZ du process change.
+- **Dropdown admins non borné (logs)** : `ActivityLogsController` charge tous les admins pour le filtre (borné par l'effectif admin, trivial). Action si l'effectif grandit : recherche/typeahead.

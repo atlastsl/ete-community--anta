@@ -67,13 +67,49 @@
     "downloads": "{{count}} downloads",
     "published_at": "Published on {{date}}"
   },
+  "production_detail": {
+    "breadcrumb_label": "Breadcrumb",
+    "breadcrumb_home": "Home",
+    "breadcrumb_productions": "Productions",
+    "summary": "Summary",
+    "files": "Files",
+    "external_links": "External links",
+    "category": "Category",
+    "domain": "Domain",
+    "subdomain": "Subdomain(s)",
+    "language": "Language",
+    "country": "Country of publication",
+    "work_published_at": "Publication date",
+    "license_label": "License",
+    "license": {
+      "member": "Members only",
+      "free_license": "Free license",
+      "external_link": "External link"
+    },
+    "journal": "Journal",
+    "publisher": "Publisher",
+    "identifier": "ISBN / DOI / ISSN",
+    "institution": "Institution",
+    "tags": "Tags"
+  },
+  "media": {
+    "pdf_viewer_title": "PDF viewer: {{name}}",
+    "open_document": "Open document",
+    "unavailable": "Preview unavailable",
+    "video_fallback": "Your browser cannot play this video.",
+    "audio_fallback": "Your browser cannot play this audio.",
+    "download": "Download",
+    "access_source": "Access source",
+    "fullscreen": "Fullscreen"
+  },
   "productions": {
     "heading": "Production catalogue",
     "results_count": "{{count}} result(s)",
     "no_results": "No production found.",
     "no_results_for": "No production found for \"{{term}}\"",
     "reset_filters": "Reset filters",
-    "approximate_notice": "No exact match for \"{{term}}\". Here are some close productions:"
+    "approximate_notice": "No exact match for \"{{term}}\". Here are some close productions:",
+    "download_unavailable": "This file is temporarily unavailable."
   },
   "sort": {
     "label": "Sort by",

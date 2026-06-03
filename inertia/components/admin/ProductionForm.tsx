@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from '~/components/ui/select'
 import { AFRICAN_COUNTRIES, OTHER_COUNTRIES, ALL_COUNTRIES } from '~/lib/countries'
+import { LANGUAGE_OPTIONS } from '~/lib/languages'
 import CompletionIndicator, { type FieldStatus } from '~/components/admin/CompletionIndicator'
 import ChipInput from '~/components/admin/ChipInput'
 import FileUploader, { type ProductionFileRow } from '~/components/admin/FileUploader'
@@ -308,7 +309,24 @@ export default function ProductionForm({
         {TextField({ name: 'domain', required: true, suggestions: suggestions.domains })}
         {data.domain.trim() !== '' &&
           ChipField({ name: 'subdomain', suggestions: suggestions.subdomains })}
-        {TextField({ name: 'language', required: true, suggestions: suggestions.languages })}
+        <div>
+          <label htmlFor="language" className="text-sm font-medium text-stone-700">
+            {t('productions.form.fields.language')}
+            <span className="text-red-600"> *</span>
+          </label>
+          <Select value={data.language} onValueChange={(value) => setData('language', value)}>
+            <SelectTrigger id="language" className="mt-1 w-72">
+              <SelectValue placeholder={t('productions.form.fields.language')} />
+            </SelectTrigger>
+            <SelectContent>
+              {LANGUAGE_OPTIONS.map((o) => (
+                <SelectItem key={o.value} value={o.value}>
+                  {o.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         {CountryField()}
       </Section>
 

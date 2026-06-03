@@ -5,6 +5,7 @@
 
 export const controllers = {
   admin: {
+    ActivityLogs: () => import('#controllers/admin/activity_logs_controller'),
     Auth: () => import('#controllers/admin/auth_controller'),
     Dashboard: () => import('#controllers/admin/dashboard_controller'),
     Files: () => import('#controllers/admin/files_controller'),
@@ -17,6 +18,7 @@ export const controllers = {
     Home: () => import('#controllers/public/home_controller'),
     Pages: () => import('#controllers/public/pages_controller'),
     Productions: () => import('#controllers/public/productions_controller'),
+    Stats: () => import('#controllers/public/stats_controller'),
   },
   Session: () => import('#controllers/session_controller'),
 }

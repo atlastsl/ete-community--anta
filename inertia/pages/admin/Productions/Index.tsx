@@ -24,6 +24,7 @@ import {
 } from '~/components/ui/dialog'
 import StatusBadge from '~/components/admin/StatusBadge'
 import Pagination from '~/components/shared/Pagination'
+import { languageLabel } from '~/lib/languages'
 
 type ProductionStatus = 'draft' | 'published' | 'unpublished'
 
@@ -180,7 +181,7 @@ export default function AdminProductionsIndex({
               <SelectItem value={ALL_VALUE}>{t(`productions.form.fields.${f.key}`)}</SelectItem>
               {f.options.map((o) => (
                 <SelectItem key={o} value={o}>
-                  {o}
+                  {f.key === 'language' ? languageLabel(o) : o}
                 </SelectItem>
               ))}
             </SelectContent>

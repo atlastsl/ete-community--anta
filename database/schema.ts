@@ -8,14 +8,7 @@ import { BaseModel, column } from '@adonisjs/lucid/orm'
 import { DateTime } from 'luxon'
 
 export class AdminActivityLogSchema extends BaseModel {
-  static $columns = [
-    'actionType',
-    'adminUserId',
-    'createdAt',
-    'id',
-    'resourceId',
-    'resourceType',
-  ] as const
+  static $columns = ['actionType', 'adminUserId', 'createdAt', 'id', 'resourceId', 'resourceType'] as const
   $columns = AdminActivityLogSchema.$columns
   @column()
   declare actionType: string
@@ -32,18 +25,7 @@ export class AdminActivityLogSchema extends BaseModel {
 }
 
 export class AdminUserSchema extends BaseModel {
-  static $columns = [
-    'createdAt',
-    'createdById',
-    'email',
-    'id',
-    'isActive',
-    'passwordChanged',
-    'passwordHash',
-    'role',
-    'sessionVersion',
-    'updatedAt',
-  ] as const
+  static $columns = ['createdAt', 'createdById', 'email', 'id', 'isActive', 'passwordChanged', 'passwordHash', 'role', 'sessionVersion', 'updatedAt'] as const
   $columns = AdminUserSchema.$columns
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
@@ -68,17 +50,7 @@ export class AdminUserSchema extends BaseModel {
 }
 
 export class ProductionFileSchema extends BaseModel {
-  static $columns = [
-    'createdAt',
-    'fileKey',
-    'id',
-    'mimeType',
-    'originalName',
-    'productionId',
-    'sizeBytes',
-    'storageProvider',
-    'updatedAt',
-  ] as const
+  static $columns = ['createdAt', 'fileKey', 'id', 'mimeType', 'originalName', 'productionId', 'sizeBytes', 'storageProvider', 'updatedAt'] as const
   $columns = ProductionFileSchema.$columns
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
@@ -101,15 +73,7 @@ export class ProductionFileSchema extends BaseModel {
 }
 
 export class ProductionLinkSchema extends BaseModel {
-  static $columns = [
-    'createdAt',
-    'id',
-    'label',
-    'linkType',
-    'productionId',
-    'updatedAt',
-    'url',
-  ] as const
+  static $columns = ['createdAt', 'id', 'label', 'linkType', 'productionId', 'updatedAt', 'url'] as const
   $columns = ProductionLinkSchema.$columns
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
@@ -128,30 +92,7 @@ export class ProductionLinkSchema extends BaseModel {
 }
 
 export class ProductionSchema extends BaseModel {
-  static $columns = [
-    'antaPublishedAt',
-    'authors',
-    'category',
-    'createdAt',
-    'createdById',
-    'domain',
-    'id',
-    'institution',
-    'isbnDoiIssn',
-    'journal',
-    'language',
-    'licenseStatus',
-    'publicationCountry',
-    'publisher',
-    'searchVector',
-    'status',
-    'subdomain',
-    'summary',
-    'tags',
-    'title',
-    'updatedAt',
-    'workPublishedAt',
-  ] as const
+  static $columns = ['antaPublishedAt', 'authors', 'category', 'createdAt', 'createdById', 'domain', 'id', 'institution', 'isbnDoiIssn', 'journal', 'language', 'licenseStatus', 'publicationCountry', 'publisher', 'searchVector', 'slug', 'status', 'subdomain', 'summary', 'tags', 'title', 'updatedAt', 'workPublishedAt'] as const
   $columns = ProductionSchema.$columns
   @column.dateTime()
   declare antaPublishedAt: DateTime | null
@@ -183,6 +124,8 @@ export class ProductionSchema extends BaseModel {
   declare publisher: string | null
   @column()
   declare searchVector: string | null
+  @column()
+  declare slug: string
   @column()
   declare status: any
   @column()

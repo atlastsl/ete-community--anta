@@ -7,6 +7,7 @@ const SECTION_SIZE = 6
 
 type ProductionCardProps = {
   id: string
+  slug: string
   title: string
   authors: string[]
   category: string | null
@@ -28,6 +29,7 @@ function publishedWithCounts() {
 function serialize(p: Production): ProductionCardProps {
   return {
     id: p.id,
+    slug: p.slug,
     title: p.title,
     authors: p.authors ?? [],
     category: p.category,

@@ -67,6 +67,22 @@ export default class FileStorageService {
     return disk.getSignedUrl(fileKey, { expiresIn: '1h' })
   }
 
+  /**
+   * URL signée (TTL 1h) forçant le téléchargement avec le nom d'origine
+   * (`Content-Disposition: attachment`). `filename*` (RFC 5987) gère les accents/UTF-8.
+   */
+  static async signedDownloadUrl(fileKey: string, originalName: string): Promise<string> {
+    // Neutralise guillemet, backslash et CR/LF dans le segment `filename="..."` (anti-injection
+    // d'en-tête / échappement de guillemet). Le `filename*` UTF-8 ci-dessous reste la source
+    // fiable côté navigateurs modernes.
+    const safe = originalName.replace(/[\\"\r\n]/g, '')
+    const disk = drive.use('r2')
+    return disk.getSignedUrl(fileKey, {
+      expiresIn: '1h',
+      contentDisposition: `attachment; filename="${safe}"; filename*=UTF-8''${encodeURIComponent(originalName)}`,
+    })
+  }
+
   static async delete(fileKey: string): Promise<void> {
     const disk = drive.use('r2')
     await disk.delete(fileKey)

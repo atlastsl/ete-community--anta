@@ -9,6 +9,7 @@ import ActionType from '#enums/action_type'
 import AdminActivityLog from '#models/admin_activity_log'
 import ActivityLogService from '#services/activity_log_service'
 import ProductionService from '#services/production_service'
+import StatsService from '#services/stats_service'
 import { draftProductionValidator } from '#validators/admin/production_validator'
 
 const PER_PAGE = 20
@@ -113,8 +114,17 @@ export default class ProductionsController {
       ? { email: lastPublish.adminUser?.email ?? null, at: lastPublish.createdAt.toISO() ?? '' }
       : null
 
+    // Statistiques par production (FR27) — totaux + évolution 30j + dates clés.
+    const aggregated = await StatsService.productionStats(production.id)
+    const stats = {
+      ...aggregated,
+      firstPublishedAt: production.antaPublishedAt?.toISO() ?? null,
+      lastModifiedAt: production.updatedAt?.toISO() ?? null,
+    }
+
     return inertia.render('admin/Productions/Edit', {
       publishedBy,
+      stats,
       production: {
         id: production.id,
         status: production.status,
