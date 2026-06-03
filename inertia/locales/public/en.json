@@ -99,7 +99,8 @@
     "video_fallback": "Your browser cannot play this video.",
     "audio_fallback": "Your browser cannot play this audio.",
     "download": "Download",
-    "access_source": "Access source"
+    "access_source": "Access source",
+    "fullscreen": "Fullscreen"
   },
   "productions": {
     "heading": "Production catalogue",

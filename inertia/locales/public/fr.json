@@ -99,7 +99,8 @@
     "video_fallback": "Votre navigateur ne peut pas lire cette vidéo.",
     "audio_fallback": "Votre navigateur ne peut pas lire cet audio.",
     "download": "Télécharger",
-    "access_source": "Accéder à la source"
+    "access_source": "Accéder à la source",
+    "fullscreen": "Plein écran"
   },
   "productions": {
     "heading": "Catalogue des productions",
