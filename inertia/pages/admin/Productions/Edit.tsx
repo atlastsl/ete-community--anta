@@ -9,6 +9,7 @@ import ProductionForm, {
   type ProductionSuggestions,
 } from '~/components/admin/ProductionForm'
 import ProductionFormActions from '~/components/admin/ProductionFormActions'
+import ProductionStats, { type ProductionStatsData } from '~/components/admin/ProductionStats'
 import { type ProductionFileRow } from '~/components/admin/FileUploader'
 import { type ProductionLinkRow } from '~/components/admin/LinkManager'
 import { isAttachmentSatisfied } from '~/lib/production_completion'
@@ -22,6 +23,7 @@ type Props = {
   links: ProductionLinkRow[]
   suggestions: ProductionSuggestions
   publishedBy: { email: string | null; at: string } | null
+  stats: ProductionStatsData
 }
 
 export default function AdminProductionsEdit({
@@ -30,6 +32,7 @@ export default function AdminProductionsEdit({
   links,
   suggestions,
   publishedBy,
+  stats,
 }: Props) {
   const { t, i18n } = useTranslation()
   const { id, status, ...formData } = production
@@ -60,6 +63,10 @@ export default function AdminProductionsEdit({
         </p>
       )}
 
+      <div className="mt-6">
+        <ProductionStats stats={stats} />
+      </div>
+
       <form onSubmit={handleSubmit} className="mt-6">
         <ProductionForm
           data={data}
@@ -75,6 +82,7 @@ export default function AdminProductionsEdit({
           isComplete={isComplete}
           processing={processing}
           productionId={id}
+          status={status}
           saveLabelKey="productions.form.save"
         />
       </form>

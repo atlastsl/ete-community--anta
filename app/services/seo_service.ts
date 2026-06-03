@@ -81,7 +81,33 @@ export default class SeoService {
     }
   }
 
-  // Epic 6 — page détail : `static forProduction(locale, production): MetaTags`
-  // renverra `ogType: 'article'` + titre/description issus de la production,
-  // en réutilisant le même mécanisme (prop `meta` + rendu edge).
+  /**
+   * Meta de la page détail d'une production (FR36). `ogType: 'article'`.
+   * Titre = `{titre} — Anta` ; description = auteurs + extrait du résumé (~160 car.).
+   * Accepte une forme minimale (pas le modèle complet) pour rester testable sans BDD.
+   */
+  static forProduction(
+    locale: Locale,
+    production: { title: string; summary?: string | null; authors?: string[] | null }
+  ): MetaTags {
+    const { name } = SITE[locale]
+    const title = `${production.title} — ${name}`
+
+    const authors = (production.authors ?? []).filter(Boolean)
+    const byline = authors.length > 0 ? authors.join(', ') : null
+    const summary = production.summary?.trim() ?? ''
+    const excerpt = summary.length > 160 ? `${summary.slice(0, 157).trimEnd()}…` : summary
+    const composed = [byline, excerpt].filter(Boolean).join(' — ') || SITE[locale].description
+    // Plafond meta description (~200) : le byline peut être long (multi-auteurs).
+    const description = composed.length > 200 ? `${composed.slice(0, 197).trimEnd()}…` : composed
+
+    return {
+      title,
+      description,
+      ogTitle: production.title,
+      ogDescription: description,
+      ogType: 'article',
+      locale,
+    }
+  }
 }

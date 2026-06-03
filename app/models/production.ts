@@ -1,4 +1,4 @@
-import { BaseModel, column, hasMany, belongsTo } from '@adonisjs/lucid/orm'
+import { BaseModel, column, hasMany, belongsTo, beforeCreate } from '@adonisjs/lucid/orm'
 import type { HasMany, BelongsTo } from '@adonisjs/lucid/types/relations'
 import { DateTime } from 'luxon'
 import type { ProductionStatus } from '#enums/production_status'
@@ -8,6 +8,7 @@ import ProductionFile from '#models/production_file'
 import ProductionLink from '#models/production_link'
 import StatsView from '#models/stats_view'
 import StatsDownload from '#models/stats_download'
+import ProductionService from '#services/production_service'
 
 export default class Production extends BaseModel {
   @column({ isPrimary: true })
@@ -15,6 +16,21 @@ export default class Production extends BaseModel {
 
   @column()
   declare title: string
+
+  /** URL publique lisible (`/productions/:slug`). Unique. Généré à la création, jamais modifié. */
+  @column()
+  declare slug: string
+
+  /**
+   * Génère un slug unique à la création si non déjà fourni (admin, seeder via modèle, tests).
+   * Le seeder de démo (multiInsert raw) pose le slug lui-même — ce hook ne s'y applique pas.
+   */
+  @beforeCreate()
+  static async assignSlug(production: Production) {
+    if (!production.slug) {
+      production.slug = await ProductionService.generateUniqueSlug(production.title)
+    }
+  }
 
   @column()
   declare summary: string | null

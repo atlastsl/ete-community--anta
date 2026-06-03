@@ -16,9 +16,11 @@ export default function PublicLayout({ children }: { children: ReactElement<Data
   }, [url])
 
   useEffect(() => {
-    if (flash?.error) toast.error(flash.error)
-    if (flash?.success) toast.success(flash.success)
-  }, [flash?.error, flash?.success])
+    // Les flashs serveur sont des clés i18n (ex. `productions.download_unavailable`) → traduire
+    // (defaultValue = la valeur brute si ce n'est pas une clé connue). Aligné sur AdminLayout.
+    if (flash?.error) toast.error(t(flash.error, { defaultValue: flash.error }))
+    if (flash?.success) toast.success(t(flash.success, { defaultValue: flash.success }))
+  }, [flash?.error, flash?.success, t])
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-stone-900">

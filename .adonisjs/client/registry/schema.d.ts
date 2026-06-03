@@ -31,6 +31,30 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/public/productions_controller').default['index']>>>
     }
   }
+  'production.show': {
+    methods: ["GET","HEAD"]
+    pattern: '/productions/:slug'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { slug: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/public/productions_controller').default['show']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/public/productions_controller').default['show']>>>
+    }
+  }
+  'production.download': {
+    methods: ["GET","HEAD"]
+    pattern: '/productions/:slug/files/:fileId/download'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue, ParamValue]
+      params: { slug: ParamValue; fileId: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/public/productions_controller').default['download']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/public/productions_controller').default['download']>>>
+    }
+  }
   'privacy-policy': {
     methods: ["GET","HEAD"]
     pattern: '/privacy-policy'
@@ -41,6 +65,18 @@ export interface Registry {
       query: {}
       response: ExtractResponse<Awaited<ReturnType<import('#controllers/public/pages_controller').default['privacy']>>>
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/public/pages_controller').default['privacy']>>>
+    }
+  }
+  'stats.view': {
+    methods: ["POST"]
+    pattern: '/stats/view'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/public/stats_controller').default['view']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/public/stats_controller').default['view']>>>
     }
   }
   'new_account.create': {
@@ -389,6 +425,18 @@ export interface Registry {
       query: {}
       response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/users_controller').default['destroy']>>>
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/users_controller').default['destroy']>>>
+    }
+  }
+  'admin.activity': {
+    methods: ["GET","HEAD"]
+    pattern: '/admin/activity'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/activity_logs_controller').default['index']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/activity_logs_controller').default['index']>>>
     }
   }
 }

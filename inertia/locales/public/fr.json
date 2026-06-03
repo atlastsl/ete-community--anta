@@ -67,13 +67,48 @@
     "downloads": "{{count}} téléchargements",
     "published_at": "Publié le {{date}}"
   },
+  "production_detail": {
+    "breadcrumb_label": "Fil d'Ariane",
+    "breadcrumb_home": "Accueil",
+    "breadcrumb_productions": "Productions",
+    "summary": "Résumé",
+    "files": "Fichiers",
+    "external_links": "Liens externes",
+    "category": "Catégorie",
+    "domain": "Domaine",
+    "subdomain": "Sous-domaine(s)",
+    "language": "Langue",
+    "country": "Pays de publication",
+    "work_published_at": "Date de publication",
+    "license_label": "Licence",
+    "license": {
+      "member": "Réservé aux membres",
+      "free_license": "Licence libre",
+      "external_link": "Lien externe"
+    },
+    "journal": "Journal / Revue",
+    "publisher": "Éditeur",
+    "identifier": "ISBN / DOI / ISSN",
+    "institution": "Institution",
+    "tags": "Mots-clés"
+  },
+  "media": {
+    "pdf_viewer_title": "Lecteur PDF : {{name}}",
+    "open_document": "Ouvrir le document",
+    "unavailable": "Aperçu indisponible",
+    "video_fallback": "Votre navigateur ne peut pas lire cette vidéo.",
+    "audio_fallback": "Votre navigateur ne peut pas lire cet audio.",
+    "download": "Télécharger",
+    "access_source": "Accéder à la source"
+  },
   "productions": {
     "heading": "Catalogue des productions",
     "results_count": "{{count}} résultat(s)",
     "no_results": "Aucune production trouvée.",
     "no_results_for": "Aucune production trouvée pour « {{term}} »",
     "reset_filters": "Réinitialiser les filtres",
-    "approximate_notice": "Aucun résultat exact pour « {{term}} ». Voici des productions proches :"
+    "approximate_notice": "Aucun résultat exact pour « {{term}} ». Voici des productions proches :",
+    "download_unavailable": "Ce fichier n'est temporairement pas disponible."
   },
   "sort": {
     "label": "Trier par",

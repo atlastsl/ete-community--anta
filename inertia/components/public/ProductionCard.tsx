@@ -4,6 +4,7 @@ import { Eye, Download, Calendar } from 'lucide-react'
 
 export type ProductionCardData = {
   id: string
+  slug: string
   title: string
   authors: string[]
   category?: string | null
@@ -22,7 +23,7 @@ export default function ProductionCard({
   variant?: 'grid' | 'list'
 }) {
   const { t, i18n } = useTranslation()
-  const { id, title, authors, category, domain, summary, viewsCount, downloadsCount, publishedAt } =
+  const { slug, title, authors, category, domain, summary, viewsCount, downloadsCount, publishedAt } =
     production
 
   const dateLabel = publishedAt
@@ -34,7 +35,7 @@ export default function ProductionCard({
     : null
 
   const titleLink = (
-    <Link href={`/productions/${id}`} className="hover:text-green-700">
+    <Link href={`/productions/${slug}`} className="hover:text-green-700">
       {title}
     </Link>
   )

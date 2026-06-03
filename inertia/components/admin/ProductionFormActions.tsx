@@ -8,8 +8,10 @@ type Props = {
   /** Tous les champs requis remplis + attachement satisfait (CompletionIndicator vert). */
   isComplete: boolean
   processing: boolean
-  /** Présent uniquement en édition (Story 4.7) : active le bouton "Publier". */
+  /** Présent uniquement en édition (Story 4.7) : active les actions "Publier" / "Dépublier". */
   productionId?: string
+  /** Statut courant (édition uniquement). 'published' → action "Dépublier" au lieu de "Publier". */
+  status?: 'draft' | 'published' | 'unpublished'
   /** Libellé du bouton submit : "Enregistrer brouillon" (création) ou "Enregistrer" (édition). */
   saveLabelKey?: string
 }
@@ -17,30 +19,59 @@ type Props = {
 /**
  * Barre d'actions du formulaire de production (UX-DR16).
  *
- * Hiérarchie des boutons : tant que la production n'est pas publiable, "Enregistrer
- * brouillon" est primaire (vert) et "Publier" est désactivé. Dès que c'est publiable
- * (vert + une production existante), "Publier" devient primaire et "Enregistrer
- * brouillon" passe secondaire. Jamais deux primaires simultanés.
+ * - Production PUBLIÉE → "Enregistrer" (primaire) + "Dépublier" (secondaire).
+ * - Production publiable (complète + existante, non publiée) → "Publier" (primaire) + "Enregistrer".
+ * - Sinon → "Enregistrer" (primaire) + "Publier" désactivé.
+ * Jamais deux primaires simultanés ; jamais "Publier" sur une production déjà publiée.
  *
- * "Enregistrer brouillon" = bouton submit du formulaire parent.
+ * "Enregistrer" = bouton submit du formulaire parent.
  */
 export default function ProductionFormActions({
   isComplete,
   processing,
   productionId,
+  status,
   saveLabelKey = 'productions.form.save_draft',
 }: Props) {
   const { t } = useTranslation()
-  const canPublish = isComplete && !!productionId
+  const isPublished = status === 'published'
+  // On ne propose "Publier" que pour une production existante, complète ET non déjà publiée.
+  const canPublish = isComplete && !!productionId && !isPublished
 
   function handlePublish() {
     if (!productionId) return
     router.post(`/admin/productions/${productionId}/publish`, {}, { preserveScroll: true })
   }
 
+  function handleUnpublish() {
+    if (!productionId) return
+    router.post(`/admin/productions/${productionId}/unpublish`, {}, { preserveScroll: true })
+  }
+
   return (
     <div className="mt-8 flex items-center gap-3">
-      {canPublish ? (
+      {isPublished ? (
+        // Production publiée : enregistrer les modifications (primaire) + dépublier (secondaire).
+        <>
+          <Button
+            type="submit"
+            disabled={processing}
+            className="bg-green-700 hover:bg-green-800 text-white"
+          >
+            {processing && <Loader2 className="mr-2 size-4 animate-spin" />}
+            {t(saveLabelKey)}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleUnpublish}
+            disabled={processing}
+            className="border-amber-700 text-amber-700 hover:bg-amber-50"
+          >
+            {t('productions.actions.unpublish')}
+          </Button>
+        </>
+      ) : canPublish ? (
         <>
           <Button
             type="button"

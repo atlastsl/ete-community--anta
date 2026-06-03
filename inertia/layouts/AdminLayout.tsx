@@ -4,7 +4,7 @@ import { Link } from '@adonisjs/inertia/react'
 import { toast, Toaster } from 'sonner'
 import { ReactElement, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { BarChart3, FolderOpen, LogOut, Users } from 'lucide-react'
+import { BarChart3, FolderOpen, LogOut, ScrollText, Users } from 'lucide-react'
 import { Badge } from '~/components/ui/badge'
 import { notify } from '~/lib/notify'
 import { cn } from '~/lib/utils'
@@ -20,6 +20,7 @@ const NAV_ITEMS: NavItem[] = [
   { labelKey: 'nav.productions', href: '/admin/productions', icon: FolderOpen },
   { labelKey: 'nav.statistics', href: '/admin/stats', icon: BarChart3 },
   { labelKey: 'nav.users', href: '/admin/users', icon: Users, superAdminOnly: true },
+  { labelKey: 'nav.activity', href: '/admin/activity', icon: ScrollText, superAdminOnly: true },
 ]
 
 export default function AdminLayout({ children }: { children: ReactElement }) {

@@ -3,7 +3,8 @@
     "productions": "Productions",
     "statistics": "Statistics",
     "users": "Users",
-    "logout": "Sign out"
+    "logout": "Sign out",
+    "activity": "Activity"
   },
   "actions": {
     "save": "Save",
@@ -148,6 +149,17 @@
     "search_placeholder": "Search a production…",
     "last_published_by": "Published by {{email}} on {{date}}",
     "unknown_admin": "unknown administrator",
+    "stats": {
+      "heading": "Statistics",
+      "views": "Views",
+      "downloads": "Downloads",
+      "first_published": "First published",
+      "last_modified": "Last modified",
+      "evolution_30d": "Views — last 30 days",
+      "empty": "No statistics available for this production.",
+      "day_views": "{{date}}: {{count}} view(s)",
+      "date": "Date"
+    },
     "filter": {
       "label": "Filter by status",
       "all": "All statuses",
@@ -271,6 +283,41 @@
         "password_too_long": "Password is too long.",
         "confirmation_mismatch": "Passwords do not match."
       }
+    }
+  },
+  "stats": {
+    "heading": "Statistics",
+    "total_published": "Published productions",
+    "total_views": "Total views",
+    "total_downloads": "Total downloads",
+    "top_viewed": "Most viewed",
+    "top_downloaded": "Most downloaded",
+    "col_title": "Title",
+    "col_views": "Views",
+    "col_downloads": "Downloads",
+    "col_date": "Date",
+    "evolution_30d": "Evolution — last 30 days",
+    "empty": "No data available for this period."
+  },
+  "activity": {
+    "heading": "Activity logs",
+    "filter_admin": "Administrator",
+    "filter_action": "Action type",
+    "all": "All",
+    "clear": "Reset",
+    "col_admin": "Administrator",
+    "col_action": "Action",
+    "col_resource": "Resource",
+    "col_date": "Date",
+    "empty": "No action recorded.",
+    "action": {
+      "login": "Login",
+      "create": "Create",
+      "update": "Update",
+      "publish": "Publish",
+      "unpublish": "Unpublish",
+      "delete": "Delete",
+      "password_reset": "Password reset"
     }
   }
 }

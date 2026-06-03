@@ -1,5 +1,6 @@
 import { test } from '@japa/runner'
 import { DateTime } from 'luxon'
+import db from '@adonisjs/lucid/services/db'
 import Production from '#models/production'
 import ProductionService from '#services/production_service'
 
@@ -82,5 +83,45 @@ test.group('ProductionService | getMissingForPublish', () => {
       true
     )
     assert.lengthOf(missing, 0)
+  })
+})
+
+test.group('ProductionService | generateSlug', () => {
+  test('retire les accents et met en minuscules', ({ assert }) => {
+    assert.equal(ProductionService.generateSlug('Étude sur l’Économie'), 'etude-sur-l-economie')
+  })
+
+  test('remplace ponctuation/espaces par des tirets, sans tirets en bordure', ({ assert }) => {
+    assert.equal(ProductionService.generateSlug('  Hello,   World!  '), 'hello-world')
+  })
+
+  test('titre vide ou non-alphanumérique → fallback', ({ assert }) => {
+    assert.equal(ProductionService.generateSlug(''), 'production')
+    assert.equal(ProductionService.generateSlug('!!! ??? ...'), 'production')
+  })
+})
+
+test.group('ProductionService | generateUniqueSlug', (group) => {
+  group.each.setup(async () => {
+    await db.beginGlobalTransaction()
+    return () => db.rollbackGlobalTransaction()
+  })
+
+  test('slug libre → slug de base', async ({ assert }) => {
+    const slug = await ProductionService.generateUniqueSlug('Un Titre Vraiment Unique 12345')
+    assert.equal(slug, 'un-titre-vraiment-unique-12345')
+  })
+
+  test('collision → suffixe incrémenté', async ({ assert }) => {
+    await Production.create({
+      title: 'Titre En Double XYZ',
+      authors: [],
+      tags: [],
+      subdomain: [],
+      licenseStatus: 'member',
+      status: 'draft',
+    })
+    const slug = await ProductionService.generateUniqueSlug('Titre En Double XYZ')
+    assert.equal(slug, 'titre-en-double-xyz-2')
   })
 })

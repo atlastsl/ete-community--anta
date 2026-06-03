@@ -13,7 +13,15 @@ import router from '@adonisjs/core/services/router'
 
 router.get('/', [controllers.public.Home, 'index']).as('home')
 router.get('/productions', [controllers.public.Productions, 'index']).as('productions')
+// Détail par slug — APRÈS le listing pour éviter tout shadowing de `/productions`.
+router.get('/productions/:slug', [controllers.public.Productions, 'show']).as('production.show')
+router
+  .get('/productions/:slug/files/:fileId/download', [controllers.public.Productions, 'download'])
+  .as('production.download')
 router.get('/privacy-policy', [controllers.public.Pages, 'privacy']).as('privacy-policy')
+
+// Beacon de vue (FR25) — public, exempté de CSRF dans config/shield.ts (fire-and-forget).
+router.post('/stats/view', [controllers.public.Stats, 'view']).as('stats.view')
 
 // --- Routes legacy (starter AdonisJS) ---
 // Conservées pour compatibilité ; remplacées par /admin/* à partir de l'Epic 2.
@@ -103,6 +111,7 @@ router
             router
               .delete('users/:id', [controllers.admin.Users, 'destroy'])
               .as('admin.users.destroy')
+            router.get('activity', [controllers.admin.ActivityLogs, 'index']).as('admin.activity')
           })
           .use(middleware.superAdmin())
       })

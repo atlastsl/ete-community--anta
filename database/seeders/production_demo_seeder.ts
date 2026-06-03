@@ -2,6 +2,7 @@ import { BaseSeeder } from '@adonisjs/lucid/seeders'
 import db from '@adonisjs/lucid/services/db'
 import { DateTime } from 'luxon'
 import Production from '#models/production'
+import ProductionService from '#services/production_service'
 
 /**
  * Seeder de DÉMO (QA) — 300 productions : 250 publiées, 30 dépubliées, 20 brouillons.
@@ -109,8 +110,12 @@ function buildRow(i: number, status: Row['status']): Record<string, unknown> {
   const antaPublishedAt =
     isPublished || isUnpublished ? DateTime.now().minus({ days: randInt(1, 720) }) : null
 
+  // Le `(vol. i+1)` rend chaque titre unique → slug unique sans collision (i unique sur 0..299).
+  const title = `${pick(TITLE_A)} ${pick(TITLE_B)} (vol. ${i + 1})`
+
   return {
-    title: `${pick(TITLE_A)} ${pick(TITLE_B)} (vol. ${i + 1})`,
+    title,
+    slug: ProductionService.generateSlug(title),
     summary: `Document académique portant sur ${pick(SUBDOMAINS).toLowerCase()}. Ressource de référence pour les chercheurs et étudiants. Réf. ${i + 1}.`,
     authors: JSON.stringify(authors),
     tags: JSON.stringify([pick(SUBDOMAINS), pick(DOMAINS)]),

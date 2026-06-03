@@ -65,3 +65,33 @@ test.group('SeoService | listing', () => {
     assert.include(metaEn.title, 'topology')
   })
 })
+
+test.group('SeoService | forProduction', () => {
+  test('ogType article + titre/description issus de la production', ({ assert }) => {
+    const meta = SeoService.forProduction('fr', {
+      title: 'La Topologie Algébrique',
+      summary: 'Un ouvrage de référence sur la topologie.',
+      authors: ['Cheikh Anta Diop'],
+    })
+    assert.equal(meta.ogType, 'article')
+    assert.include(meta.title, 'La Topologie Algébrique')
+    assert.equal(meta.ogTitle, 'La Topologie Algébrique')
+    assert.include(meta.description, 'Cheikh Anta Diop')
+    assert.include(meta.description, 'topologie')
+  })
+
+  test('résumé long tronqué à ~160 caractères', ({ assert }) => {
+    const meta = SeoService.forProduction('fr', {
+      title: 'T',
+      summary: 'x'.repeat(300),
+      authors: [],
+    })
+    assert.isBelow(meta.description.length, 200)
+  })
+
+  test('sans résumé ni auteur → description de repli', ({ assert }) => {
+    const meta = SeoService.forProduction('en', { title: 'T', summary: null, authors: [] })
+    assert.isNotEmpty(meta.description)
+    assert.equal(meta.locale, 'en')
+  })
+})

@@ -18,11 +18,29 @@ const routes = {
     tokens: [{"old":"/productions","type":0,"val":"productions","end":""}],
     types: placeholder as Registry['productions']['types'],
   },
+  'production.show': {
+    methods: ["GET","HEAD"],
+    pattern: '/productions/:slug',
+    tokens: [{"old":"/productions/:slug","type":0,"val":"productions","end":""},{"old":"/productions/:slug","type":1,"val":"slug","end":""}],
+    types: placeholder as Registry['production.show']['types'],
+  },
+  'production.download': {
+    methods: ["GET","HEAD"],
+    pattern: '/productions/:slug/files/:fileId/download',
+    tokens: [{"old":"/productions/:slug/files/:fileId/download","type":0,"val":"productions","end":""},{"old":"/productions/:slug/files/:fileId/download","type":1,"val":"slug","end":""},{"old":"/productions/:slug/files/:fileId/download","type":0,"val":"files","end":""},{"old":"/productions/:slug/files/:fileId/download","type":1,"val":"fileId","end":""},{"old":"/productions/:slug/files/:fileId/download","type":0,"val":"download","end":""}],
+    types: placeholder as Registry['production.download']['types'],
+  },
   'privacy-policy': {
     methods: ["GET","HEAD"],
     pattern: '/privacy-policy',
     tokens: [{"old":"/privacy-policy","type":0,"val":"privacy-policy","end":""}],
     types: placeholder as Registry['privacy-policy']['types'],
+  },
+  'stats.view': {
+    methods: ["POST"],
+    pattern: '/stats/view',
+    tokens: [{"old":"/stats/view","type":0,"val":"stats","end":""},{"old":"/stats/view","type":0,"val":"view","end":""}],
+    types: placeholder as Registry['stats.view']['types'],
   },
   'new_account.create': {
     methods: ["GET","HEAD"],
@@ -197,6 +215,12 @@ const routes = {
     pattern: '/admin/users/:id',
     tokens: [{"old":"/admin/users/:id","type":0,"val":"admin","end":""},{"old":"/admin/users/:id","type":0,"val":"users","end":""},{"old":"/admin/users/:id","type":1,"val":"id","end":""}],
     types: placeholder as Registry['admin.users.destroy']['types'],
+  },
+  'admin.activity': {
+    methods: ["GET","HEAD"],
+    pattern: '/admin/activity',
+    tokens: [{"old":"/admin/activity","type":0,"val":"admin","end":""},{"old":"/admin/activity","type":0,"val":"activity","end":""}],
+    types: placeholder as Registry['admin.activity']['types'],
   },
 } as const satisfies Record<string, AdonisEndpoint>
 

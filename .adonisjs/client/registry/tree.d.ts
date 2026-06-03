@@ -4,7 +4,14 @@ import type { routes } from './index.ts'
 export interface ApiDefinition {
   home: typeof routes['home']
   productions: typeof routes['productions']
+  production: {
+    show: typeof routes['production.show']
+    download: typeof routes['production.download']
+  }
   privacyPolicy: typeof routes['privacy-policy']
+  stats: {
+    view: typeof routes['stats.view']
+  }
   newAccount: {
     create: typeof routes['new_account.create']
     store: typeof routes['new_account.store']
@@ -49,5 +56,6 @@ export interface ApiDefinition {
       resetPassword: typeof routes['admin.users.reset-password']
       destroy: typeof routes['admin.users.destroy']
     }
+    activity: typeof routes['admin.activity']
   }
 }
