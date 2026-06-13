@@ -25,6 +25,7 @@ import {
 import StatusBadge from '~/components/admin/StatusBadge'
 import Pagination from '~/components/shared/Pagination'
 import { languageLabel } from '~/lib/languages'
+import { taxonomyLabel } from '~/lib/taxonomy'
 
 type ProductionStatus = 'draft' | 'published' | 'unpublished'
 
@@ -181,7 +182,13 @@ export default function AdminProductionsIndex({
               <SelectItem value={ALL_VALUE}>{t(`productions.form.fields.${f.key}`)}</SelectItem>
               {f.options.map((o) => (
                 <SelectItem key={o} value={o}>
-                  {f.key === 'language' ? languageLabel(o) : o}
+                  {f.key === 'language'
+                    ? languageLabel(o)
+                    : f.key === 'category'
+                      ? taxonomyLabel(t, 'categories', o)
+                      : f.key === 'domain'
+                        ? taxonomyLabel(t, 'domains', o)
+                        : o}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -230,7 +237,11 @@ export default function AdminProductionsIndex({
                     <td className="px-4 py-3 text-stone-600">
                       {production.authors.length > 0 ? production.authors.join(', ') : '—'}
                     </td>
-                    <td className="px-4 py-3 text-stone-600">{production.category ?? '—'}</td>
+                    <td className="px-4 py-3 text-stone-600">
+                      {production.category
+                        ? taxonomyLabel(t, 'categories', production.category)
+                        : '—'}
+                    </td>
                     <td className="px-4 py-3">
                       <StatusBadge status={production.status} />
                     </td>

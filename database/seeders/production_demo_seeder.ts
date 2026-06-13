@@ -1,6 +1,7 @@
 import { BaseSeeder } from '@adonisjs/lucid/seeders'
 import db from '@adonisjs/lucid/services/db'
 import { DateTime } from 'luxon'
+import { PRODUCTION_DOMAINS, SUBDOMAINS_BY_DOMAIN } from '#constants/production_taxonomy'
 import Production from '#models/production'
 import ProductionService from '#services/production_service'
 
@@ -19,27 +20,15 @@ import ProductionService from '#services/production_service'
  */
 const MARKER = 'SEED_DEMO'
 
-const CATEGORIES = ['Livre', 'Article', 'Thèse', 'Rapport', 'Mémoire', 'Actes de colloque']
-const DOMAINS = [
-  'Mathématiques',
-  'Informatique',
-  'Biologie',
-  'Histoire',
-  'Économie',
-  'Linguistique',
-]
-const SUBDOMAINS = [
-  'Topologie',
-  'Algèbre',
-  'Intelligence artificielle',
-  'Réseaux',
-  'Génétique',
-  'Écologie',
-  'Histoire médiévale',
-  'Macroéconomie',
-  'Phonétique',
-  'Sociolinguistique',
-]
+const CATEGORIES = [
+  'book',
+  'article',
+  'thesis',
+  'report',
+  'memoir',
+  'conference_proceedings',
+] as const
+const DOMAINS = PRODUCTION_DOMAINS
 const LANGUAGES = ['fr', 'en']
 const COUNTRIES = [
   'Sénégal',
@@ -113,18 +102,19 @@ function buildRow(i: number, status: Row['status']): Record<string, unknown> {
   // Le `(vol. i+1)` rend chaque titre unique → slug unique sans collision (i unique sur 0..299).
   const title = `${pick(TITLE_A)} ${pick(TITLE_B)} (vol. ${i + 1})`
 
+  const domain = pick(DOMAINS)
+  const domainSubs = SUBDOMAINS_BY_DOMAIN[domain]
+  const subPick = pick(domainSubs)
+
   return {
     title,
     slug: ProductionService.generateSlug(title),
-    summary: `Document académique portant sur ${pick(SUBDOMAINS).toLowerCase()}. Ressource de référence pour les chercheurs et étudiants. Réf. ${i + 1}.`,
+    summary: `Document académique portant sur ${subPick.replace(/_/g, ' ')}. Ressource de référence pour les chercheurs et étudiants. Réf. ${i + 1}.`,
     authors: JSON.stringify(authors),
-    tags: JSON.stringify([pick(SUBDOMAINS), pick(DOMAINS)]),
+    tags: JSON.stringify([subPick, domain]),
     category: pick(CATEGORIES),
-    domain: pick(DOMAINS),
-    subdomain: JSON.stringify([
-      pick(SUBDOMAINS),
-      ...(Math.random() < 0.3 ? [pick(SUBDOMAINS)] : []),
-    ]),
+    domain,
+    subdomain: JSON.stringify([subPick, ...(Math.random() < 0.3 ? [pick(domainSubs)] : [])]),
     language: pick(LANGUAGES),
     publication_country: pick(COUNTRIES),
     journal: null,

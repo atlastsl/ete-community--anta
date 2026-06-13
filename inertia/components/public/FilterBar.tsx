@@ -11,6 +11,7 @@ import {
   type Facets,
   type ProductionFilters,
 } from '~/lib/search_query'
+import { facetValueLabel, taxonomyLabel } from '~/lib/taxonomy'
 
 type FilterBarProps = {
   /** Mode homepage : simple liste de catégories liant vers /productions?category=X. */
@@ -51,7 +52,7 @@ export default function FilterBar({
             {facets[dim].map((value) => (
               <FilterChip
                 key={value}
-                label={value}
+                label={facetValueLabel(t, dim, value)}
                 href={`/productions${toggleFilter(search, dim, value)}`}
                 active={isFilterActive(activeFilters, dim, value)}
               />
@@ -83,7 +84,7 @@ export default function FilterBar({
       {categories.map((category) => (
         <FilterChip
           key={category}
-          label={category}
+          label={taxonomyLabel(t, 'categories', category)}
           href={`/productions?category=${encodeURIComponent(category)}`}
           active={category === activeCategory}
         />

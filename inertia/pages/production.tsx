@@ -5,7 +5,9 @@ import { Eye, Download, ExternalLink } from 'lucide-react'
 import { Badge } from '~/components/ui/badge'
 import ViewTracker from '~/components/public/ViewTracker'
 import MediaViewer from '~/components/public/MediaViewer'
+import ShareButton from '~/components/public/ShareButton'
 import { languageLabel } from '~/lib/languages'
+import { taxonomyLabel } from '~/lib/taxonomy'
 import type { SeoMeta } from '~/lib/seo'
 
 type ProductionFile = {
@@ -107,13 +109,16 @@ export default function ProductionShow({ production }: Props) {
         </ol>
       </nav>
 
-      <header className="mt-6">
-        <h1 className="font-display text-3xl leading-tight text-stone-900">{production.title}</h1>
-        {production.authors.length > 0 && (
-          <p className="mt-2 text-stone-600">
-            {t('production_card.by')} {production.authors.join(', ')}
-          </p>
-        )}
+      <header className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0 flex-1">
+          <h1 className="font-display text-3xl leading-tight text-stone-900">{production.title}</h1>
+          {production.authors.length > 0 && (
+            <p className="mt-2 text-stone-600">
+              {t('production_card.by')} {production.authors.join(', ')}
+            </p>
+          )}
+        </div>
+        <ShareButton slug={production.slug} title={production.title} />
       </header>
 
       <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-3">
@@ -196,8 +201,20 @@ export default function ProductionShow({ production }: Props) {
             </div>
 
             <dl className="mt-4">
-              <MetaRow label={t('production_detail.category')} value={production.category} />
-              <MetaRow label={t('production_detail.domain')} value={production.domain} />
+              <MetaRow
+                label={t('production_detail.category')}
+                value={
+                  production.category
+                    ? taxonomyLabel(t, 'categories', production.category)
+                    : null
+                }
+              />
+              <MetaRow
+                label={t('production_detail.domain')}
+                value={
+                  production.domain ? taxonomyLabel(t, 'domains', production.domain) : null
+                }
+              />
               {production.subdomain.length > 0 && (
                 <div className="border-t border-stone-100 py-2">
                   <dt className="text-xs uppercase tracking-wide text-stone-500">
@@ -206,7 +223,7 @@ export default function ProductionShow({ production }: Props) {
                   <dd className="mt-1 flex flex-wrap gap-1.5">
                     {production.subdomain.map((sd) => (
                       <Badge key={sd} variant="outline">
-                        {sd}
+                        {taxonomyLabel(t, 'subdomains', sd)}
                       </Badge>
                     ))}
                   </dd>
@@ -242,6 +259,14 @@ export default function ProductionShow({ production }: Props) {
                 </div>
               </div>
             )}
+
+            <div className="mt-4 border-t border-stone-100 pt-4">
+              <ShareButton
+                slug={production.slug}
+                title={production.title}
+                className="w-full"
+              />
+            </div>
           </div>
         </aside>
       </div>

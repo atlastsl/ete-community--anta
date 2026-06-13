@@ -12,5 +12,6 @@ export type SeoMeta = {
   ogTitle: string
   ogDescription: string
   ogType: string
+  ogUrl?: string
   locale: 'fr' | 'en'
 }

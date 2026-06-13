@@ -1,6 +1,7 @@
 import { Link } from '@adonisjs/inertia/react'
 import { useTranslation } from 'react-i18next'
 import { Eye, Download, Calendar } from 'lucide-react'
+import { taxonomyLabel } from '~/lib/taxonomy'
 
 export type ProductionCardData = {
   id: string
@@ -42,7 +43,12 @@ export default function ProductionCard({
 
   const meta = (category || domain) && (
     <p className="mt-1 text-xs uppercase tracking-wide text-stone-600">
-      {[category, domain].filter(Boolean).join(' · ')}
+      {[
+        category ? taxonomyLabel(t, 'categories', category) : null,
+        domain ? taxonomyLabel(t, 'domains', domain) : null,
+      ]
+        .filter(Boolean)
+        .join(' · ')}
     </p>
   )
 

@@ -66,6 +66,25 @@ test.group('ProductionValidator | draftProductionValidator', () => {
       assert
     )
   })
+
+  test('category valide acceptée', async ({ assert }) => {
+    const out = await draftProductionValidator.validate({ title: 'X', category: 'article' })
+    assert.equal(out.category, 'article')
+  })
+
+  test('category hors enum → rejette', async ({ assert }) => {
+    await expectRejected(
+      () => draftProductionValidator.validate({ title: 'X', category: 'Livre' }),
+      assert
+    )
+  })
+
+  test('domain hors enum → rejette', async ({ assert }) => {
+    await expectRejected(
+      () => draftProductionValidator.validate({ title: 'X', domain: 'Mathématiques' }),
+      assert
+    )
+  })
 })
 
 test.group('ProductionValidator | createLinkValidator', () => {

@@ -8,12 +8,15 @@ type Props = {
   /** Tous les champs requis remplis + attachement satisfait (CompletionIndicator vert). */
   isComplete: boolean
   processing: boolean
-  /** Présent uniquement en édition (Story 4.7) : active les actions "Publier" / "Dépublier". */
+  /** Présent en édition : active les actions "Publier" / "Dépublier". */
   productionId?: string
   /** Statut courant (édition uniquement). 'published' → action "Dépublier" au lieu de "Publier". */
   status?: 'draft' | 'published' | 'unpublished'
   /** Libellé du bouton submit : "Enregistrer brouillon" (création) ou "Enregistrer" (édition). */
   saveLabelKey?: string
+  /** Création : formulaire complet avec attachements en attente → Publier actif. */
+  canPublishOnCreate?: boolean
+  onPublishCreate?: () => void
 }
 
 /**
@@ -32,13 +35,18 @@ export default function ProductionFormActions({
   productionId,
   status,
   saveLabelKey = 'productions.form.save_draft',
+  canPublishOnCreate = false,
+  onPublishCreate,
 }: Props) {
   const { t } = useTranslation()
   const isPublished = status === 'published'
-  // On ne propose "Publier" que pour une production existante, complète ET non déjà publiée.
-  const canPublish = isComplete && !!productionId && !isPublished
+  const canPublish = (isComplete && !!productionId && !isPublished) || canPublishOnCreate
 
   function handlePublish() {
+    if (canPublishOnCreate && onPublishCreate) {
+      onPublishCreate()
+      return
+    }
     if (!productionId) return
     router.post(`/admin/productions/${productionId}/publish`, {}, { preserveScroll: true })
   }
