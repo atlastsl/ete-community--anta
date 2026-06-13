@@ -24,11 +24,7 @@ function canShareData(data: NativeShareData): boolean {
  * Quand `url` est présent, le texte ne doit pas contenir l'URL : Copilot et d'autres
  * cibles concatènent `text` + `url`, ce qui dupliquerait le lien.
  */
-export function pickNativeShareData(
-  title: string,
-  intro: string,
-  url: string
-): NativeShareData {
+export function pickNativeShareData(title: string, intro: string, url: string): NativeShareData {
   const body = buildShareClipboardText(intro, url)
   const candidates: NativeShareData[] = [
     { title, text: intro, url },

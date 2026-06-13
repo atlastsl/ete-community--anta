@@ -54,10 +54,7 @@ test.group('Admin productions create | store brouillon', (group) => {
       .redirects(0)
 
     response.assertStatus(302)
-    assert.match(
-      response.header('location') ?? '',
-      /\/admin\/productions\/[0-9a-f-]+\/edit/
-    )
+    assert.match(response.header('location') ?? '', /\/admin\/productions\/[0-9a-f-]+\/edit/)
 
     const created = await Production.findBy('title', 'Brouillon minimal')
     assert.isNotNull(created)

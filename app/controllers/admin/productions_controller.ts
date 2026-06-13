@@ -10,7 +10,10 @@ import AdminActivityLog from '#models/admin_activity_log'
 import ActivityLogService from '#services/activity_log_service'
 import ProductionService from '#services/production_service'
 import StatsService from '#services/stats_service'
-import { draftProductionValidator, assertProductionTaxonomy } from '#validators/admin/production_validator'
+import {
+  draftProductionValidator,
+  assertProductionTaxonomy,
+} from '#validators/admin/production_validator'
 import { PRODUCTION_CATEGORIES, PRODUCTION_DOMAINS } from '#constants/production_taxonomy'
 
 const PER_PAGE = 20

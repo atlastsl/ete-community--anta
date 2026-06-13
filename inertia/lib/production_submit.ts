@@ -24,16 +24,12 @@ function uploadFile(productionId: string, file: File): Promise<void> {
 
 function createLink(productionId: string, link: PendingProductionLink): Promise<void> {
   return new Promise((resolve, reject) => {
-    router.post(
-      `/admin/productions/${productionId}/links`,
-      link,
-      {
-        preserveScroll: true,
-        preserveState: true,
-        onSuccess: () => resolve(),
-        onError: () => reject(new Error('link_create_failed')),
-      }
-    )
+    router.post(`/admin/productions/${productionId}/links`, link, {
+      preserveScroll: true,
+      preserveState: true,
+      onSuccess: () => resolve(),
+      onError: () => reject(new Error('link_create_failed')),
+    })
   })
 }
 

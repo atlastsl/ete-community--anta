@@ -1,10 +1,7 @@
 import { BaseSeeder } from '@adonisjs/lucid/seeders'
 import db from '@adonisjs/lucid/services/db'
 import { DateTime } from 'luxon'
-import {
-  PRODUCTION_DOMAINS,
-  SUBDOMAINS_BY_DOMAIN,
-} from '#constants/production_taxonomy'
+import { PRODUCTION_DOMAINS, SUBDOMAINS_BY_DOMAIN } from '#constants/production_taxonomy'
 import Production from '#models/production'
 import ProductionService from '#services/production_service'
 
@@ -117,10 +114,7 @@ function buildRow(i: number, status: Row['status']): Record<string, unknown> {
     tags: JSON.stringify([subPick, domain]),
     category: pick(CATEGORIES),
     domain,
-    subdomain: JSON.stringify([
-      subPick,
-      ...(Math.random() < 0.3 ? [pick(domainSubs)] : []),
-    ]),
+    subdomain: JSON.stringify([subPick, ...(Math.random() < 0.3 ? [pick(domainSubs)] : [])]),
     language: pick(LANGUAGES),
     publication_country: pick(COUNTRIES),
     journal: null,
