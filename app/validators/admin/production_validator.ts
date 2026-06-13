@@ -1,6 +1,64 @@
 import vine, { SimpleMessagesProvider } from '@vinejs/vine'
+import { errors } from '@vinejs/vine'
 import LicenseStatus from '#enums/license_status'
 import LinkType from '#enums/link_type'
+import {
+  PRODUCTION_CATEGORIES,
+  PRODUCTION_DOMAINS,
+  allowedSubdomainsForDomain,
+} from '#constants/production_taxonomy'
+
+export type DraftProductionPayload = {
+  title: string
+  summary?: string
+  authors?: string[]
+  tags?: string[]
+  category?: string
+  domain?: string
+  subdomain?: string[]
+  language?: string
+  publicationCountry?: string
+  journal?: string
+  publisher?: string
+  isbnDoiIssn?: string
+  institution?: string
+  licenseStatus?: string
+  workPublishedAt?: string
+}
+
+/** Valide cohérence sous-domaines ↔ domaine (après VineJS). */
+export function assertProductionTaxonomy(data: DraftProductionPayload): void {
+  if (data.category && !(PRODUCTION_CATEGORIES as readonly string[]).includes(data.category)) {
+    throw new errors.E_VALIDATION_ERROR([
+      {
+        field: 'category',
+        message: 'productions.form.errors.category_invalid',
+        rule: 'enum',
+      },
+    ])
+  }
+  if (data.domain && !(PRODUCTION_DOMAINS as readonly string[]).includes(data.domain)) {
+    throw new errors.E_VALIDATION_ERROR([
+      {
+        field: 'domain',
+        message: 'productions.form.errors.domain_invalid',
+        rule: 'enum',
+      },
+    ])
+  }
+  const allowed = new Set(allowedSubdomainsForDomain(data.domain))
+  for (const sub of data.subdomain ?? []) {
+    if (!allowed.has(sub)) {
+      throw new errors.E_VALIDATION_ERROR([
+        {
+          field: 'subdomain',
+          message: 'productions.form.errors.subdomain_invalid',
+          rule: 'enum',
+        },
+      ])
+    }
+  }
+}
 
 /**
  * Validateur d'enregistrement BROUILLON (Story 4.3).
@@ -15,8 +73,8 @@ export const draftProductionValidator = vine.compile(
     summary: vine.string().trim().optional(),
     authors: vine.array(vine.string().trim()).optional(),
     tags: vine.array(vine.string().trim()).optional(),
-    category: vine.string().trim().maxLength(255).optional(),
-    domain: vine.string().trim().maxLength(255).optional(),
+    category: vine.enum([...PRODUCTION_CATEGORIES]).optional(),
+    domain: vine.enum([...PRODUCTION_DOMAINS]).optional(),
     subdomain: vine.array(vine.string().trim()).optional(),
     language: vine.string().trim().maxLength(255).optional(),
     publicationCountry: vine.string().trim().maxLength(255).optional(),

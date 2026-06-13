@@ -11,6 +11,7 @@ import ProductionStatus from '#enums/production_status'
 import SeoService from '#services/seo_service'
 import FileStorageService from '#services/file_storage_service'
 import StatsService from '#services/stats_service'
+import env from '#start/env'
 
 /** Sérialisation plate d'une production pour les ProductionCard. */
 function serialize(p: Production) {
@@ -186,7 +187,7 @@ export default class ProductionsController {
 
     return inertia.render('production', {
       production: { ...serializeDetail(production), files },
-      meta: SeoService.forProduction(locale, production),
+      meta: SeoService.forProduction(locale, production, env.get('APP_URL')),
     })
   }
 

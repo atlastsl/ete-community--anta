@@ -18,11 +18,18 @@ export type ProductionFileRow = {
 }
 
 type Props = {
-  productionId: string
+  productionId?: string
   files: ProductionFileRow[]
+  pendingFiles?: File[]
+  onPendingFilesChange?: (files: File[]) => void
 }
 
-export default function FileUploader({ productionId, files }: Props) {
+export default function FileUploader({
+  productionId,
+  files,
+  pendingFiles = [],
+  onPendingFilesChange,
+}: Props) {
   const { t } = useTranslation()
   const inputRef = useRef<HTMLInputElement>(null)
   const [isDragOver, setIsDragOver] = useState(false)
@@ -32,14 +39,19 @@ export default function FileUploader({ productionId, files }: Props) {
   // Erreur serveur (ex. MIME falsifié rejeté par FilesController) — AC5.
   const serverFileError = (usePage().props.errors as Record<string, string> | undefined)?.file
 
-  function upload(file: File) {
+  function queueOrUpload(file: File) {
     setClientError(null)
-    if (progress !== null) return // upload déjà en cours
+    if (progress !== null) return
 
-    // Validation client AVANT tout envoi réseau (NFR3)
     const error = validateFileConstraints(file)
     if (error) {
       setClientError(t(`productions.files.errors.${error}`))
+      return
+    }
+
+    if (!productionId) {
+      onPendingFilesChange?.([...pendingFiles, file])
+      if (inputRef.current) inputRef.current.value = ''
       return
     }
 
@@ -56,6 +68,14 @@ export default function FileUploader({ productionId, files }: Props) {
         },
       }
     )
+  }
+
+  function upload(file: File) {
+    queueOrUpload(file)
+  }
+
+  function removePending(index: number) {
+    onPendingFilesChange?.(pendingFiles.filter((_, i) => i !== index))
   }
 
   function handleDrop(e: React.DragEvent) {
@@ -76,10 +96,14 @@ export default function FileUploader({ productionId, files }: Props) {
   }
 
   function handleDelete(fileId: string) {
+    if (!productionId) return
     router.delete(`/admin/productions/${productionId}/files/${fileId}`, {
       preserveScroll: true,
     })
   }
+
+  const allPending = !productionId && pendingFiles.length > 0
+  const hasList = files.length > 0 || allPending
 
   const isUploading = progress !== null
   const acceptAttr = ALLOWED_EXTENSIONS.map((e) => `.${e}`).join(',')
@@ -141,8 +165,28 @@ export default function FileUploader({ productionId, files }: Props) {
         )}
       </div>
 
-      {files.length > 0 && (
+      {hasList && (
         <ul className="divide-y divide-stone-100 rounded-lg border border-stone-200">
+          {pendingFiles.map((file, index) => (
+            <li key={`pending-${file.name}-${index}`} className="flex items-center justify-between px-4 py-3">
+              <span className="flex items-center gap-2 text-sm text-stone-700">
+                <FileIcon className="size-4 text-stone-400" aria-hidden />
+                <span className="font-medium">{file.name}</span>
+                <span className="text-stone-400">({formatBytes(file.size)})</span>
+                <span className="text-xs text-amber-600">{t('productions.files.pending')}</span>
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                onClick={() => removePending(index)}
+              >
+                <Trash2 className="size-4" aria-hidden />
+                <span className="sr-only">{t('productions.files.delete')}</span>
+              </Button>
+            </li>
+          ))}
           {files.map((file) => (
             <li key={file.id} className="flex items-center justify-between px-4 py-3">
               <span className="flex items-center gap-2 text-sm text-stone-700">

@@ -94,4 +94,13 @@ test.group('SeoService | forProduction', () => {
     assert.isNotEmpty(meta.description)
     assert.equal(meta.locale, 'en')
   })
+
+  test('avec slug + APP_URL → ogUrl canonique', ({ assert }) => {
+    const meta = SeoService.forProduction(
+      'fr',
+      { title: 'Mon article', slug: 'mon-article' },
+      'https://anta.example.com/'
+    )
+    assert.equal(meta.ogUrl, 'https://anta.example.com/productions/mon-article')
+  })
 })

@@ -8,6 +8,10 @@ type ChipInputProps = {
   onChange: (value: string[]) => void
   onBlur?: () => void
   suggestions?: string[]
+  /** Si défini, seules ces valeurs peuvent être ajoutées (clés taxonomie). */
+  allowedValues?: readonly string[]
+  /** Affichage des chips (ex. libellé i18n). La valeur stockée reste la clé. */
+  formatChip?: (key: string) => string
   placeholder?: string
   invalid?: boolean
   describedBy?: string
@@ -16,7 +20,7 @@ type ChipInputProps = {
 /**
  * Saisie multi-valeurs sous forme de chips. Entrée (ou virgule) valide une valeur ;
  * Retour arrière sur champ vide retire la dernière. Suggestions natives via `<datalist>`
- * alimenté par les valeurs existantes en BDD.
+ * ou liste contrainte via `allowedValues`.
  */
 export default function ChipInput({
   id,
@@ -24,6 +28,8 @@ export default function ChipInput({
   onChange,
   onBlur,
   suggestions = [],
+  allowedValues,
+  formatChip,
   placeholder,
   invalid,
   describedBy,
@@ -33,9 +39,22 @@ export default function ChipInput({
   const reactId = useId()
   const listId = `${id ?? reactId}-suggestions`
 
-  function addChip(raw: string) {
+  function resolveKey(raw: string): string | null {
     const v = raw.trim()
-    if (v && !value.includes(v)) onChange([...value, v])
+    if (!v) return null
+    if (allowedValues) {
+      if (allowedValues.includes(v)) return v
+      const byLabel = allowedValues.find(
+        (key) => formatChip?.(key).toLowerCase() === v.toLowerCase()
+      )
+      return byLabel ?? null
+    }
+    return v
+  }
+
+  function addChip(raw: string) {
+    const key = resolveKey(raw)
+    if (key && !value.includes(key)) onChange([...value, key])
     setDraft('')
   }
 
@@ -48,7 +67,8 @@ export default function ChipInput({
     }
   }
 
-  const available = suggestions.filter((s) => !value.includes(s))
+  const optionSource = allowedValues ?? suggestions
+  const available = optionSource.filter((s) => !value.includes(s))
 
   return (
     <div className="mt-1">
@@ -62,11 +82,13 @@ export default function ChipInput({
             key={chip}
             className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-sm text-green-800"
           >
-            {chip}
+            {formatChip ? formatChip(chip) : chip}
             <button
               type="button"
               onClick={() => onChange(value.filter((_, i) => i !== index))}
-              aria-label={t('productions.form.remove_chip', { label: chip })}
+              aria-label={t('productions.form.remove_chip', {
+                label: formatChip ? formatChip(chip) : chip,
+              })}
               className="text-green-700 hover:text-green-900"
             >
               <X className="size-3" aria-hidden />
@@ -75,7 +97,7 @@ export default function ChipInput({
         ))}
         <input
           id={id}
-          list={available.length > 0 ? listId : undefined}
+          list={available.length > 0 && !allowedValues ? listId : undefined}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={handleKeyDown}
@@ -89,7 +111,21 @@ export default function ChipInput({
           className="min-w-[8rem] flex-1 bg-transparent text-sm outline-none"
         />
       </div>
-      {available.length > 0 && (
+      {allowedValues && available.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {available.map((key) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => addChip(key)}
+              className="rounded-full border border-stone-200 px-2 py-0.5 text-xs text-stone-600 hover:border-green-600 hover:text-green-800"
+            >
+              + {formatChip ? formatChip(key) : key}
+            </button>
+          ))}
+        </div>
+      )}
+      {available.length > 0 && !allowedValues && (
         <datalist id={listId}>
           {available.map((s) => (
             <option key={s} value={s} />
