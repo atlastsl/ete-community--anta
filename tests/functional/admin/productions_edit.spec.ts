@@ -26,8 +26,8 @@ async function createProduction(overrides: Partial<Production> = {}): Promise<Pr
     authors: ['A'],
     tags: ['t'],
     category: 'article',
-    domain: 'Maths',
-    subdomain: ['Topo'],
+    domain: 'mathematics',
+    subdomain: ['topology'],
     language: 'fr',
     publicationCountry: 'SN',
     licenseStatus: 'member',
@@ -65,9 +65,9 @@ test.group('Admin productions edit | page + update', (group) => {
         summary: 'Nouveau résumé',
         authors: ['B'],
         tags: ['x'],
-        category: 'livre',
-        domain: 'Physique',
-        subdomain: ['Quantique'],
+        category: 'book',
+        domain: 'computer_science',
+        subdomain: ['networks'],
         language: 'en',
         publicationCountry: 'FR',
         licenseStatus: 'free_license',
@@ -81,7 +81,7 @@ test.group('Admin productions edit | page + update', (group) => {
 
     await production.refresh()
     assert.equal(production.title, 'Nouveau titre')
-    assert.equal(production.category, 'livre')
+    assert.equal(production.category, 'book')
     assert.deepEqual(production.authors, ['B'])
     // updated_at maintenu par Lucid (autoUpdate) lors du save (FR35)
     assert.isNotNull(production.updatedAt)
@@ -120,8 +120,8 @@ test.group('Admin productions edit | page + update', (group) => {
         authors: ['A'],
         tags: ['t'],
         category: 'article',
-        domain: 'Maths',
-        subdomain: ['Topo'],
+        domain: 'mathematics',
+        subdomain: ['topology'],
         language: 'fr',
         publicationCountry: 'SN',
         licenseStatus: 'member',

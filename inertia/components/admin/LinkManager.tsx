@@ -13,6 +13,8 @@ import {
   SelectValue,
 } from '~/components/ui/select'
 
+import type { PendingProductionLink } from '~/lib/production_submit'
+
 export type ProductionLinkRow = {
   id: string
   url: string
@@ -21,11 +23,18 @@ export type ProductionLinkRow = {
 }
 
 type Props = {
-  productionId: string
+  productionId?: string
   links: ProductionLinkRow[]
+  pendingLinks?: PendingProductionLink[]
+  onPendingLinksChange?: (links: PendingProductionLink[]) => void
 }
 
-export default function LinkManager({ productionId, links }: Props) {
+export default function LinkManager({
+  productionId,
+  links,
+  pendingLinks = [],
+  onPendingLinksChange,
+}: Props) {
   const { t } = useTranslation()
   const [isAdding, setIsAdding] = useState(false)
   const { data, setData, post, processing, errors, reset, clearErrors } = useForm<{
@@ -34,7 +43,31 @@ export default function LinkManager({ productionId, links }: Props) {
     label: string
   }>({ url: '', linkType: 'simple', label: '' })
 
+  const [localError, setLocalError] = useState<string | null>(null)
+
   function submitLink() {
+    if (!productionId) {
+      setLocalError(null)
+      try {
+        const parsed = new URL(data.url)
+        if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error('invalid')
+      } catch {
+        setLocalError(t('productions.links.errors.invalid_url'))
+        return
+      }
+      onPendingLinksChange?.([
+        ...pendingLinks,
+        {
+          url: data.url.trim(),
+          linkType: data.linkType,
+          label: data.label.trim(),
+        },
+      ])
+      reset()
+      setIsAdding(false)
+      return
+    }
+
     post(`/admin/productions/${productionId}/links`, {
       preserveScroll: true,
       onSuccess: () => {
@@ -59,17 +92,49 @@ export default function LinkManager({ productionId, links }: Props) {
   }
 
   function handleDelete(linkId: string) {
+    if (!productionId) return
     router.delete(`/admin/productions/${productionId}/links/${linkId}`, {
       preserveScroll: true,
     })
   }
 
-  const urlError = errors.url ? t(errors.url, { defaultValue: errors.url }) : null
+  function removePending(index: number) {
+    onPendingLinksChange?.(pendingLinks.filter((_, i) => i !== index))
+  }
+
+  const urlError =
+    localError ?? (errors.url ? t(errors.url, { defaultValue: errors.url }) : null)
+  const hasLinks = links.length > 0 || pendingLinks.length > 0
 
   return (
     <div className="space-y-4">
-      {links.length > 0 ? (
+      {hasLinks ? (
         <ul className="divide-y divide-stone-100 rounded-lg border border-stone-200">
+          {pendingLinks.map((link, index) => (
+            <li key={`pending-${link.url}-${index}`} className="flex items-center justify-between gap-3 px-4 py-3">
+              <span className="flex min-w-0 items-center gap-2 text-sm text-stone-700">
+                <Link2 className="size-4 shrink-0 text-stone-400" aria-hidden />
+                <Badge variant="secondary">
+                  {link.linkType === 'embed'
+                    ? t('productions.links.type_embed')
+                    : t('productions.links.type_simple')}
+                </Badge>
+                {link.label && <span className="font-medium">{link.label}</span>}
+                <span className="truncate text-stone-500">{link.url}</span>
+                <span className="text-xs text-amber-600">{t('productions.files.pending')}</span>
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                onClick={() => removePending(index)}
+              >
+                <Trash2 className="size-4" aria-hidden />
+                <span className="sr-only">{t('productions.links.delete')}</span>
+              </Button>
+            </li>
+          ))}
           {links.map((link) => (
             <li key={link.id} className="flex items-center justify-between gap-3 px-4 py-3">
               <span className="flex min-w-0 items-center gap-2 text-sm text-stone-700">

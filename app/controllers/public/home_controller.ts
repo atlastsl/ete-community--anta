@@ -2,6 +2,7 @@ import type { HttpContext } from '@adonisjs/core/http'
 import Production from '#models/production'
 import ProductionStatus from '#enums/production_status'
 import SeoService from '#services/seo_service'
+import { PRODUCTION_CATEGORIES } from '#constants/production_taxonomy'
 
 const SECTION_SIZE = 6
 
@@ -55,16 +56,10 @@ export default class HomeController {
       .orderBy('id', 'asc')
       .limit(SECTION_SIZE)
 
-    const categoryRows = await Production.query()
-      .where('status', ProductionStatus.PUBLISHED)
-      .whereNotNull('category')
-      .distinct('category')
-      .orderBy('category', 'asc')
-
     return inertia.render('home', {
       mostViewed: mostViewedRows.map(serialize),
       recent: recentRows.map(serialize),
-      categories: categoryRows.map((p) => p.category).filter((c): c is string => c !== null),
+      categories: [...PRODUCTION_CATEGORIES],
       meta: SeoService.site(locale),
     })
   }

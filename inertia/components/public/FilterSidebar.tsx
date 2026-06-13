@@ -14,6 +14,7 @@ import {
   type FilterDimension,
   type ProductionFilters,
 } from '~/lib/search_query'
+import { facetValueLabel } from '~/lib/taxonomy'
 
 function CheckboxRow({ label, href, active }: { label: string; href: string; active: boolean }) {
   return (
@@ -79,7 +80,7 @@ function DimensionGroup({
         {shown.map((value) => (
           <CheckboxRow
             key={value}
-            label={value}
+            label={facetValueLabel(t, dim, value)}
             active={isFilterActive(activeFilters, dim, value)}
             href={`/productions${toggleFilter(search, dim, value)}`}
           />

@@ -28,6 +28,7 @@
     "#middleware/*": "./app/middleware/*.js",
     "#transformers/*": "./app/transformers/*.js",
     "#enums/*": "./app/enums/*.js",
+    "#constants/*": "./app/constants/*.js",
     "#validators/*": "./app/validators/*.js",
     "#providers/*": "./providers/*.js",
     "#policies/*": "./app/policies/*.js",

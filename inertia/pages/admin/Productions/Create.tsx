@@ -1,4 +1,4 @@
-import { ReactElement } from 'react'
+import { ReactElement, useRef, useState } from 'react'
 import { useForm } from '@inertiajs/react'
 import { useTranslation } from 'react-i18next'
 import AdminLayout from '~/layouts/AdminLayout'
@@ -10,6 +10,12 @@ import ProductionForm, {
 } from '~/components/admin/ProductionForm'
 import ProductionFormActions from '~/components/admin/ProductionFormActions'
 import { isAttachmentSatisfied } from '~/lib/production_completion'
+import {
+  type PendingProductionLink,
+  uploadPendingAttachments,
+  publishProduction,
+  productionIdFromEditPage,
+} from '~/lib/production_submit'
 
 export default function AdminProductionsCreate({
   suggestions,
@@ -19,28 +25,89 @@ export default function AdminProductionsCreate({
   const { t } = useTranslation()
   const form = useForm<ProductionFormData>({ ...EMPTY_PRODUCTION_FORM })
   const { data, setData, post, processing, errors } = form
+  const [pendingFiles, setPendingFiles] = useState<File[]>([])
+  const [pendingLinks, setPendingLinks] = useState<PendingProductionLink[]>([])
+  const publishAfterSave = useRef(false)
+  const [chaining, setChaining] = useState(false)
 
-  // En création, aucun fichier/lien n'est encore associé (la production n'existe pas) :
-  // l'attachement n'est jamais satisfait → "Publier" reste désactivé (plein flux en Edit, 4.7).
   const isComplete =
     getRequiredFieldStatuses(data).every((f) => f.filled) &&
-    isAttachmentSatisfied(data.licenseStatus, false, false)
+    isAttachmentSatisfied(
+      data.licenseStatus,
+      pendingFiles.length > 0,
+      pendingLinks.length > 0
+    )
+
+  async function afterCreate(page: { props: Record<string, unknown> }) {
+    const productionId = productionIdFromEditPage(page.props)
+    if (!productionId) return
+
+    try {
+      await uploadPendingAttachments(productionId, pendingFiles, pendingLinks)
+      setPendingFiles([])
+      setPendingLinks([])
+      if (publishAfterSave.current) {
+        await publishProduction(productionId)
+      }
+    } finally {
+      publishAfterSave.current = false
+      setChaining(false)
+    }
+  }
 
   function handleSaveDraft(e: React.FormEvent) {
     e.preventDefault()
-    post('/admin/productions')
+    publishAfterSave.current = false
+    setChaining(true)
+    post('/admin/productions', {
+      onSuccess: (page) => {
+        void afterCreate(page)
+      },
+      onError: () => setChaining(false),
+      onFinish: () => {
+        if (!publishAfterSave.current) setChaining(false)
+      },
+    })
   }
+
+  function handlePublishCreate() {
+    publishAfterSave.current = true
+    setChaining(true)
+    post('/admin/productions', {
+      onSuccess: (page) => {
+        void afterCreate(page)
+      },
+      onError: () => {
+        publishAfterSave.current = false
+        setChaining(false)
+      },
+    })
+  }
+
+  const busy = processing || chaining
 
   return (
     <div className="mx-auto max-w-3xl">
       <h1 className="text-2xl font-semibold text-stone-900">{t('productions.create_title')}</h1>
 
       <form onSubmit={handleSaveDraft} className="mt-6">
-        <ProductionForm data={data} setData={setData} errors={errors} suggestions={suggestions} />
+        <ProductionForm
+          data={data}
+          setData={setData}
+          errors={errors}
+          pendingFiles={pendingFiles}
+          onPendingFilesChange={setPendingFiles}
+          pendingLinks={pendingLinks}
+          onPendingLinksChange={setPendingLinks}
+          suggestions={suggestions}
+        />
 
-        {/* Page création : pas de productionId → "Publier" reste désactivé (pas d'attachement
-            possible). Le flux de publication complet est réalisé sur l'Edit (Story 4.7). */}
-        <ProductionFormActions isComplete={isComplete} processing={processing} />
+        <ProductionFormActions
+          isComplete={isComplete}
+          processing={busy}
+          canPublishOnCreate={isComplete}
+          onPublishCreate={handlePublishCreate}
+        />
       </form>
     </div>
   )

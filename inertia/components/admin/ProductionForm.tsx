@@ -13,6 +13,14 @@ import {
 } from '~/components/ui/select'
 import { AFRICAN_COUNTRIES, OTHER_COUNTRIES, ALL_COUNTRIES } from '~/lib/countries'
 import { LANGUAGE_OPTIONS } from '~/lib/languages'
+import {
+  PRODUCTION_CATEGORIES,
+  PRODUCTION_DOMAINS,
+  allowedSubdomainsForDomain,
+  filterSubdomainsForDomain,
+  taxonomyLabel,
+} from '~/lib/taxonomy'
+import type { PendingProductionLink } from '~/lib/production_submit'
 import CompletionIndicator, { type FieldStatus } from '~/components/admin/CompletionIndicator'
 import ChipInput from '~/components/admin/ChipInput'
 import FileUploader, { type ProductionFileRow } from '~/components/admin/FileUploader'
@@ -110,11 +118,15 @@ type Props = {
   data: ProductionFormData
   setData: Setter
   errors: Partial<Record<keyof ProductionFormData, string>>
-  /** Présent uniquement en édition (Story 4.7) : active l'upload de fichiers et la gestion des liens. */
+  /** Présent en édition : id persisté. Absent en création : files/links en attente côté client. */
   productionId?: string
   files?: ProductionFileRow[]
   links?: ProductionLinkRow[]
-  /** Valeurs existantes pour l'auto-complétion des champs (auteur, catégorie…). */
+  pendingFiles?: File[]
+  onPendingFilesChange?: (files: File[]) => void
+  pendingLinks?: PendingProductionLink[]
+  onPendingLinksChange?: (links: PendingProductionLink[]) => void
+  /** Valeurs existantes pour l'auto-complétion (auteur, tags). */
   suggestions?: ProductionSuggestions
 }
 
@@ -138,14 +150,20 @@ export default function ProductionForm({
   productionId,
   files = [],
   links = [],
+  pendingFiles = [],
+  onPendingFilesChange,
+  pendingLinks = [],
+  onPendingLinksChange,
   suggestions = EMPTY_SUGGESTIONS,
 }: Props) {
   const { t } = useTranslation()
   const [touched, setTouched] = useState<Record<string, boolean>>({})
 
-  // Règle d'attachement (AC5 Story 4.5) : pour external_link, un lien est requis ;
-  // sinon un fichier OU un lien suffit.
-  const hasFileOrLink = isAttachmentSatisfied(data.licenseStatus, files.length > 0, links.length > 0)
+  const hasFileOrLink = isAttachmentSatisfied(
+    data.licenseStatus,
+    files.length + pendingFiles.length > 0,
+    links.length + pendingLinks.length > 0
+  )
 
   const fields = getRequiredFieldStatuses(data)
   const filledMap = new Map(fields.map((f) => [f.key, f.filled]))
@@ -161,6 +179,53 @@ export default function ProductionForm({
       return t('productions.form.errors.required_to_publish')
     }
     return null
+  }
+
+  /** Liste déroulante taxonomie (catégorie, domaine). */
+  function TaxonomySelect({
+    name,
+    options,
+    group,
+  }: {
+    name: 'category' | 'domain'
+    options: readonly string[]
+    group: 'categories' | 'domains'
+  }) {
+    const error = fieldError(name)
+    return (
+      <div>
+        <label htmlFor={name} className="text-sm font-medium text-stone-700">
+          {t(`productions.form.fields.${name}`)}
+          <span className="text-red-600"> *</span>
+        </label>
+        <Select
+          value={data[name] || undefined}
+          onValueChange={(value) => {
+            setData(name, value)
+            markTouched(name)
+            if (name === 'domain') {
+              setData('subdomain', filterSubdomainsForDomain(value, data.subdomain))
+            }
+          }}
+        >
+          <SelectTrigger id={name} className="mt-1 w-full" aria-invalid={!!error}>
+            <SelectValue placeholder={t('productions.form.select_placeholder')} />
+          </SelectTrigger>
+          <SelectContent>
+            {options.map((key) => (
+              <SelectItem key={key} value={key}>
+                {taxonomyLabel(t, group, key)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {error && (
+          <p id={`${name}-error`} className="mt-1 text-sm text-red-600">
+            {error}
+          </p>
+        )}
+      </div>
+    )
   }
 
   function TextField({
@@ -227,7 +292,7 @@ export default function ProductionForm({
             markTouched('publicationCountry')
           }}
         >
-          <SelectTrigger id="publicationCountry" className="mt-1 w-72" aria-invalid={!!error}>
+          <SelectTrigger id="publicationCountry" className="mt-1 w-full" aria-invalid={!!error}>
             <SelectValue placeholder={t('productions.form.country_placeholder')} />
           </SelectTrigger>
           <SelectContent className="max-h-72">
@@ -264,9 +329,13 @@ export default function ProductionForm({
   function ChipField({
     name,
     suggestions: fieldSuggestions,
+    allowedValues,
+    formatChip,
   }: {
     name: 'authors' | 'tags' | 'subdomain'
-    suggestions: string[]
+    suggestions?: string[]
+    allowedValues?: readonly string[]
+    formatChip?: (key: string) => string
   }) {
     const error = fieldError(name)
     return (
@@ -280,7 +349,9 @@ export default function ProductionForm({
           value={data[name]}
           onChange={(v) => setData(name, v)}
           onBlur={() => markTouched(name)}
-          suggestions={fieldSuggestions}
+          suggestions={fieldSuggestions ?? []}
+          allowedValues={allowedValues}
+          formatChip={formatChip}
           placeholder={t('productions.form.chip_hint')}
           invalid={!!error}
           describedBy={error ? `${name}-error` : `${name}-hint`}
@@ -305,17 +376,21 @@ export default function ProductionForm({
       <Section legend={t('productions.form.sections.general')}>
         {TextField({ name: 'title', required: true })}
         {ChipField({ name: 'authors', suggestions: suggestions.authors })}
-        {TextField({ name: 'category', required: true, suggestions: suggestions.categories })}
-        {TextField({ name: 'domain', required: true, suggestions: suggestions.domains })}
+        <TaxonomySelect name="category" options={PRODUCTION_CATEGORIES} group="categories" />
+        <TaxonomySelect name="domain" options={PRODUCTION_DOMAINS} group="domains" />
         {data.domain.trim() !== '' &&
-          ChipField({ name: 'subdomain', suggestions: suggestions.subdomains })}
+          ChipField({
+            name: 'subdomain',
+            allowedValues: allowedSubdomainsForDomain(data.domain),
+            formatChip: (key) => taxonomyLabel(t, 'subdomains', key),
+          })}
         <div>
           <label htmlFor="language" className="text-sm font-medium text-stone-700">
             {t('productions.form.fields.language')}
             <span className="text-red-600"> *</span>
           </label>
           <Select value={data.language} onValueChange={(value) => setData('language', value)}>
-            <SelectTrigger id="language" className="mt-1 w-72">
+            <SelectTrigger id="language" className="mt-1 w-full">
               <SelectValue placeholder={t('productions.form.fields.language')} />
             </SelectTrigger>
             <SelectContent>
@@ -368,7 +443,7 @@ export default function ProductionForm({
               setData('licenseStatus', value as ProductionFormData['licenseStatus'])
             }
           >
-            <SelectTrigger id="licenseStatus" className="mt-1 w-72">
+            <SelectTrigger id="licenseStatus" className="mt-1 w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -392,14 +467,20 @@ export default function ProductionForm({
       </Section>
 
       <Section legend={t('productions.form.sections.files')}>
-        {productionId ? (
-          <div className="space-y-6">
-            <FileUploader productionId={productionId} files={files} />
-            <LinkManager productionId={productionId} links={links} />
-          </div>
-        ) : (
-          <p className="text-sm text-stone-500">{t('productions.form.files_placeholder')}</p>
-        )}
+        <div className="space-y-6">
+          <FileUploader
+            productionId={productionId}
+            files={files}
+            pendingFiles={pendingFiles}
+            onPendingFilesChange={onPendingFilesChange}
+          />
+          <LinkManager
+            productionId={productionId}
+            links={links}
+            pendingLinks={pendingLinks}
+            onPendingLinksChange={onPendingLinksChange}
+          />
+        </div>
       </Section>
     </div>
   )
@@ -417,5 +498,6 @@ function Section({ legend, children }: { legend: string; children: ReactNode }) 
 /** Mappe le nom de champ vers la sous-clé i18n du label (identité ici, sauf alias). */
 function labelKeyFor(name: string): string {
   if (name === 'publicationCountry') return 'country'
+  if (name === 'workPublishedAt') return 'work_published_at'
   return name
 }

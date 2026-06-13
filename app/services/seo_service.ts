@@ -11,6 +11,7 @@ export type MetaTags = {
   ogTitle: string
   ogDescription: string
   ogType: string
+  ogUrl?: string
   locale: Locale
 }
 
@@ -88,7 +89,13 @@ export default class SeoService {
    */
   static forProduction(
     locale: Locale,
-    production: { title: string; summary?: string | null; authors?: string[] | null }
+    production: {
+      title: string
+      summary?: string | null
+      authors?: string[] | null
+      slug?: string | null
+    },
+    appUrl?: string | null
   ): MetaTags {
     const { name } = SITE[locale]
     const title = `${production.title} — ${name}`
@@ -101,12 +108,17 @@ export default class SeoService {
     // Plafond meta description (~200) : le byline peut être long (multi-auteurs).
     const description = composed.length > 200 ? `${composed.slice(0, 197).trimEnd()}…` : composed
 
+    const slug = production.slug?.trim()
+    const baseUrl = appUrl?.replace(/\/$/, '')
+    const ogUrl = slug && baseUrl ? `${baseUrl}/productions/${slug}` : undefined
+
     return {
       title,
       description,
       ogTitle: production.title,
       ogDescription: description,
       ogType: 'article',
+      ogUrl,
       locale,
     }
   }

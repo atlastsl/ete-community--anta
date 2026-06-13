@@ -10,7 +10,11 @@ import AdminActivityLog from '#models/admin_activity_log'
 import ActivityLogService from '#services/activity_log_service'
 import ProductionService from '#services/production_service'
 import StatsService from '#services/stats_service'
-import { draftProductionValidator } from '#validators/admin/production_validator'
+import {
+  draftProductionValidator,
+  assertProductionTaxonomy,
+} from '#validators/admin/production_validator'
+import { PRODUCTION_CATEGORIES, PRODUCTION_DOMAINS } from '#constants/production_taxonomy'
 
 const PER_PAGE = 20
 
@@ -82,8 +86,8 @@ export default class ProductionsController {
       currentDomain: domain,
       currentLanguage: language,
       filterOptions: {
-        categories: options.categories,
-        domains: options.domains,
+        categories: [...PRODUCTION_CATEGORIES],
+        domains: [...PRODUCTION_DOMAINS],
         languages: options.languages,
       },
     })
@@ -163,6 +167,7 @@ export default class ProductionsController {
   async update({ params, request, auth, response, session }: HttpContext) {
     const production = await Production.findOrFail(params.id)
     const data = await request.validateUsing(draftProductionValidator)
+    assertProductionTaxonomy(data)
 
     // `status` n'est JAMAIS modifié ici (FR22 — pas de republication automatique).
     production.title = data.title
@@ -255,6 +260,7 @@ export default class ProductionsController {
 
   async store({ request, auth, response, session }: HttpContext) {
     const data = await request.validateUsing(draftProductionValidator)
+    assertProductionTaxonomy(data)
 
     const production = await Production.create({
       title: data.title,
@@ -284,7 +290,7 @@ export default class ProductionsController {
     })
 
     session.flash('success', 'productions.draft_saved')
-    return response.redirect('/admin/productions')
+    return response.redirect(`/admin/productions/${production.id}/edit`)
   }
 
   async publish({ params, auth, response, session }: HttpContext) {
