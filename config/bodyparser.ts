@@ -65,8 +65,13 @@ const bodyParserConfig = defineConfig({
 
     /**
      * Maximum accepted payload size for multipart requests.
+     * Volontairement au-dessus de la limite par-fichier (100 Mo, `files_controller` +
+     * `FileStorageService`) pour laisser l'enveloppe multipart passer : la validation
+     * par-fichier produit alors un flash d'erreur propre au lieu d'un 413 opaque.
+     * Au-delà de 110 Mo, le bodyparser rejette toujours en 413 (`E_REQUEST_ENTITY_TOO_LARGE`)
+     * sans gestion Inertia dédiée — voir deferred-work (graceful 413 handling).
      */
-    limit: '20mb',
+    limit: '110mb',
 
     /**
      * Content types handled by the multipart parser.

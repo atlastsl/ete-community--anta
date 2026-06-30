@@ -148,6 +148,30 @@ test.group('Infrastructure | Documentation', () => {
   })
 })
 
+test.group('Infrastructure | config/bodyparser.ts (limite upload)', () => {
+  // La limite multipart globale doit être >= à la limite par-fichier (100 Mo,
+  // cf. files_controller + FileStorageService.MAX_FILE_SIZE_BYTES). Sinon le
+  // bodyparser rejette la requête en 413 "Request entity too large" avant que
+  // la validation par-fichier ne produise un flash d'erreur propre.
+  const parseMiB = (s: string): number => {
+    const m = s.match(/(\d+(?:\.\d+)?)\s*mb/i)
+    if (!m) throw new Error(`unparseable multipart limit: ${s}`)
+    return Number.parseFloat(m[1])
+  }
+
+  test('la limite multipart est >= 100 Mo (NFR3/NFR10)', ({ assert }) => {
+    const src = readFileSync(r('config/bodyparser.ts'), 'utf-8')
+    const limitMatch = src.match(/limit:\s*['"](\d+(?:\.\d+)?\s*mb)['"]/i)
+    assert.exists(limitMatch, 'multipart.limit introuvable dans config/bodyparser.ts')
+    const limit = parseMiB(limitMatch![1])
+    assert.isAtLeast(
+      limit,
+      100,
+      `multipart.limit = ${limit}mb doit être >= 100mb — sinon un upload de 20-100 Mo échoue en 413`
+    )
+  })
+})
+
 test.group('Infrastructure | config/session.ts (Story 2.4)', () => {
   const sessionConfigSource = readFileSync(r('config/session.ts'), 'utf-8')
 
