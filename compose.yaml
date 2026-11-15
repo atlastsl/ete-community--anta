@@ -1,0 +1,87 @@
+# Staging et production d'Anta (Epic 8) : `doppler run -- docker compose up -d`.
+# Aucun fichier .env : les variables listées sans valeur sont reprises de
+# l'environnement injecté par Doppler (anta/stg ou anta/prd).
+
+name: anta
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: '10m'
+    max-file: '5'
+
+services:
+  app:
+    image: ${ANTA_IMAGE:-anta:local}
+    build: .
+    restart: unless-stopped
+    environment:
+      # Fixées par l'image / le réseau Compose (écrasent Doppler)
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3333
+      TZ: UTC
+      # Reprises de Doppler
+      LOG_LEVEL:
+      APP_KEY:
+      APP_URL:
+      APP_NAME:
+      DB_HOST:
+      DB_PORT:
+      DB_USER:
+      DB_PASSWORD:
+      DB_DATABASE:
+      DB_SSL:
+      SESSION_DRIVER:
+      SESSION_AGE:
+      R2_ENDPOINT:
+      R2_BUCKET:
+      R2_ACCESS_KEY_ID:
+      R2_SECRET_ACCESS_KEY:
+      MAIL_MAILER:
+      MAIL_FROM_NAME:
+      MAIL_FROM_ADDRESS:
+      RESEND_API_KEY:
+      MAILGUN_API_KEY:
+      MAILGUN_DOMAIN:
+      SUPER_ADMIN_EMAIL:
+      SUPER_ADMIN_PASSWORD:
+    # Pas de port publié : seul Caddy joint l'app, sur le réseau Compose.
+    expose:
+      - '3333'
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3333/health').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      # Laisse le temps à `migration:run` au démarrage
+      start_period: 60s
+    logging: *logging
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      DOMAIN: ${DOMAIN:?DOMAIN est requis (ex. anta.peraha.com)}
+    ports:
+      - '${HTTP_PORT:-80}:80'
+      - '${HTTPS_PORT:-443}:443'
+      - '${HTTPS_PORT:-443}:443/udp'
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    logging: *logging
+
+volumes:
+  caddy_data:
+  caddy_config:
