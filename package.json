@@ -14,7 +14,8 @@
     "test": "node ace test",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "typecheck": "tsc --noEmit && tsc --noEmit --project inertia/tsconfig.json"
+    "typecheck": "tsc --noEmit && tsc --noEmit --project inertia/tsconfig.json",
+    "docs:pdf": "python scripts/md_to_pdf.py"
   },
   "imports": {
     "#controllers/*": "./app/controllers/*.js",
