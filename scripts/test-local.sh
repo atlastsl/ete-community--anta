@@ -26,7 +26,9 @@ until docker exec "$CONTAINER" pg_isready -U postgres -d anta_test >/dev/null 2>
 
 export TZ=UTC NODE_ENV=test PORT=3333 HOST=localhost LOG_LEVEL=info
 export APP_KEY=ci-test-app-key-32-chars-minimum-required APP_URL=http://localhost:3333
-export APP_NAME=Anta VITE_APP_NAME=Anta SESSION_DRIVER=cookie
+# SESSION_DRIVER=memory : le client de test (sessionApiClient) écrit la session dans
+# le store memory ; une valeur exportée ici prime sur .env.test (cookie = CSRF/loginAs KO).
+export APP_NAME=Anta VITE_APP_NAME=Anta SESSION_DRIVER=memory
 export DB_HOST=127.0.0.1 DB_PORT=$PG_PORT DB_USER=postgres DB_PASSWORD=postgres DB_DATABASE=anta_test DB_SSL=false
 export R2_ENDPOINT=https://placeholder.r2.cloudflarestorage.com R2_BUCKET=anta-test
 export R2_ACCESS_KEY_ID=placeholder R2_SECRET_ACCESS_KEY=placeholder

@@ -23,7 +23,10 @@
 - **Sous-domaine requis mais champ masqué quand domaine vide — faible impact** : le champ sous-domaine (ChipField) n'est rendu que si `domain` non vide ; si l'admin vide `domain` après avoir saisi des sous-domaines, les valeurs `data.subdomain` persistent (cachées) et sont comptées « remplies ». Sans gravité (domaine requis → publication bloquée de toute façon), mais données orphelines possibles au save brouillon. Action : vider `subdomain` quand `domain` devient vide, ou afficher le champ toujours.
 - **Publier avant Enregistrer (Edit) invite une action qui échoue — pré-existant** : le bouton Publier s'active sur l'état du formulaire client ; cliquer Publier sans Enregistrer envoie un POST sans données → le serveur revalide la ligne persistée (incomplète) et flashe `publish.incomplete`. Sûr (garde serveur) mais UX trompeuse. Action : désactiver Publier tant que le brouillon a des modifications non enregistrées.
 
-## TICKET — Suite fonctionnelle incompatible avec la CI (Postgres propre) → **EPIC 8**
+## ~~TICKET — Suite fonctionnelle incompatible avec la CI (Postgres propre)~~ → **résolu en Story 8.4 (2026-11-16)**
+
+**Cause réelle** (pas la transaction globale) : le client de test `sessionApiClient` écrit la session dans le store `memory` ; la CI exportait `SESSION_DRIVER=cookie`, qui prime sur `.env.test` (`memory`). Le serveur ne voyait jamais la session (CSRF invalide, `loginAs` sans effet). Correctif : `SESSION_DRIVER: memory` dans `ci.yml` et `scripts/test-local.sh`, 2 tests périmés de `home.spec.ts` alignés sur la taxonomie fixe, `continue-on-error` retiré. Historique ci-dessous.
+
 
 **Planification** : rattaché à l'**Epic 8 (Migration VPS / durcissement CI-CD)**, à traiter APRÈS les epics 6 et 7 et la mise en ligne (décision du 2026-06-02).
 **Statut** : step `Run functional tests` marqué `continue-on-error: true` dans `.github/workflows/ci.yml` (non bloquant) le 2026-06-02. À retirer une fois corrigé.
