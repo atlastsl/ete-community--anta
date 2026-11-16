@@ -1,6 +1,6 @@
 # Story 8.3 : Staging Anta sur le VPS partagé (`anta.peraha.com`)
 
-Status: in-progress
+Status: done
 
 ## Story
 
@@ -70,7 +70,7 @@ Ces décisions remplacent, pour le staging, « Caddy dans le compose » (8.2) et
   - [x] Le renouvellement est fait par la boucle du conteneur `coffeechat-certbot-1` (tous les certificats du volume). **Piège constaté** : son `--deploy-hook` envoie `kill -HUP 1` dans le conteneur certbot, pas dans nginx → nginx ne recharge pas les certificats renouvelés. Ajouter sur le VPS un cron hebdomadaire `docker exec coffeechat-nginx-1 nginx -s reload` (crontab de `coffeechat`) et le signaler à Aurélien (concerne aussi le certificat Coffee Chat).
 - [x] T7 — Validation, tests, docs (AC 1–3)
   - [x] Bout en bout (automatisé, sans écriture en base) : page d'accueil, POST 20 Mo atteignant l'app (pas de 413 nginx), lecture PDF (URL R2 signée), en-têtes `X-Forwarded-*` pris en compte (cookies `Secure`, `og:url` en https).
-  - [ ] Recette manuelle par Aurélien (écrit dans la base partagée / envoie un e-mail) : connexion admin, upload réel d'un fichier > 10 Mo, réinitialisation de mot de passe (e-mail Mailgun reçu).
+  - [x] Recette manuelle par Aurélien (écrit dans la base partagée / envoie un e-mail) : connexion admin, upload réel d'un fichier > 10 Mo, réinitialisation de mot de passe (e-mail Mailgun reçu).
   - [x] AC 3 : `docker compose stop app` → `nginx -t && nginx -s reload` OK, coffeechathub.com 200, anta 502 ; puis redémarrer.
   - [x] Étendre `tests/unit/infrastructure/deployment.spec.ts` : `compose.staging.yaml` (caddy hors profil, port lié à `127.0.0.1`, réseau externe, alias `anta-app`), `anta.conf` (`resolver 127.0.0.11`, `proxy_pass $…`, `client_max_body_size 110m`, acme-challenge), script (`set -euo pipefail`, `--no-build`, aucune IP ni `dp.st.`).
   - [x] `docs/staging-vps.md` : architecture (schéma), arborescence `/opt/anta`, `.env`, déploiement, rollback, logs, nginx/certificat, ce qu'il ne faut pas faire (toucher aux conteneurs Coffee Chat, `nginx -s reload` sans `nginx -t`, commandes destructives sur la base partagée).
@@ -139,6 +139,7 @@ claude-opus-5-5 (Claude Code), 2026-11-16
 - Écart à la story : le tag déployé est conservé dans `/opt/anta/image.env` (lu par Compose) plutôt que `.image`, pour que les commandes manuelles (`ps`, `logs`, `up`) visent la bonne image.
 - `.env` généré depuis Doppler `anta/dev_personal` (seule source existante des secrets), avec `APP_KEY` propre au staging ; valeurs entre apostrophes (pas d'interpolation `$`).
 - `epics.md` / `architecture.md` amendés sur la branche `docs/epic-8-vps-infra` (PR #11), commit 4f37553 ; 8.6 : VPS de prod dédié, `.env`, Caddy.
+- 2026-11-16 : PR mergées (#12–#16, #18 sur `development` ; #19 sur `staging`), premier run de `deploy-staging.yml` vert (`/health` → `revision` 81d9e07). Recette de l'Epic 8 validée par Aurélien. Story → done.
 
 ### File List
 

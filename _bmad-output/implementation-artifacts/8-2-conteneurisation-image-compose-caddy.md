@@ -1,6 +1,6 @@
 # Story 8.2 : Conteneurisation de l'application (image + Compose + Caddy)
 
-Status: review
+Status: done
 
 ## Story
 
@@ -71,6 +71,7 @@ claude-opus-5-5
 - `npm run test:local -- unit` : 262/262 ✅ (5 nouveaux).
 - `npm run test:local -- functional` : 81 ✅ / 90 ❌ — même échec connu qu'en 8.1 (`loginAs`/transaction globale, Story 8.4) ; le nouveau `health.spec.ts` passe.
 - `npm run typecheck` et lint des fichiers modifiés verts.
+- 2026-11-16 : PR mergées (#12–#16, #18 sur `development` ; #19 sur `staging`), premier run de `deploy-staging.yml` vert (`/health` → `revision` 81d9e07). Recette de l'Epic 8 validée par Aurélien. Story → done.
 
 ### File List
 
