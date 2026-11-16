@@ -1,0 +1,132 @@
+# Déploiement du staging (Story 8.4, docs/staging-vps.md).
+# Merge development → staging : tests (ci.yml) → image GHCR taggée par le SHA →
+# démarrage sur le VPS par SSH (clé restreinte à /opt/anta/remote-deploy.sh) →
+# health check public (révision attendue).
+# Rollback : « Run workflow » avec image_tag = SHA d'une image déjà sur GHCR.
+
+name: Deploy staging
+
+on:
+  push:
+    branches: [staging]
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'SHA complet d’une image déjà sur GHCR (rollback, sans tests ni build). Vide = commit courant.'
+        required: false
+        default: ''
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  IMAGE: ghcr.io/atlastsl/ete-community--anta
+  APP_URL: https://anta.peraha.com
+
+jobs:
+  test:
+    name: Gate (lint, typecheck, tests)
+    if: inputs.image_tag == ''
+    uses: ./.github/workflows/ci.yml
+
+  image:
+    name: Image GHCR
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          build-args: GIT_SHA=${{ github.sha }}
+          tags: |
+            ${{ env.IMAGE }}:${{ github.sha }}
+            ${{ env.IMAGE }}:staging
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Déploiement VPS
+    needs: [test, image]
+    # Après une image construite, ou directement pour un rollback (image_tag).
+    if: >-
+      always() &&
+      (needs.image.result == 'success' || (inputs.image_tag != '' && needs.image.result == 'skipped'))
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: https://anta.peraha.com
+    permissions:
+      contents: read
+      packages: read
+    env:
+      TAG: ${{ inputs.image_tag || github.sha }}
+    steps:
+      - name: Tag valide
+        run: |
+          [[ "$TAG" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::image_tag doit être un SHA complet (40 caractères)"; exit 1; }
+
+      - uses: actions/checkout@v4
+
+      - name: Clé SSH de déploiement
+        env:
+          STAGING_SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
+          STAGING_KNOWN_HOSTS: ${{ secrets.STAGING_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$STAGING_SSH_KEY" > ~/.ssh/deploy_key
+          printf '%s\n' "$STAGING_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/deploy_key ~/.ssh/known_hosts
+
+      # Fichiers Compose + jeton GHCR en lecture seule (expire à la fin du job) sur stdin :
+      # la clé n'autorise que remote-deploy.sh (ni scp, ni shell).
+      - name: Démarrage sur le VPS
+        env:
+          STAGING_HOST: ${{ secrets.STAGING_HOST }}
+          STAGING_USER: ${{ vars.STAGING_USER || 'coffeechat' }}
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          bundle="$(mktemp -d)"
+          cp compose.yaml compose.staging.yaml "$bundle/"
+          printf '%s' "$GHCR_USER" > "$bundle/ghcr-user"
+          (umask 077 && printf '%s' "$GHCR_TOKEN" > "$bundle/ghcr-token")
+          tar -czf - -C "$bundle" . |
+            ssh -i ~/.ssh/deploy_key -o BatchMode=yes -o StrictHostKeyChecking=yes \
+              "$STAGING_USER@$STAGING_HOST" "deploy $IMAGE:$TAG"
+          rm -rf "$bundle"
+
+      - name: Health check public
+        run: |
+          for _ in $(seq 1 12); do
+            body="$(curl -fsS --max-time 10 "$APP_URL/health" || true)"
+            echo "$body"
+            if [[ "$(jq -r '.revision // empty' <<<"$body" 2>/dev/null)" == "$TAG" ]]; then
+              echo "✓ $APP_URL sert $TAG"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::$APP_URL/health ne renvoie pas la révision $TAG"
+          exit 1
+
+      - name: Nettoyage
+        if: always()
+        run: rm -f ~/.ssh/deploy_key

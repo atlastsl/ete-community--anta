@@ -10,6 +10,7 @@
 import { middleware } from '#start/kernel'
 import { controllers } from '#generated/controllers'
 import router from '@adonisjs/core/services/router'
+import env from '#start/env'
 
 router.get('/', [controllers.public.Home, 'index']).as('home')
 router.get('/productions', [controllers.public.Productions, 'index']).as('productions')
@@ -21,7 +22,12 @@ router
 router.get('/privacy-policy', [controllers.public.Pages, 'privacy']).as('privacy-policy')
 
 // Health check (Docker / déploiement) — sans base de données ni rendu.
-router.get('/health', ({ response }) => response.ok({ status: 'ok' })).as('health')
+// `revision` : commit de l'image, vérifié par le health check du déploiement (Story 8.4).
+router
+  .get('/health', ({ response }) =>
+    response.ok({ status: 'ok', revision: env.get('ANTA_REVISION', 'unknown') })
+  )
+  .as('health')
 
 // Beacon de vue (FR25) — public, exempté de CSRF dans config/shield.ts (fire-and-forget).
 router.post('/stats/view', [controllers.public.Stats, 'view']).as('stats.view')

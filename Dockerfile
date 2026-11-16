@@ -18,7 +18,10 @@ RUN node ace build
 # --- Runtime : uniquement build/ + dépendances de production ---
 # Pas de `.npmrc` ici : son `include=dev` l'emporterait sur `--omit=dev`.
 FROM base AS runtime
-ENV NODE_ENV=production \
+# Commit de l'image (passé par la CI), renvoyé par GET /health.
+ARG GIT_SHA=unknown
+ENV ANTA_REVISION=$GIT_SHA \
+    NODE_ENV=production \
     HOST=0.0.0.0 \
     PORT=3333 \
     TZ=UTC

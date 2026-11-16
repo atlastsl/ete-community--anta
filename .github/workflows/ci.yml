@@ -4,7 +4,9 @@ on:
   pull_request:
     branches: [development, staging, master]
   push:
-    branches: [development, staging]
+    branches: [development]
+  # Gate du déploiement staging : appelé par deploy-staging.yml (push sur `staging`).
+  workflow_call:
 
 jobs:
   test:
@@ -41,7 +43,9 @@ jobs:
       VITE_APP_NAME: Anta
 
       # === Session ===
-      SESSION_DRIVER: cookie
+      # memory, comme .env.test : le client de test (sessionApiClient) écrit la session
+      # dans le store memory. Avec `cookie`, le serveur ne la voit pas (CSRF, loginAs KO).
+      SESSION_DRIVER: memory
 
       # === Database (PostgreSQL service container ci-dessus) ===
       DB_HOST: localhost
@@ -84,7 +88,7 @@ jobs:
         run: npm run lint
 
       # Typecheck après les migrations : le boot ace a généré les types `@generated/*`
-      # (codegen Inertia/Tuyau). Attrape les ruptures de build avant le déploiement Render.
+      # (codegen Inertia/Tuyau). Attrape les ruptures de build avant le déploiement.
       - name: Typecheck
         run: npm run typecheck
 
@@ -93,12 +97,5 @@ jobs:
       - name: Run unit tests
         run: node ace test unit
 
-      # NON BLOQUANT (temporaire) : la suite fonctionnelle n'a jamais tourné en CI
-      # propre (masquée par la commande invalide `--suite unit`). Elle échoue à ~80/142
-      # à cause d'un problème d'auth/transaction spécifique à l'environnement CI
-      # (db.beginGlobalTransaction non propagé au serveur HTTP in-process → loginAs KO),
-      # alors qu'elle passe en local. Suivi : _bmad-output/implementation-artifacts/deferred-work.md
-      # → retirer `continue-on-error` une fois la cause racine corrigée.
       - name: Run functional tests
         run: node ace test functional
-        continue-on-error: true

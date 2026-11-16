@@ -20,14 +20,14 @@ Voir aussi `tests/functional/robots_txt.spec.ts` (Story 2.5 — exclusion `/admi
 
 ```bash
 # Toute la suite functional (CI lance ça)
-node ace test --suite functional
+node ace test functional
 
 # Un seul fichier
 node ace test functional --files login
 node ace test functional --files middleware
 
 # Avec watcher
-node ace test --suite functional --watch
+node ace test functional --watch
 ```
 
 ## Mapping scénarios Epic 2.6 → tests existants
@@ -111,7 +111,7 @@ Toute la suite functional est exécutée à chaque PR via `.github/workflows/ci.
 
 ```yaml
 - name: Run functional tests
-  run: node ace test --suite functional
+  run: node ace test functional
 ```
 
 Si la suite échoue, la PR est bloquée. Voir `tests/unit/infrastructure/config_files.spec.ts` pour le test anti-régression qui garantit que cette ligne reste dans `ci.yml`.

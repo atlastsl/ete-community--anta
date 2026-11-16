@@ -2,6 +2,7 @@ import { test } from '@japa/runner'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { http } from '#config/app'
+import { parse } from 'yaml'
 
 /**
  * Garde-fous de la conteneurisation (Story 8.2) : image non-root, limite de corps
@@ -106,21 +107,110 @@ test.group('Deployment staging (VPS partagé, nginx Coffee Chat)', () => {
     assert.include(conf, '/etc/letsencrypt/live/anta.peraha.com/fullchain.pem')
   })
 
-  test('deploy-staging.sh : strict, sans build sur le VPS, sans secret ni IP', ({ assert }) => {
+  for (const file of ['scripts/vps/deploy-staging.sh', 'scripts/vps/staging-remote-deploy.sh']) {
+    test(`${file} : strict, sans secret ni IP`, ({ assert }) => {
+      const script = read(file)
+      assert.include(script, 'set -euo pipefail')
+      assert.include(script, 'test -f .env')
+      assert.notMatch(
+        script.replaceAll('127.0.0.1', ''),
+        /\b\d{1,3}(\.\d{1,3}){3}\b/,
+        'aucune adresse IP en dur (hors loopback)'
+      )
+      assert.notInclude(script, 'dp.st.')
+    })
+  }
+
+  test('deploy-staging.sh : délègue le démarrage à remote-deploy.sh', ({ assert }) => {
     const script = read('scripts/vps/deploy-staging.sh')
-    assert.include(script, 'set -euo pipefail')
-    assert.include(script, '--no-build')
-    assert.include(script, 'test -f .env')
-    assert.include(script, '-f compose.yaml -f compose.staging.yaml')
-    assert.notMatch(
-      script.replaceAll('127.0.0.1', ''),
-      /\b\d{1,3}(\.\d{1,3}){3}\b/,
-      'aucune adresse IP en dur (hors loopback)'
-    )
-    assert.notInclude(script, 'dp.st.')
+    assert.include(script, 'scripts/vps/staging-remote-deploy.sh')
+    assert.include(script, 'remote-deploy.sh deploy $IMAGE')
+    assert.include(script, '--build-arg GIT_SHA=')
   })
 
   test("trustProxy : nginx joint l'app depuis le réseau bridge Docker", ({ assert }) => {
     assert.isTrue(http.trustProxy!('172.19.0.5', 0))
+  })
+})
+
+/**
+ * CI/CD du staging (Story 8.4) : tests avant tout déploiement, image GHCR par SHA,
+ * clé SSH restreinte à remote-deploy.sh, retour à l'image précédente si échec.
+ */
+test.group('Deployment staging | CI/CD', () => {
+  const workflow = parse(read('.github/workflows/deploy-staging.yml'))
+  const ci = parse(read('.github/workflows/ci.yml'))
+
+  test('ci.yml : réutilisable, suite functional bloquante, session memory', ({ assert }) => {
+    assert.property(ci.on, 'workflow_call')
+    assert.notInclude(
+      ci.on.push.branches,
+      'staging',
+      'le gate staging passe par deploy-staging.yml'
+    )
+    assert.equal(ci.jobs.test.env.SESSION_DRIVER, 'memory')
+    const functional = ci.jobs.test.steps.find((st: any) =>
+      /node ace test\s+functional/.test(st.run ?? '')
+    )
+    assert.exists(functional)
+    assert.notProperty(functional, 'continue-on-error')
+  })
+
+  test('deploy-staging.yml : push staging + rollback manuel, sans concurrence', ({ assert }) => {
+    assert.deepEqual(workflow.on.push.branches, ['staging'])
+    assert.property(workflow.on.workflow_dispatch.inputs, 'image_tag')
+    assert.notProperty(workflow.on, 'pull_request')
+    assert.equal(workflow.concurrency['cancel-in-progress'], false)
+  })
+
+  test('gate : tests (ci.yml) → image → déploiement', ({ assert }) => {
+    assert.equal(workflow.jobs.test.uses, './.github/workflows/ci.yml')
+    assert.equal(workflow.jobs.image.needs, 'test')
+    assert.includeMembers(workflow.jobs.deploy.needs, ['test', 'image'])
+    assert.include(workflow.jobs.deploy.if, "needs.image.result == 'success'")
+  })
+
+  test('image GHCR taggée par le SHA, révision passée au build', ({ assert }) => {
+    assert.equal(workflow.env.IMAGE, 'ghcr.io/atlastsl/ete-community--anta')
+    const build = workflow.jobs.image.steps.find((st: any) =>
+      st.uses?.startsWith('docker/build-push-action')
+    )
+    assert.isTrue(build.with.push)
+    assert.include(build.with.tags, '${{ env.IMAGE }}:${{ github.sha }}')
+    assert.equal(build.with['build-args'], 'GIT_SHA=${{ github.sha }}')
+    assert.equal(workflow.jobs.image.permissions.packages, 'write')
+  })
+
+  test('déploiement : environnement staging, host vérifié, health check par révision', ({
+    assert,
+  }) => {
+    const deploy = workflow.jobs.deploy
+    assert.equal(deploy.environment.name, 'staging')
+    assert.equal(deploy.permissions.packages, 'read')
+    const raw = read('.github/workflows/deploy-staging.yml')
+    assert.notInclude(raw, 'StrictHostKeyChecking=no')
+    assert.include(raw, 'secrets.STAGING_KNOWN_HOSTS')
+    assert.include(raw, '"deploy $IMAGE:$TAG"')
+    assert.include(raw, "jq -r '.revision")
+  })
+
+  test('remote-deploy.sh : commandes et images filtrées, retour arrière', ({ assert }) => {
+    const script = read('scripts/vps/staging-remote-deploy.sh')
+    assert.include(script, 'SSH_ORIGINAL_COMMAND')
+    assert.include(script, 'IMAGE_RE=')
+    assert.include(script, 'GHCR_REPO=ghcr.io/atlastsl/ete-community--anta')
+    assert.include(script, '--no-build --wait')
+    assert.include(script, 'export DOCKER_CONFIG="$tmp/docker"')
+    assert.include(script, 'docker logout ghcr.io')
+    assert.match(script, /Retour à \$previous/)
+    assert.include(script, 'flock')
+    assert.notMatch(script, /\beval\b/)
+  })
+
+  test('Dockerfile : révision de l’image exposée par /health', ({ assert }) => {
+    const dockerfile = read('Dockerfile')
+    assert.include(dockerfile, 'ARG GIT_SHA=unknown')
+    assert.include(dockerfile, 'ANTA_REVISION=$GIT_SHA')
+    assert.include(read('start/routes.ts'), "env.get('ANTA_REVISION', 'unknown')")
   })
 })
