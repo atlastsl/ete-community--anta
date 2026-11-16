@@ -64,12 +64,13 @@ Ces décisions remplacent, pour le staging, « Caddy dans le compose » (8.2) et
   - [x] Toujours `docker exec coffeechat-nginx-1 nginx -t` **avant** `nginx -s reload` ; en cas d'échec, retirer le fichier immédiatement.
   - [x] Vérifier que coffeechathub.com et admin.coffeechathub.com répondent toujours (`curl -sI`).
   - [x] Test avant DNS : `curl --resolve anta.peraha.com:80:<IP du VPS> http://anta.peraha.com/health`.
-- [ ] T6 — DNS puis certificat (AC 2) — *bloqué par l'action DNS d'Aurélien*
-  - [ ] Après propagation (`dig +short anta.peraha.com` = `<IP du VPS>`) : `docker run --rm -v coffeechat_nginx_certs:/etc/letsencrypt -v coffeechat_nginx_certbot_webroot:/var/www/certbot certbot/certbot:v3.1.0 certonly --webroot -w /var/www/certbot -d anta.peraha.com --agree-tos -m <email> -n` (essayer d'abord `--dry-run`).
-  - [ ] Passer `anta.conf` en version HTTPS, `nginx -t`, reload, revérifier Coffee Chat.
+- [x] T6 — DNS puis certificat (AC 2)
+  - [x] Après propagation (`dig +short anta.peraha.com` = `<IP du VPS>`) : `docker run --rm -v coffeechat_nginx_certs:/etc/letsencrypt -v coffeechat_nginx_certbot_webroot:/var/www/certbot certbot/certbot:v3.1.0 certonly --webroot -w /var/www/certbot -d anta.peraha.com --agree-tos -m <email> -n` (essayer d'abord `--dry-run`).
+  - [x] Passer `anta.conf` en version HTTPS, `nginx -t`, reload, revérifier Coffee Chat.
   - [x] Le renouvellement est fait par la boucle du conteneur `coffeechat-certbot-1` (tous les certificats du volume). **Piège constaté** : son `--deploy-hook` envoie `kill -HUP 1` dans le conteneur certbot, pas dans nginx → nginx ne recharge pas les certificats renouvelés. Ajouter sur le VPS un cron hebdomadaire `docker exec coffeechat-nginx-1 nginx -s reload` (crontab de `coffeechat`) et le signaler à Aurélien (concerne aussi le certificat Coffee Chat).
 - [x] T7 — Validation, tests, docs (AC 1–3)
-  - [ ] Bout en bout : page d'accueil, connexion admin, upload d'un fichier > 10 Mo (preuve que la limite globale 10M de Coffee Chat ne s'applique pas), lecture PDF (URL R2 signée), envoi d'un e-mail (réinitialisation de mot de passe via Mailgun), en-têtes `X-Forwarded-*` pris en compte (cookie `Secure`, redirections en https).
+  - [x] Bout en bout (automatisé, sans écriture en base) : page d'accueil, POST 20 Mo atteignant l'app (pas de 413 nginx), lecture PDF (URL R2 signée), en-têtes `X-Forwarded-*` pris en compte (cookies `Secure`, `og:url` en https).
+  - [ ] Recette manuelle par Aurélien (écrit dans la base partagée / envoie un e-mail) : connexion admin, upload réel d'un fichier > 10 Mo, réinitialisation de mot de passe (e-mail Mailgun reçu).
   - [x] AC 3 : `docker compose stop app` → `nginx -t && nginx -s reload` OK, coffeechathub.com 200, anta 502 ; puis redémarrer.
   - [x] Étendre `tests/unit/infrastructure/deployment.spec.ts` : `compose.staging.yaml` (caddy hors profil, port lié à `127.0.0.1`, réseau externe, alias `anta-app`), `anta.conf` (`resolver 127.0.0.11`, `proxy_pass $…`, `client_max_body_size 110m`, acme-challenge), script (`set -euo pipefail`, `--no-build`, aucune IP ni `dp.st.`).
   - [x] `docs/staging-vps.md` : architecture (schéma), arborescence `/opt/anta`, `.env`, déploiement, rollback, logs, nginx/certificat, ce qu'il ne faut pas faire (toucher aux conteneurs Coffee Chat, `nginx -s reload` sans `nginx -t`, commandes destructives sur la base partagée).
@@ -129,11 +130,12 @@ claude-opus-5-5 (Claude Code), 2026-11-16
 - `anta.http-only.conf` installé : `nginx -t` OK, reload ; coffeechathub.com 200 et admin 307 avant/après ; `curl --resolve anta.peraha.com:80:<IP du VPS> /health` → 200.
 - AC 3 sur le VPS : `stop app` → `nginx -t` + reload OK, coffeechathub.com 200, Anta 502 ; relance → 200.
 - Cron `coffeechat` : `17 4 * * 1 docker exec coffeechat-nginx-1 sh -c "nginx -t -q && nginx -s reload"`.
+- HTTPS : `https://anta.peraha.com/health` et `/` 200, HTTP → 301, coffeechathub.com 200 / admin 307 après reload ; `/admin/productions` → 302 `/admin/login` ; cookies `Secure; HttpOnly; SameSite=Lax` ; POST multipart 20 Mo → 302 de l'app ; PDF via URL R2 signée → 206 `application/pdf`.
 - Tests : unit 268/268 ; functional 81/171 (échecs CI connus, Story 8.4 ; aucun code applicatif modifié) ; lint + typecheck OK.
 
 ### Completion Notes List
 
-- En attente : changement DNS par Aurélien (A `anta` → <IP du VPS>), puis certificat (`--dry-run` puis réel), passage à `anta.conf` HTTPS et validation de bout en bout (T6, dernier point de T7).
+- 2026-11-16 : DNS fait par Aurélien ; certificat Let's Encrypt obtenu (`--dry-run` puis réel, e-mail `dev@peraha.com`, émetteur YE2, expire 2027-02-14, renouvellement webroot par `coffeechat-certbot-1`) ; `anta.conf` HTTPS installé. Reste la recette manuelle (T7).
 - Écart à la story : le tag déployé est conservé dans `/opt/anta/image.env` (lu par Compose) plutôt que `.image`, pour que les commandes manuelles (`ps`, `logs`, `up`) visent la bonne image.
 - `.env` généré depuis Doppler `anta/dev_personal` (seule source existante des secrets), avec `APP_KEY` propre au staging ; valeurs entre apostrophes (pas d'interpolation `$`).
 - `epics.md` / `architecture.md` amendés sur la branche `docs/epic-8-vps-infra` (PR #11), commit 4f37553 ; 8.6 : VPS de prod dédié, `.env`, Caddy.
