@@ -97,7 +97,7 @@ NFR15: Priorité stabilité sous usage normal ; pas de montée en charge extrêm
 - **Configuration mail** : `config/mail.ts` avec Resend (principal) + Mailgun (fallback) via `@adonisjs/mail`
 - **Branches Git** : `master` (production), `development` (centralisation des updates), `staging` (test/démo, connectée à Render, puis au VPS de staging `anta.peraha.com` — Epic 8) — chaque story part d'une branche depuis `development`, merge sur `development` après validation locale, PR `development → staging` pour déploiement test
 - **Hébergement phase initiale** : Render Free Tier (auto-deploy depuis `staging`) — keep-alive via cron externe (14 min)
-- **Hébergement phase finale (Epic 8, révisé 2026-11-15)** : dev sur VPS via Tailscale + Doppler ; staging et production sur VPS dédiés en Docker Compose + Caddy (TLS Let's Encrypt automatique) ; secrets Doppler (`dev`/`stg`/`prd`)
+- **Hébergement phase finale (Epic 8, révisé 2026-11-15)** : dev sur VPS via Tailscale + Doppler ; staging en Docker Compose sur le VPS partagé avec Coffee Chat, derrière son nginx (révisé 2026-11-16) ; production sur VPS dédié en Docker Compose + Caddy (TLS Let's Encrypt automatique) ; Doppler pour le dev seulement, `.env` sur les VPS de staging et de production
 - **CI/CD** : Phase initiale — `ci.yml` (lint + tests sur PR vers `development` et `staging`) ; Phase finale (Epic 8) — `deploy-staging.yml` (image GHCR depuis `staging`) et `deploy-production.yml` (promotion de l'image depuis `master`)
 - **Session timeout** : 2 heures d'inactivité (configurable)
 - **Enum ProductionStatus** : Source de vérité unique — `'draft' | 'published' | 'unpublished'` — jamais de strings en dur
@@ -232,7 +232,7 @@ Un administrateur peut consulter les statistiques par production et en vue agré
 
 ### Epic 8 : Infrastructure VPS (dev, staging, production)
 
-Le développement, le staging et la production quittent le PC et Render pour des VPS maîtrisés : dev sur VPS via Tailscale, staging public sur `anta.peraha.com`, production en Docker Compose + Caddy, secrets Doppler, mêmes services externes partout (Supabase, R2, Mailgun). Révisé par `sprint-change-proposal-2026-11-15.md`.
+Le développement, le staging et la production quittent le PC et Render pour des VPS maîtrisés : dev sur VPS via Tailscale, staging public sur `anta.peraha.com`, production en Docker Compose + Caddy, secrets Doppler pour le dev et `.env` sur les VPS, mêmes services externes partout (Supabase, R2, Mailgun). Révisé par `sprint-change-proposal-2026-11-15.md`, puis le 2026-11-16 (staging sur le VPS partagé avec Coffee Chat, Story 8.3).
 **NFRs :** NFR4 (HTTPS), NFR13 (disponibilité 99%)
 **Dépend de :** 8.1–8.5 aucun epic fonctionnel ; 8.6 (mise en production) après validation des epics fonctionnels sur le staging VPS
 
@@ -1648,7 +1648,7 @@ Afin de garantir la fiabilité des métriques et la sécurité des données d'ac
 
 Le développement, le staging et la production quittent le PC et Render pour des VPS maîtrisés :
 dev sur VPS via Tailscale, staging public sur `anta.peraha.com`, production en Docker Compose + Caddy,
-secrets centralisés dans Doppler, mêmes services externes partout (Supabase, R2, Mailgun).
+secrets Doppler pour le dev et `.env` sur les VPS, mêmes services externes partout (Supabase, R2, Mailgun).
 
 ### Story 8.1 : Environnement de développement sur VPS (Tailscale + Doppler)
 
@@ -1693,23 +1693,29 @@ Afin que staging et production exécutent exactement le même artefact.
 **And** la limite de corps de requête accepte les uploads de 110 Mo (parité avec `bodyparser`)
 **And** les logs des conteneurs sont plafonnés (driver `json-file`, `max-size`/`max-file`)
 
-### Story 8.3 : Provisionnement du VPS de staging (`anta.peraha.com`)
+### Story 8.3 : Staging sur le VPS partagé (`anta.peraha.com`)
 
 En tant que développeur,
-Je veux un VPS de staging dédié et public,
+Je veux qu'Anta tourne en Docker sur le VPS de staging et soit servi publiquement sur `https://anta.peraha.com`,
 Afin de tester et faire la démo de l'application dans des conditions de production.
+
+*Révisée le 2026-11-16 : le VPS de staging est celui de Coffee Chat, dont le nginx conteneurisé détient 80/443 ; pas de Caddy ni de Doppler en staging.*
 
 **Acceptance Criteria:**
 
-**Given** un VPS de staging distinct du VPS de développement, accessible en SSH par clé
-**When** il est provisionné (Docker + plugin Compose, pare-feu ouvrant uniquement 22/80/443, mises à jour de sécurité automatiques)
-**Then** il est prêt à recevoir l'image de la Story 8.2
+**Given** le VPS de staging partagé avec Coffee Chat
+**When** la stack Anta est démarrée (`compose.yaml` + `compose.staging.yaml`, secrets dans `/opt/anta/.env` hors dépôt)
+**Then** l'app répond sur `127.0.0.1:3333` sans publier de port public et sans toucher aux conteneurs Coffee Chat
 
 **Given** l'enregistrement DNS `anta.peraha.com` pointe vers l'IP du VPS de staging
-**When** la stack Compose est démarrée avec la config Doppler `stg` (token de service stocké sur le VPS, hors dépôt)
-**Then** `https://anta.peraha.com` sert l'application avec un certificat valide
+**When** le vhost `anta.conf` est chargé dans le nginx de Coffee Chat
+**Then** `https://anta.peraha.com` sert l'application avec un certificat Let's Encrypt valide, HTTP redirige vers HTTPS, les uploads jusqu'à 110 Mo passent
 **And** elle utilise la même base Supabase, le même bucket R2 et Mailgun
 **And** `APP_URL=https://anta.peraha.com`
+
+**Given** Anta est arrêté
+**When** le nginx de Coffee Chat est rechargé ou redémarré
+**Then** il démarre normalement et Coffee Chat reste servi
 
 ### Story 8.4 : CI/CD de déploiement du staging
 
@@ -1749,8 +1755,8 @@ Afin que l'application soit en ligne sur un serveur maîtrisé (NFR4, NFR13).
 
 **Acceptance Criteria:**
 
-**Given** un VPS de production provisionné comme en Story 8.3 et le domaine de production configuré
+**Given** un VPS de production dédié (Docker + Compose, pare-feu 22/80/443, mises à jour de sécurité automatiques) et le domaine de production configuré
 **When** une PR `staging → master` est mergée
 **Then** `deploy-production.yml` promeut l'image déjà validée en staging (même tag), sans rebuild
-**And** la config Doppler `prd` fournit les variables
+**And** les variables viennent d'un `.env` sur le VPS (`0600`, hors dépôt), stack `compose.yaml` avec Caddy
 **And** le site est accessible en HTTPS sur le domaine de production, avec un comportement identique au staging

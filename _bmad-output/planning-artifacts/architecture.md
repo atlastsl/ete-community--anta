@@ -399,14 +399,16 @@ node ace migration:run --force && node build/bin/server.js
 
 |                    | Dev                                   | Staging                          | Production                        |
 | ------------------ | ------------------------------------- | -------------------------------- | --------------------------------- |
-| Hôte               | VPS de dev (`vmi3733843`)             | VPS dédié                        | VPS dédié                         |
+| Hôte               | VPS de dev (`vmi3733843`)             | VPS partagé avec Coffee Chat     | VPS dédié                         |
 | Accès              | Tailscale (`tailscale serve`, tailnet) | Public — `anta.peraha.com`       | Domaine de production (à définir) |
-| Exécution          | `doppler run -- npm run dev`          | Docker Compose (`app` + `caddy`) | Identique au staging              |
-| TLS                | Tailscale                             | Caddy (Let's Encrypt automatique) | Caddy                             |
-| Secrets            | Doppler `anta/dev`                    | Doppler `anta/stg`               | Doppler `anta/prd`                |
+| Exécution          | `doppler run -- npm run dev`          | Docker Compose (`app`, `compose.staging.yaml`) | Docker Compose (`app` + `caddy`) |
+| TLS                | Tailscale                             | nginx de Coffee Chat + certbot (Let's Encrypt) | Caddy (Let's Encrypt automatique) |
+| Secrets            | Doppler `anta/dev`                    | `/opt/anta/.env` sur le VPS (0600) | `.env` sur le VPS (0600)        |
 | Base de données    | Supabase (partagée dev/staging)       | Supabase (partagée dev/staging)  | Supabase (production)             |
 | Fichiers / e-mails | R2 / Mailgun                          | R2 / Mailgun                     | R2 / Mailgun                      |
 | Déploiement        | —                                     | push `staging` → GHCR → SSH      | merge `master` → promotion image  |
+
+Révision 2026-11-16 (Story 8.3, décision d'Aurélien) : le staging partage le VPS de Coffee Chat, dont le nginx conteneurisé détient 80/443. Anta y tourne dans son propre projet Compose (`/opt/anta`, app sur `127.0.0.1:3333`, sans Caddy) et nginx le joint par le réseau Docker de Coffee Chat (alias `anta-app`, résolution paresseuse pour ne jamais empêcher nginx de démarrer). **Doppler ne sert qu'au dev** ; staging et production lisent un `.env` sur le VPS. Détails : `docs/staging-vps.md`.
 
 Artefacts : `Dockerfile` multi-stage (Node 22, utilisateur non-root, démarrage `node ace migration:run --force && node bin/server.js`), `compose.yaml`, `Caddyfile` paramétré par domaine (limite de corps ≥ 110 Mo, parité `bodyparser`), logs Docker plafonnés.
 
