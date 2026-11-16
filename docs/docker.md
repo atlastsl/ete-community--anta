@@ -1,5 +1,10 @@
 # Image Docker et stack Compose (staging + production, Story 8.2)
 
+> **Staging (2026-11-16)** : le staging tourne sur le VPS partagé avec Coffee Chat, sans Caddy ni Doppler
+> (`compose.staging.yaml`, `/opt/anta/.env`) : voir `docs/staging-vps.md`. Doppler ne sert plus qu'au dev ;
+> les commandes `doppler run` ci-dessous ne valent que pour un VPS dédié, et la source des secrets de
+> production sera tranchée en Story 8.6.
+
 La même image tourne en staging et en production ; seuls la config Doppler
 (`anta/stg`, `anta/prd`) et `DOMAIN` changent.
 

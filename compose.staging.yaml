@@ -1,0 +1,31 @@
+# Staging d'Anta sur le VPS partagé avec Coffee Chat (Story 8.3, docs/staging-vps.md).
+#   docker compose --env-file .env --env-file image.env \
+#     -f compose.yaml -f compose.staging.yaml up -d --no-build
+#
+# - Pas de Caddy : 80/443 appartiennent au nginx (conteneurisé) de Coffee Chat,
+#   qui joint l'app sur son réseau Docker sous l'alias `anta-app`
+#   (vhost : deploy/nginx/anta.conf).
+# - Pas de Doppler : les variables sans valeur de compose.yaml sont lues dans
+#   /opt/anta/.env (0600, hors dépôt) ; le tag déployé est dans image.env
+#   (ANTA_IMAGE=anta:<sha>, écrit par scripts/vps/deploy-staging.sh).
+#   Ne pas utiliser `env_file` : ces entrées sans valeur l'écraseraient.
+
+services:
+  app:
+    # Loopback uniquement (Docker contourne ufw) : debug et healthcheck sur le VPS.
+    ports:
+      - '127.0.0.1:${APP_PORT:-3333}:3333'
+    networks:
+      default:
+      proxy:
+        aliases:
+          - anta-app
+
+  caddy:
+    # Désactivé : `--profile caddy` seulement sur un VPS dédié.
+    profiles: [caddy]
+
+networks:
+  proxy:
+    name: ${PROXY_NETWORK:-coffeechat_coffeechat_network}
+    external: true
