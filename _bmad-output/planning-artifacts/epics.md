@@ -95,10 +95,10 @@ NFR15: Priorité stabilité sous usage normal ; pas de montée en charge extrêm
 - **Variables d'environnement** : `.env.example` documentant toutes les variables requises (DB, R2, mail, session)
 - **Configuration R2** : `config/drive.ts` avec driver S3 Cloudflare R2 (endpoint, bucket, credentials) ; `FileStorageService` gère upload, suppression et URL signées (TTL 1h)
 - **Configuration mail** : `config/mail.ts` avec Resend (principal) + Mailgun (fallback) via `@adonisjs/mail`
-- **Branches Git** : `master` (production), `development` (centralisation des updates), `staging` (test/démo, connectée à Render) — chaque story part d'une branche depuis `development`, merge sur `development` après validation locale, PR `development → staging` pour déploiement test
+- **Branches Git** : `master` (production), `development` (centralisation des updates), `staging` (test/démo, connectée à Render, puis au VPS de staging `anta.peraha.com` — Epic 8) — chaque story part d'une branche depuis `development`, merge sur `development` après validation locale, PR `development → staging` pour déploiement test
 - **Hébergement phase initiale** : Render Free Tier (auto-deploy depuis `staging`) — keep-alive via cron externe (14 min)
-- **Hébergement phase finale (Epic 8)** : VPS (Hetzner CX21), Nginx, PM2 + pm2-logrotate, Let's Encrypt (Certbot)
-- **CI/CD** : Phase initiale — `ci.yml` (lint + tests sur PR vers `development` et `staging`) ; Phase finale (Epic 8) — 3 workflows de déploiement sélectif depuis `master`
+- **Hébergement phase finale (Epic 8, révisé 2026-11-15)** : dev sur VPS via Tailscale + Doppler ; staging en Docker Compose sur le VPS partagé avec Coffee Chat, derrière son nginx (révisé 2026-11-16) ; production sur VPS dédié en Docker Compose + Caddy (TLS Let's Encrypt automatique) ; Doppler pour le dev seulement, `.env` sur les VPS de staging et de production
+- **CI/CD** : Phase initiale — `ci.yml` (lint + tests sur PR vers `development` et `staging`) ; Phase finale (Epic 8) — `deploy-staging.yml` (image GHCR depuis `staging`) et `deploy-production.yml` (promotion de l'image depuis `master`)
 - **Session timeout** : 2 heures d'inactivité (configurable)
 - **Enum ProductionStatus** : Source de vérité unique — `'draft' | 'published' | 'unpublished'` — jamais de strings en dur
 - **ActivityLogService** : Service centralisé pour tous les logs admin — actions : `login | create | update | publish | unpublish | delete | password_reset`
@@ -230,13 +230,13 @@ Un administrateur peut consulter les statistiques par production et en vue agré
 **FRs couverts :** FR27, FR28, FR29
 **Dépend de :** Epic 4 (productions créées), Epic 6 (vues et téléchargements enregistrés)
 
-### Epic 8 : Migration VPS (Production)
+### Epic 8 : Infrastructure VPS (dev, staging, production)
 
-L'application est migrée de Render vers un VPS autonome avec Nginx, PM2, Let's Encrypt et un CI/CD sélectif par chemin — permettant un hébergement production performant, stable et maîtrisé.
+Le développement, le staging et la production quittent le PC et Render pour des VPS maîtrisés : dev sur VPS via Tailscale, staging public sur `anta.peraha.com`, production en Docker Compose + Caddy, secrets Doppler pour le dev et `.env` sur les VPS, mêmes services externes partout (Supabase, R2, Mailgun). Révisé par `sprint-change-proposal-2026-11-15.md`, puis le 2026-11-16 (staging sur le VPS partagé avec Coffee Chat, Story 8.3).
 **NFRs :** NFR4 (HTTPS), NFR13 (disponibilité 99%)
-**Dépend de :** Tous les epics fonctionnels validés sur Render
+**Dépend de :** 8.1–8.5 aucun epic fonctionnel ; 8.6 (mise en production) après validation des epics fonctionnels sur le staging VPS
 
-**Durcissement CI/CD inclus dans cet epic :**
+**Durcissement CI/CD inclus dans cet epic (Story 8.4) :**
 - **Réparer la suite de tests fonctionnels en CI** (actuellement `continue-on-error`, ~80/142 échecs en CI propre). Cause racine probable : `db.beginGlobalTransaction()` non propagé au serveur HTTP in-process → `loginAs()` KO → cascade. Détail complet et pistes dans `_bmad-output/implementation-artifacts/deferred-work.md` (section « TICKET — Suite fonctionnelle incompatible avec la CI »). Une fois corrigé : retirer `continue-on-error` du step `Run functional tests` dans `.github/workflows/ci.yml`.
 
 ---
@@ -1644,79 +1644,119 @@ Afin de garantir la fiabilité des métriques et la sécurité des données d'ac
 
 ---
 
-## Epic 8 : Migration VPS (Production)
+## Epic 8 : Infrastructure VPS (dev, staging, production)
 
-L'application est migrée de Render vers un VPS autonome avec Nginx, PM2, Let's Encrypt et un CI/CD sélectif par chemin — permettant un hébergement production performant, stable et maîtrisé.
+Le développement, le staging et la production quittent le PC et Render pour des VPS maîtrisés :
+dev sur VPS via Tailscale, staging public sur `anta.peraha.com`, production en Docker Compose + Caddy,
+secrets Doppler pour le dev et `.env` sur les VPS, mêmes services externes partout (Supabase, R2, Mailgun).
 
-### Story 8.1 : Provisionnement VPS et configuration serveur
+### Story 8.1 : Environnement de développement sur VPS (Tailscale + Doppler)
 
 En tant que développeur,
-Je veux un VPS configuré avec Nginx, PM2 et Let's Encrypt,
-Afin que l'application soit accessible en production via HTTPS sur un serveur maîtrisé (NFR4, NFR13).
+Je veux lancer Anta en mode dev sur le VPS de développement et l'ouvrir depuis mon PC via Tailscale,
+Afin de développer sans dépendre de mon poste local ni d'un fichier `.env`.
 
 **Acceptance Criteria:**
 
-**Given** un VPS (type Hetzner CX21 — 2 vCPU, 4 Go RAM) est provisionné
-**When** Nginx, PM2 et Certbot sont installés et configurés
-**Then** l'application AdonisJS est servie via Nginx en reverse proxy
-**And** HTTPS est actif avec un certificat Let's Encrypt valide
-**And** HTTP redirige automatiquement vers HTTPS (NFR4)
-**And** `pm2-logrotate` est activé pour la rotation des logs
+**Given** un projet Doppler `anta` avec une config `dev` contenant toutes les variables de `.env.example`
+**When** `doppler run -- npm run dev` est exécuté dans le dépôt du VPS (`PORT=3333`, `HOST=127.0.0.1`)
+**Then** l'application démarre sans fichier `.env` sur disque
+**And** aucun secret n'est écrit dans le dépôt ni dans les fichiers du workspace
 
-**Given** les variables d'environnement sont configurées sur le serveur
-**When** `node ace migration:run --force` est exécuté
-**Then** les migrations s'appliquent sans erreur sur la base PostgreSQL Supabase
-**And** PM2 démarre l'application via `ecosystem.config.js`
+**Given** `tailscale serve` expose le port 3333 sur un port HTTPS libre du tailnet (hors 443, 8443 et 10000, déjà pris)
+**When** j'ouvre l'URL `https://vmi3733843.tail39fe0e.ts.net:<port>` depuis le PC
+**Then** le site public et l'admin fonctionnent
+**And** le HMR de Vite se recharge à travers le proxy (`vite.config.ts` ajusté si nécessaire)
+**And** l'URL n'est pas joignable hors du tailnet
 
-**Given** l'application tourne sur le VPS
-**When** un utilisateur accède au domaine configuré
-**Then** le site est accessible et fonctionnel, identique à l'environnement Render
+**Given** la base Supabase est partagée avec le staging
+**When** je travaille en dev
+**Then** les règles « base partagée » sont documentées dans `CLAUDE.local.md` et dans `docs/` : pas de rollback/fresh/reset/wipe, migrations rétrocompatibles uniquement
+**And** `node ace test` tourne contre un Postgres local jetable (Docker, base `anta_test`, mêmes valeurs que la CI), jamais contre Supabase
 
----
-
-### Story 8.2 : CI/CD sélectif et workflow de production
+### Story 8.2 : Conteneurisation de l'application (image + Compose + Caddy)
 
 En tant que développeur,
-Je veux trois workflows GitHub Actions de déploiement sélectif par chemin depuis la branche master,
-Afin que les déploiements en production soient automatisés et optimisés selon les fichiers modifiés.
+Je veux une image Docker de production et un fichier Compose avec Caddy,
+Afin que staging et production exécutent exactement le même artefact.
 
 **Acceptance Criteria:**
 
-**Given** du code est poussé sur `master` (via PR `staging → master`)
-**When** seuls des fichiers dans `inertia/pages/public/**` ou `app/controllers/public/**` sont modifiés
-**Then** uniquement le workflow `deploy-public.yml` se déclenche (rebuild bundle public + rechargement PM2 partiel)
+**Given** un `Dockerfile` multi-stage (Node 22 : build `node ace build`, puis image runtime avec `npm ci --omit=dev` dans `build/`)
+**When** l'image est construite
+**Then** elle démarre avec `node ace migration:run --force && node bin/server.js` et écoute sur `PORT`
+**And** elle tourne avec un utilisateur non-root
 
-**When** seuls des fichiers dans `inertia/pages/admin/**` ou `app/controllers/admin/**` sont modifiés
-**Then** uniquement le workflow `deploy-admin.yml` se déclenche
+**Given** un `compose.yaml` (services `app` et `caddy`) et un `Caddyfile` paramétré par domaine
+**When** `doppler run -- docker compose up -d` est exécuté sur un hôte
+**Then** Caddy sert l'app en HTTPS avec un certificat Let's Encrypt automatique et redirige HTTP → HTTPS (NFR4)
+**And** la limite de corps de requête accepte les uploads de 110 Mo (parité avec `bodyparser`)
+**And** les logs des conteneurs sont plafonnés (driver `json-file`, `max-size`/`max-file`)
 
-**When** des fichiers dans `app/models/**`, `database/migrations/**`, `app/services/**` ou `config/**` sont modifiés
-**Then** le workflow `deploy-full.yml` se déclenche (build complet + migration + redémarrage PM2)
-
-**Given** le workflow de production est en place
-**When** le flux complet est suivi
-**Then** le chemin est : branche story → merge `development` → PR `development → staging` (test Render) → PR `staging → master` (déploiement VPS)
-
-**Given** les tests Japa sont en place
-**When** `node ace test` est exécuté dans le workflow CI
-**Then** les tests passent avant tout déploiement (gate CI)
-
----
-
-### Story 8.3 : Décommissionnement Render
+### Story 8.3 : Staging sur le VPS partagé (`anta.peraha.com`)
 
 En tant que développeur,
-Je veux décommissionner l'environnement Render et mettre à jour la configuration,
-Afin que le VPS soit l'unique environnement de production et que les coûts Render soient éliminés.
+Je veux qu'Anta tourne en Docker sur le VPS de staging et soit servi publiquement sur `https://anta.peraha.com`,
+Afin de tester et faire la démo de l'application dans des conditions de production.
+
+*Révisée le 2026-11-16 : le VPS de staging est celui de Coffee Chat, dont le nginx conteneurisé détient 80/443 ; pas de Caddy ni de Doppler en staging.*
 
 **Acceptance Criteria:**
 
-**Given** le VPS est opérationnel et validé
-**When** la migration est confirmée
-**Then** le service Render est supprimé ou suspendu
-**And** le cron de keep-alive (cron-job.org) est désactivé
-**And** la branche `staging` peut être conservée pour un futur environnement de staging sur le VPS (optionnel)
+**Given** le VPS de staging partagé avec Coffee Chat
+**When** la stack Anta est démarrée (`compose.yaml` + `compose.staging.yaml`, secrets dans `/opt/anta/.env` hors dépôt)
+**Then** l'app répond sur `127.0.0.1:3333` sans publier de port public et sans toucher aux conteneurs Coffee Chat
 
-**Given** le DNS est configuré
-**When** le domaine principal pointe vers le VPS
-**Then** le trafic est routé vers le VPS et non plus vers Render
-**And** le certificat Let's Encrypt est actif et renouvelable automatiquement
+**Given** l'enregistrement DNS `anta.peraha.com` pointe vers l'IP du VPS de staging
+**When** le vhost `anta.conf` est chargé dans le nginx de Coffee Chat
+**Then** `https://anta.peraha.com` sert l'application avec un certificat Let's Encrypt valide, HTTP redirige vers HTTPS, les uploads jusqu'à 110 Mo passent
+**And** elle utilise la même base Supabase, le même bucket R2 et Mailgun
+**And** `APP_URL=https://anta.peraha.com`
+
+**Given** Anta est arrêté
+**When** le nginx de Coffee Chat est rechargé ou redémarré
+**Then** il démarre normalement et Coffee Chat reste servi
+
+### Story 8.4 : CI/CD de déploiement du staging
+
+En tant que développeur,
+Je veux qu'un push sur la branche `staging` déploie automatiquement le VPS de staging,
+Afin de conserver le flux actuel (PR `development → staging`) sans Render.
+
+**Acceptance Criteria:**
+
+**Given** une PR `development → staging` est mergée
+**When** le workflow `deploy-staging.yml` se déclenche
+**Then** les tests (`node ace test`, Postgres de service CI) passent avant tout déploiement (gate)
+**And** la suite fonctionnelle est réparée en CI et le `continue-on-error` du step `Run functional tests` de `ci.yml` est retiré (voir `deferred-work.md`, « TICKET — Suite fonctionnelle incompatible avec la CI »), sinon le gate ne couvre que les tests unitaires
+**And** l'image est construite et poussée sur GHCR, taggée avec le SHA du commit
+**And** le VPS de staging tire l'image et redémarre la stack via SSH (clé de déploiement dédiée, secrets GitHub)
+**And** un health check HTTP sur `https://anta.peraha.com` valide le déploiement ; en cas d'échec le workflow est rouge et l'image précédente reste relançable par son tag
+
+### Story 8.5 : Décommissionnement de Render
+
+En tant que développeur,
+Je veux supprimer l'environnement Render,
+Afin que le VPS de staging soit l'unique staging et que Render ne coûte ni ne trompe plus personne.
+
+**Acceptance Criteria:**
+
+**Given** le staging VPS est validé (Stories 8.3 et 8.4)
+**When** le décommissionnement est confirmé
+**Then** le service Render `anta-staging` est supprimé et le keep-alive cron-job.org désactivé
+**And** `render.yaml` est retiré du dépôt et la documentation (README, `docs/`, skill de déploiement) mise à jour
+**And** toute référence à `anta-staging.onrender.com` (liens, `APP_URL`, mémoire projet) est remplacée par `https://anta.peraha.com`
+
+### Story 8.6 : Mise en production sur VPS
+
+En tant que développeur,
+Je veux déployer la production sur un VPS avec la même stack que le staging,
+Afin que l'application soit en ligne sur un serveur maîtrisé (NFR4, NFR13).
+
+**Acceptance Criteria:**
+
+**Given** un VPS de production dédié (Docker + Compose, pare-feu 22/80/443, mises à jour de sécurité automatiques) et le domaine de production configuré
+**When** une PR `staging → master` est mergée
+**Then** `deploy-production.yml` promeut l'image déjà validée en staging (même tag), sans rebuild
+**And** les variables viennent d'un `.env` sur le VPS (`0600`, hors dépôt), stack `compose.yaml` avec Caddy
+**And** le site est accessible en HTTPS sur le domaine de production, avec un comportement identique au staging

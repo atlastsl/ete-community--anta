@@ -141,16 +141,13 @@ anta/
 
 **Phase initiale (Render) :** Auto-deploy depuis la branche `staging` — Render rebuild l'intégralité de l'app à chaque push. Pas de déploiement sélectif par chemin en phase dev/démo.
 
-**Phase finale (VPS — Epic 8) :** GitHub Actions avec déploiement sélectif par chemin depuis `master` :
+**Phase finale (VPS — Epic 8, révisé 2026-11-15) :** GitHub Actions construit une image Docker unique ; pas de déploiement sélectif par chemin (l'image est toujours reconstruite entièrement) :
 
 ```yaml
-# Règles de déclenchement par chemin modifié
-- inertia/pages/public/** ou app/controllers/public/**
-  → Rebuild bundle public → Redéploiement partiel
-- inertia/pages/admin/** ou app/controllers/admin/**
-  → Rebuild bundle admin → Redéploiement partiel
-- app/models/** ou database/migrations/**
-  → Redéploiement complet backend
+deploy-staging.yml: # push sur staging
+  → tests (gate) → build image → push GHCR (tag = SHA) → SSH VPS staging → docker compose pull && up -d → health check
+deploy-production.yml: # push sur master
+  → promotion de l'image validée en staging (même tag, sans rebuild) → SSH VPS prod → docker compose up -d → health check
 ```
 
 **Note :** L'initialisation du projet via cette commande constitue la première story d'implémentation (Epic 1, Story 1).
@@ -379,7 +376,7 @@ AdonisJS injecte `<title>`, `<meta name="description">`, `<meta property="og:*">
 | ------------- | -------------------------------------------------------------------- |
 | `master`      | Production — reflète le code déployé en production (VPS, phase finale) |
 | `development` | Centralisation des updates — branche cible des merges de stories     |
-| `staging`     | Test/démo — connectée à Render, mise à jour via PR `development → staging` |
+| `staging`     | Test/démo — connectée à Render, puis au VPS de staging (`anta.peraha.com`, Epic 8), mise à jour via PR `development → staging` |
 
 **Workflow de développement :**
 
@@ -398,18 +395,30 @@ npm install && node ace build
 node ace migration:run --force && node build/bin/server.js
 ```
 
-#### Phase finale — Production (VPS) — Epic 8
+#### Phase finale — VPS (Epic 8, révisé par `sprint-change-proposal-2026-11-15.md`)
 
-| Composant         | Choix                                                           |
-| ----------------- | --------------------------------------------------------------- |
-| Hébergement       | VPS (type Hetzner CX21 — 2 vCPU, 4 Go RAM)                      |
-| Reverse proxy     | Nginx                                                           |
-| Process manager   | PM2 (avec `pm2-logrotate`)                                      |
-| TLS               | Let's Encrypt (Certbot)                                         |
-| CI/CD             | GitHub Actions — déploiement depuis `master`                    |
-| Stockage fichiers | Cloudflare R2 (voir section 2)                                  |
+|                    | Dev                                   | Staging                          | Production                        |
+| ------------------ | ------------------------------------- | -------------------------------- | --------------------------------- |
+| Hôte               | VPS de dev (`vmi3733843`)             | VPS partagé avec Coffee Chat     | VPS dédié                         |
+| Accès              | Tailscale (`tailscale serve`, tailnet) | Public — `anta.peraha.com`       | Domaine de production (à définir) |
+| Exécution          | `doppler run -- npm run dev`          | Docker Compose (`app`, `compose.staging.yaml`) | Docker Compose (`app` + `caddy`) |
+| TLS                | Tailscale                             | nginx de Coffee Chat + certbot (Let's Encrypt) | Caddy (Let's Encrypt automatique) |
+| Secrets            | Doppler `anta/dev`                    | `/opt/anta/.env` sur le VPS (0600) | `.env` sur le VPS (0600)        |
+| Base de données    | Supabase (partagée dev/staging)       | Supabase (partagée dev/staging)  | Supabase (production)             |
+| Fichiers / e-mails | R2 / Mailgun                          | R2 / Mailgun                     | R2 / Mailgun                      |
+| Déploiement        | —                                     | push `staging` → GHCR → SSH      | merge `master` → promotion image  |
 
-La migration vers VPS est planifiée dans l'Epic 8, après validation complète sur l'environnement Render.
+Révision 2026-11-16 (Story 8.3, décision d'Aurélien) : le staging partage le VPS de Coffee Chat, dont le nginx conteneurisé détient 80/443. Anta y tourne dans son propre projet Compose (`/opt/anta`, app sur `127.0.0.1:3333`, sans Caddy) et nginx le joint par le réseau Docker de Coffee Chat (alias `anta-app`, résolution paresseuse pour ne jamais empêcher nginx de démarrer). **Doppler ne sert qu'au dev** ; staging et production lisent un `.env` sur le VPS. Détails : `docs/staging-vps.md`.
+
+Artefacts : `Dockerfile` multi-stage (Node 22, utilisateur non-root, démarrage `node ace migration:run --force && node bin/server.js`), `compose.yaml`, `Caddyfile` paramétré par domaine (limite de corps ≥ 110 Mo, parité `bodyparser`), logs Docker plafonnés.
+
+**Règles base partagée (dev/staging) :**
+
+- Interdits : `migration:rollback`, `migration:fresh`, `migration:reset`, `db:wipe`, seeders destructifs.
+- Migrations rétrocompatibles uniquement (expand/contract : ajouter d'abord, supprimer dans une release ultérieure) — le staging exécute `migration:run --force` à chaque démarrage.
+- `node ace test` uniquement contre un Postgres local jetable (`anta_test`, comme la CI), jamais contre Supabase.
+
+Render (phase initiale) est décommissionné en Story 8.5.
 
 ---
 
@@ -684,9 +693,12 @@ anta/
 ├── .github/
 │   └── workflows/
 │       ├── ci.yml                   # Lint + tests sur chaque PR (development, staging)
-│       ├── deploy-public.yml        # [Phase VPS] Rebuild bundle public (chemin : inertia/pages/public/**)
-│       ├── deploy-admin.yml         # [Phase VPS] Rebuild bundle admin (chemin : inertia/pages/admin/**)
-│       └── deploy-full.yml          # [Phase VPS] Redéploiement complet (chemin : app/models/**, database/**)
+│       ├── deploy-staging.yml       # [Phase VPS] Tests → image GHCR → déploiement VPS staging
+│       └── deploy-production.yml    # [Phase VPS] Promotion de l'image validée → VPS production
+│
+├── Dockerfile                       # [Phase VPS] Image multi-stage (staging + production)
+├── compose.yaml                     # [Phase VPS] Services app + caddy
+├── Caddyfile                        # [Phase VPS] Reverse proxy + TLS automatique
 │
 ├── app/
 │   ├── controllers/
@@ -905,14 +917,11 @@ ci.yml: # Déclenché sur PR vers development et staging
 **Phase finale (VPS — Epic 8) :**
 
 ```yaml
-deploy-public.yml: # inertia/pages/public/**, app/controllers/public/**
-  → build public bundle → rsync → pm2 reload
+deploy-staging.yml: # push sur staging
+  → tests → build image → GHCR → SSH → docker compose pull && up -d → health check
 
-deploy-admin.yml: # inertia/pages/admin/**, app/controllers/admin/**
-  → build admin bundle → rsync → pm2 reload
-
-deploy-full.yml: # app/models/**, database/**, app/services/**, config/**
-  → build all → rsync → migration:run → pm2 restart
+deploy-production.yml: # push sur master
+  → promotion de l'image validée en staging → SSH → docker compose up -d → health check
 ```
 
 ## Résultats de Validation Architecturale
