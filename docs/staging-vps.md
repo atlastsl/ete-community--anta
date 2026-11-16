@@ -76,10 +76,15 @@ Secrets de l'environnement GitHub **`staging`** (Settings → Environments) :
 | `STAGING_SSH_KEY` | clé privée `ed25519` dédiée (`anta-ci-deploy`, sans passphrase) |
 | `STAGING_KNOWN_HOSTS` | sortie de `ssh-keyscan -t ed25519 <ip>` (hôte vérifié, jamais `StrictHostKeyChecking=no`) |
 
-Variable optionnelle `STAGING_USER` (défaut `coffeechat`).
+Variable optionnelle `STAGING_USER` (défaut `coffeechat`). L'environnement n'accepte que des déploiements
+depuis la branche `staging` (règle de branche). Copie de la clé privée sur le VPS de dev :
+`/home/atlas/.ssh/dev-staging/anta_ci_deploy` (root, `0600`). Sur le VPS, `~coffeechat/.ssh` appartient à
+root : éditer `authorized_keys` avec `sudo` en gardant `root:root 644`.
 
 **Rollback** : Actions → *Deploy staging* → *Run workflow*, `image_tag` = SHA complet d'un commit déjà
-publié sur GHCR (onglet Packages du dépôt). Pas de tests ni de build, seulement le déploiement et le health check.
+publié sur GHCR (onglet Packages du dépôt), en lançant le workflow **sur la branche `staging`** (règle de
+l'environnement). Pas de tests ni de build, seulement le déploiement et le health check. GitHub n'affiche le
+bouton qu'une fois le workflow présent sur la branche par défaut (`development`).
 
 **Rotation de la clé** : générer une nouvelle paire, remplacer la ligne `anta-ci-deploy` dans
 `authorized_keys` (même préfixe `restrict,command=…`), mettre à jour `STAGING_SSH_KEY`.

@@ -1,6 +1,6 @@
 # Story 8.4 : CI/CD de déploiement du staging
 
-Status: in-progress
+Status: review
 
 ## Story
 
@@ -51,9 +51,9 @@ Vérifié : avec `SESSION_DRIVER=memory` dans `test-local.sh`, functional passe 
   - [x] Job `image` (`needs: test`, `packages: write`) : `docker/setup-buildx-action`, `docker/login-action` (GHCR, `GITHUB_TOKEN`), `docker/build-push-action` (`push: true`, tags `:<sha>` + `:staging`, `build-args: GIT_SHA=<sha>`, cache `type=gha`).
   - [x] Job `deploy` (`environment: staging`, url `https://anta.peraha.com`, `packages: read`) : clé SSH et `known_hosts` depuis les secrets (pas de `StrictHostKeyChecking=no`), tar des fichiers Compose + jeton → `ssh coffeechat@$STAGING_HOST "deploy ghcr.io/…:<sha>"`, puis health check public avec retries (`/health`, `revision` attendue). Le job tourne si `image` a réussi ou si `image_tag` est fourni.
   - [x] Secrets de l'environnement GitHub `staging` : `STAGING_HOST`, `STAGING_SSH_KEY`, `STAGING_KNOWN_HOSTS`. Aucune IP ni secret dans le dépôt.
-- [ ] T6 — Outillage et docs (AC 4, 5)
+- [x] T6 — Outillage et docs (AC 4, 5)
   - [x] `scripts/vps/deploy-staging.sh` (manuel, clé admin) : installe/rafraîchit `/opt/anta/remote-deploy.sh` puis délègue le démarrage à ce script (même chemin que la CI) ; l'image locale `anta:<sha>` reste transférée par `docker save | docker load`.
-  - [ ] Clé de déploiement : générée sur le VPS de dev (`ed25519`, sans passphrase, hors dépôt), publique installée restreinte sur le VPS, privée + `ssh-keyscan` dans les secrets GitHub — **avec l'accord d'Aurélien** (écrit sur le VPS partagé et sur GitHub).
+  - [x] Clé de déploiement : générée sur le VPS de dev (`ed25519`, sans passphrase, hors dépôt), publique installée restreinte sur le VPS, privée + `ssh-keyscan` dans les secrets GitHub — **avec l'accord d'Aurélien** (écrit sur le VPS partagé et sur GitHub).
   - [x] `docs/staging-vps.md` : section CI/CD (schéma, secrets, rollback par `workflow_dispatch`, rotation de la clé) ; `docs/docker.md` si besoin.
   - [x] `tests/unit/infrastructure/deployment.spec.ts` : workflow (déclencheurs, `needs`, `uses: ./.github/workflows/ci.yml`, tag `github.sha`, `environment: staging`, pas de `StrictHostKeyChecking=no`), `ci.yml` (plus de `continue-on-error`, `SESSION_DRIVER: memory`, `workflow_call`), script distant (`set -euo pipefail`, regex d'image, `--no-build`, retour arrière, aucune IP).
 
@@ -114,7 +114,8 @@ claude-opus-5-5 (Claude Code), 2026-11-16
 - Cause racine du ticket CI : `SESSION_DRIVER=cookie` exporté par la CI masquait `.env.test` (`memory`), store utilisé par le client de test. Pas un problème de transaction.
 - `/health` renvoie `revision` (commit de l'image) : le health check public du workflow compare au SHA déployé.
 - `deploy-staging.sh` (manuel) passe désormais par `remote-deploy.sh` : un seul chemin de démarrage, retour arrière compris ; il réinstalle aussi le script sur le VPS (la clé CI ne peut pas le modifier).
-- En attente de l'accord d'Aurélien : clé `anta-ci-deploy` (installée restreinte dans `authorized_keys` de `coffeechat`), environnement GitHub `staging` + secrets `STAGING_HOST`, `STAGING_SSH_KEY`, `STAGING_KNOWN_HOSTS`. Puis 1er run réel au push/merge sur `staging`.
+- 2026-11-16 (accord d'Aurélien) : clé `anta-ci-deploy` générée (copie `/home/atlas/.ssh/dev-staging/anta_ci_deploy`), installée `restrict,command="/opt/anta/remote-deploy.sh"` dans `authorized_keys` de `coffeechat` (fichier `root:root 644`, sauvegarde `authorized_keys.bak-anta-ci`). Testée : `status` OK ; `id`, lecture de `.env` → refusés ; `scp` → fermé ; redirection de port → `administratively prohibited`. Environnement GitHub `staging` (déploiements depuis la branche `staging` seulement) + secrets `STAGING_HOST`, `STAGING_KNOWN_HOSTS` (ed25519, empreinte vérifiée contre `/etc/ssh/ssh_host_ed25519_key.pub` du VPS), `STAGING_SSH_KEY`.
+- Premier run réel du workflow : au merge sur `staging` (Epic 8 testé d'un bloc par Aurélien).
 
 ### File List
 
@@ -123,4 +124,5 @@ claude-opus-5-5 (Claude Code), 2026-11-16
 - `Dockerfile`, `start/env.ts`, `start/routes.ts`
 - `tests/functional/health.spec.ts`, `tests/functional/public/home.spec.ts`, `tests/functional/admin/README.md`, `tests/unit/infrastructure/deployment.spec.ts`
 - `docs/staging-vps.md`, `docs/docker.md`, `_bmad-output/implementation-artifacts/deferred-work.md`
-- Hors dépôt (VPS) : `/opt/anta/remote-deploy.sh`, `/opt/anta/image.env.previous`
+- Hors dépôt (VPS) : `/opt/anta/remote-deploy.sh`, `/opt/anta/image.env.previous`, `~coffeechat/.ssh/authorized_keys`
+- GitHub : environnement `staging` + 3 secrets
