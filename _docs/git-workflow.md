@@ -6,7 +6,7 @@
 | ------------- | ------------------------------------------------------------- | -------------------------------- |
 | `master`      | Production (VPS — Epic 8)                                     | PR + 1 review obligatoire        |
 | `development` | Centralisation des features en cours (branche **par défaut**) | CI doit passer avant merge       |
-| `staging`     | Environnement test/démo (connectée à Render auto-deploy)      | CI doit passer avant merge       |
+| `staging`     | Environnement test/démo (`https://anta.peraha.com`, VPS)      | CI doit passer avant merge       |
 
 ## Workflow par story
 
@@ -42,17 +42,17 @@
 
 7. Supprimer la branche feature localement et sur le remote.
 
-## Déploiement test (Render)
+## Déploiement test (staging VPS)
 
 1. Créer une PR `development → staging` sur GitHub
-2. Une fois CI vert + merge, **Render auto-deploy** détecte le push
-3. Vérifier l'app sur `https://anta-staging.onrender.com` (URL à confirmer après le premier déploiement)
+2. Au merge, le workflow `deploy-staging.yml` lance les tests, pousse l'image sur GHCR (tag = SHA du commit), déploie le VPS puis vérifie `/health`
+3. Vérifier l'app sur `https://anta.peraha.com`
 
-⚠️ Si Render Free Tier dort (15 min d'inactivité), prévoir 30-60s pour le cold start. Le cron-job.org configuré toutes les 14 min limite ce cas.
+En cas d'échec, le VPS relance l'image précédente et le workflow est rouge. Pour revenir à une version : Actions → `Deploy staging` → **Run workflow** avec `image_tag` = SHA. Détails : [`docs/staging-vps.md`](../docs/staging-vps.md).
 
 ## Déploiement production (VPS — Epic 8)
 
-Le workflow VPS sera mis en place lors de l'Epic 8 (migration depuis Render). En attendant :
+Le workflow de production arrive avec la Story 8.6. En attendant :
 
 1. Créer une PR `staging → master`
 2. Review obligatoire (1 reviewer minimum)
@@ -72,5 +72,5 @@ Le workflow VPS sera mis en place lors de l'Epic 8 (migration depuis Render). En
 feat(story-1.5): SuperAdminSeeder with idempotency
 fix(db): Supabase pooler SSL config
 chore(deps): bump react-i18next to v17.0.8
-docs(deployment): add Render rollback procedure
+docs(deployment): document staging rollback
 ```

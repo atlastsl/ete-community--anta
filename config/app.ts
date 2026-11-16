@@ -1,6 +1,7 @@
 import env from '#start/env'
 import app from '@adonisjs/core/services/app'
 import { defineConfig } from '@adonisjs/core/http'
+import proxyAddr from 'proxy-addr'
 
 /**
  * The app URL can be used in various places where you want to create absolute
@@ -31,6 +32,13 @@ export const http = defineConfig({
    * from anywhere inside your application.
    */
   useAsyncLocalStorage: false,
+
+  /**
+   * Proxies de confiance pour X-Forwarded-For / X-Forwarded-Proto : loopback
+   * (tailscale serve en dev) et réseaux privés (Caddy sur le réseau Compose).
+   * Sans cela, `request.ip()` (stats de vues/téléchargements) vaudrait l'IP de Caddy.
+   */
+  trustProxy: proxyAddr.compile(['loopback', 'uniquelocal']),
 
   /**
    * Manage cookies configuration. The settings for the session id cookie are

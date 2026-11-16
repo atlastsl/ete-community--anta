@@ -1,0 +1,27 @@
+# Contexte de build Docker : uniquement le code nécessaire à `node ace build`.
+.git
+.github
+.claude
+node_modules
+build
+tmp
+storage
+public/assets
+*.tsbuildinfo
+
+# Jamais de secrets dans l'image
+.env
+.env.*
+CLAUDE.local.md
+
+# Documentation et artefacts de planification
+_bmad
+_bmad-output
+_docs
+docs
+README.md
+
+# Déploiement (inutiles dans l'image)
+Dockerfile
+compose.yaml
+Caddyfile

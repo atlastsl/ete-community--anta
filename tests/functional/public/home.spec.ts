@@ -3,6 +3,7 @@ import db from '@adonisjs/lucid/services/db'
 import { DateTime } from 'luxon'
 import Production from '#models/production'
 import StatsView from '#models/stats_view'
+import { PRODUCTION_CATEGORIES } from '#constants/production_taxonomy'
 
 type ProductionFixture = {
   title?: string
@@ -47,14 +48,17 @@ test.group('Public home | accès', (group) => {
     return () => db.rollbackGlobalTransaction()
   })
 
-  test('GET / → 200 même base vide (sections vides)', async ({ client, assert }) => {
+  test('GET / → 200 même base vide (sections vides, catégories fixes)', async ({
+    client,
+    assert,
+  }) => {
     const response = await client.get('/')
     response.assertStatus(200)
     const props = extractProps(response.text())
     assert.isNotNull(props)
     assert.lengthOf(props.mostViewed, 0)
     assert.lengthOf(props.recent, 0)
-    assert.lengthOf(props.categories, 0)
+    assert.deepEqual(props.categories, [...PRODUCTION_CATEGORIES])
   })
 })
 
@@ -119,14 +123,13 @@ test.group('Public home | sections', (group) => {
     assert.lengthOf(props.recent, 6)
   })
 
-  test('categories : valeurs distinctes des productions publiées', async ({ client, assert }) => {
-    await createProduction({ status: 'published', category: 'Livre' })
-    await createProduction({ status: 'published', category: 'Livre' })
-    await createProduction({ status: 'published', category: 'Article' })
-    await createProduction({ status: 'draft', category: 'Thèse' })
+  // Taxonomie unifiée (0a1541f) : liste fixe, indépendante des productions publiées.
+  test('categories : liste fixe de la taxonomie', async ({ client, assert }) => {
+    await createProduction({ status: 'published', category: 'book' })
+    await createProduction({ status: 'draft', category: 'thesis' })
 
     const response = await client.get('/')
     const props = extractProps(response.text())
-    assert.deepEqual(props.categories.sort(), ['Article', 'Livre'])
+    assert.deepEqual(props.categories, [...PRODUCTION_CATEGORIES])
   })
 })
