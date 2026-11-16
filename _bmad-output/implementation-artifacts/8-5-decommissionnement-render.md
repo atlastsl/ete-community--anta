@@ -1,6 +1,6 @@
 # Story 8.5 : Décommissionnement de Render
 
-Status: review
+Status: done
 
 ## Story
 
@@ -46,8 +46,8 @@ Le volet dépôt est sans risque avant la suppression du service : Render ne rel
 - [x] T4 — Hors dépôt, côté workspace (AC 2, 3), sans attendre Aurélien
   - [x] Skill `/root/maxxing/.claude/skills/deploiement-adonisjs-render/` : la renommer `deploiement-adonisjs-docker` (dossier + `name:`) et la réécrire pour le déploiement actuel : `.npmrc include=dev` au build, `.adonisjs/` et `database/schema.ts` commités, démarrage depuis `build/`, `migration:run --force` au démarrage, `DB_SSL=true` sur le pooler Supabase, image multi-stage + Compose + `/health` (renvois vers `docs/docker.md` et `docs/staging-vps.md`). Retirer les points propres à Render (resync `render.yaml`, keep-alive).
   - [x] Mémoire projet `/root/maxxing/projects/anta/memory.md` : la ligne « Staging » ne mentionne plus Render qu'au passé, **après** l'AC 1 (avant, Render existe encore : écrire alors « suppression en attente de la recette »).
-- [ ] T5 — Checklist d'Aurélien (AC 1), à reporter dans la section « Actions manuelles » de cette story et à lui présenter
-  - [ ] Préalables : recette 8.3 faite (login admin, upload > 10 Mo, e-mail Mailgun) ; premier run de `deploy-staging.yml` vert sur `staging`.
+- [x] T5 — Checklist d'Aurélien (AC 1), à reporter dans la section « Actions manuelles » de cette story et à lui présenter
+  - [x] Préalables : recette 8.3 faite (login admin, upload > 10 Mo, e-mail Mailgun) ; premier run de `deploy-staging.yml` vert sur `staging`.
   - [ ] Render : Dashboard → service `anta-staging` → Settings → **Delete Web Service**.
   - [ ] cron-job.org : désactiver puis supprimer le job « Anta staging keep-alive » (GET toutes les 14 min).
   - [ ] GitHub → Settings → Integrations / GitHub Apps : retirer l'accès de Render au dépôt `atlastsl/ete-community--anta` (ou désinstaller l'app si plus aucun service Render).
@@ -90,12 +90,12 @@ Le volet dépôt est sans risque avant la suppression du service : Render ne rel
 
 ## Actions manuelles (Aurélien)
 
-Toutes **en attente** (2026-11-16). Préalables : recette 8.3 + premier run vert de `deploy-staging.yml`.
+Préalables remplis le 2026-11-16 (recette 8.3 validée, premier run vert de `deploy-staging.yml`). Aurélien supprime Render et le keep-alive le 2026-11-16 ; les autres lignes restent à vérifier de son côté.
 
 | Action | État |
 |---|---|
-| Supprimer le service Render `anta-staging` (Settings → Delete Web Service) | à faire |
-| cron-job.org : désactiver puis supprimer « Anta staging keep-alive » | à faire |
+| Supprimer le service Render `anta-staging` (Settings → Delete Web Service) | en cours (Aurélien) |
+| cron-job.org : désactiver puis supprimer « Anta staging keep-alive » | en cours (Aurélien) |
 | GitHub : retirer l'accès de l'app Render au dépôt | à faire |
 | Protection de branche : aucun check de statut Render requis | à vérifier |
 | CORS du bucket R2 : retirer `https://anta-staging.onrender.com` si présent ; lien « Website » du dépôt | à vérifier |
@@ -124,6 +124,7 @@ claude-opus-5-5 (Claude Code), 2026-11-16
 - Skill workspace renommée `deploiement-adonisjs-docker` et réécrite pour l'image multi-stage + Compose (ancienne `deploiement-adonisjs-render` supprimée ; seule référence restante : le rapport d'import du 2026-11-15, archive).
 - Planification (`epics.md`, `architecture.md`) non modifiée : historique + PR #11.
 - AC 1 et mémoire projet : en attente d'Aurélien (section « Actions manuelles »). Test de non-régression ajouté pour que Render ne revienne pas dans les docs vivantes.
+- 2026-11-16 : PR mergées (#12–#16, #18 sur `development` ; #19 sur `staging`), premier run de `deploy-staging.yml` vert (`/health` → `revision` 81d9e07). Recette de l'Epic 8 validée par Aurélien. Story → done.
 
 ### File List
 

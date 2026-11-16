@@ -1,6 +1,6 @@
 # Story 8.1 : Environnement de développement sur VPS (Tailscale + Doppler)
 
-Status: in-progress
+Status: done
 
 ## Story
 
@@ -32,7 +32,7 @@ Afin de développer sans dépendre de mon poste local ni d'un fichier `.env`.
 - [x] T2 — Projet Doppler `anta` / config `dev` (AC 1)
   - [x] `doppler projects create anta` (crée les environnements dev/stg/prd ; `stg`/`prd` restent vides, ils servent aux stories 8.3/8.6)
   - [x] Renseigner les **valeurs non secrètes** par CLI : `TZ=UTC`, `PORT=3333`, `HOST=127.0.0.1`, `NODE_ENV=development`, `LOG_LEVEL=info`, `APP_NAME=Anta`, `VITE_APP_NAME=Anta`, `APP_URL=https://vmi3733843.tail39fe0e.ts.net:9443`, `SESSION_DRIVER=cookie`, `SESSION_AGE=2h`, `DB_SSL=true`, `R2_BUCKET`, `MAIL_MAILER=mailgun`, `MAIL_FROM_*`, `MAILGUN_DOMAIN`, `SUPER_ADMIN_EMAIL`, `VITE_HMR_CLIENT_PORT=9444`
-  - [ ] **Action Aurélien** : saisir les secrets dans le dashboard Doppler (jamais via un fichier ni le chat) : `APP_KEY`, `DB_HOST`/`DB_PORT`/`DB_USER`/`DB_PASSWORD`/`DB_DATABASE` (pooler Supabase du staging), `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `MAILGUN_API_KEY`, `RESEND_API_KEY` (optionnel), `SUPER_ADMIN_PASSWORD` (optionnel)
+  - [x] **Action Aurélien** : saisir les secrets dans le dashboard Doppler (jamais via un fichier ni le chat) : `APP_KEY`, `DB_HOST`/`DB_PORT`/`DB_USER`/`DB_PASSWORD`/`DB_DATABASE` (pooler Supabase du staging), `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `MAILGUN_API_KEY`, `RESEND_API_KEY` (optionnel), `SUPER_ADMIN_PASSWORD` (optionnel)
   - [x] `doppler setup --project anta --config dev` dans le dépôt (scope local à `/home/atlas/projects/anta`, stocké dans `~atlas/.doppler`, pas dans le dépôt)
   - [x] Vérifier : comparaison des noms `.env.example` ↔ `doppler secrets --only-names` = aucun manquant
 - [x] T3 — HMR à travers `tailscale serve` (AC 2)
@@ -49,11 +49,11 @@ Afin de développer sans dépendre de mon poste local ni d'un fichier `.env`.
 - [x] T6 — Documentation (AC 3)
   - [x] `docs/dev-vps.md` : prérequis, `doppler run -- npm run dev`, ports tailnet, HMR, tests locaux, règles base partagée
   - [x] `CLAUDE.local.md` (déjà réécrit le 2026-11-15, ignoré par git via `.git/info/exclude`) : vérifier qu'il couvre les règles ; y ajouter les ports et la commande de test
-- [ ] T7 — Validation manuelle (AC 1, 2)
-  - [ ] `doppler run -- npm run dev` démarre ; `ls .env` → absent
-  - [ ] Depuis le PC : page d'accueil, une page détail, `/admin/login` + connexion OK (cookie de session sur HTTPS)
-  - [ ] Modifier un composant React → rechargement à chaud visible sans F5
-  - [ ] Hors tailnet (téléphone en 4G sans Tailscale) : URL injoignable
+- [x] T7 — Validation manuelle (AC 1, 2)
+  - [x] `doppler run -- npm run dev` démarre ; `ls .env` → absent
+  - [x] Depuis le PC : page d'accueil, une page détail, `/admin/login` + connexion OK (cookie de session sur HTTPS)
+  - [x] Modifier un composant React → rechargement à chaud visible sans F5
+  - [x] Hors tailnet (téléphone en 4G sans Tailscale) : URL injoignable
 
 ## Dev Notes
 
@@ -109,6 +109,7 @@ claude-opus-5-5
 - `tailscale serve` : 9443 → 3333, 9444 → 24678, tous deux « tailnet only ».
 - Smoke test : `doppler run -- npm run dev` (DB/R2 surchargés vers la base de test locale) → `/` et `/admin/login` 200 via l'URL tailnet, sans `.env`.
 - `npm run test:local` : unit 257/257 ✅ ; functional 80 ✅ / 90 ❌ — identique à l'échec connu de la CI (`loginAs`/transaction globale, `deferred-work.md`), traité en Story 8.4. Lint + typecheck verts.
+- 2026-11-16 : PR mergées (#12–#16, #18 sur `development` ; #19 sur `staging`), premier run de `deploy-staging.yml` vert (`/health` → `revision` 81d9e07). Recette de l'Epic 8 validée par Aurélien. Story → done.
 
 ### File List
 

@@ -1,6 +1,6 @@
 # Story 8.4 : CI/CD de déploiement du staging
 
-Status: review
+Status: done
 
 ## Story
 
@@ -116,6 +116,7 @@ claude-opus-5-5 (Claude Code), 2026-11-16
 - `deploy-staging.sh` (manuel) passe désormais par `remote-deploy.sh` : un seul chemin de démarrage, retour arrière compris ; il réinstalle aussi le script sur le VPS (la clé CI ne peut pas le modifier).
 - 2026-11-16 (accord d'Aurélien) : clé `anta-ci-deploy` générée (copie `/home/atlas/.ssh/dev-staging/anta_ci_deploy`), installée `restrict,command="/opt/anta/remote-deploy.sh"` dans `authorized_keys` de `coffeechat` (fichier `root:root 644`, sauvegarde `authorized_keys.bak-anta-ci`). Testée : `status` OK ; `id`, lecture de `.env` → refusés ; `scp` → fermé ; redirection de port → `administratively prohibited`. Environnement GitHub `staging` (déploiements depuis la branche `staging` seulement) + secrets `STAGING_HOST`, `STAGING_KNOWN_HOSTS` (ed25519, empreinte vérifiée contre `/etc/ssh/ssh_host_ed25519_key.pub` du VPS), `STAGING_SSH_KEY`.
 - Premier run réel du workflow : au merge sur `staging` (Epic 8 testé d'un bloc par Aurélien).
+- 2026-11-16 : PR mergées (#12–#16, #18 sur `development` ; #19 sur `staging`), premier run de `deploy-staging.yml` vert (`/health` → `revision` 81d9e07). Recette de l'Epic 8 validée par Aurélien. Story → done.
 
 ### File List
 
