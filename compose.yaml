@@ -1,6 +1,7 @@
-# Staging et production d'Anta (Epic 8) : `doppler run -- docker compose up -d`.
-# Aucun fichier .env : les variables listées sans valeur sont reprises de
-# l'environnement injecté par Doppler (anta/stg ou anta/prd).
+# Stack d'Anta pour un VPS dédié, avec Caddy (Epic 8, docs/docker.md).
+# Les variables listées sans valeur sont reprises de l'environnement de Compose
+# (shell, ou fichier .env du dossier projet).
+# Staging sur le VPS partagé : + compose.staging.yaml (docs/staging-vps.md).
 
 name: anta
 
