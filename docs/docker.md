@@ -30,7 +30,7 @@ Variables Compose (à mettre dans la config Doppler ; ce ne sont pas des variabl
 | Variable | Défaut | Rôle |
 |---|---|---|
 | `DOMAIN` | requis | Site servi par Caddy (`anta.peraha.com` en staging) |
-| `ANTA_IMAGE` | `anta:local` | Image à exécuter (tag GHCR en Story 8.4) |
+| `ANTA_IMAGE` | `anta:local` | Image à exécuter (staging : `ghcr.io/atlastsl/ete-community--anta:<sha>`, voir `docs/staging-vps.md`) |
 | `HTTP_PORT` / `HTTPS_PORT` | `80` / `443` | Ports de l'hôte (à changer seulement pour un test local) |
 
 `NODE_ENV`, `HOST`, `PORT` et `TZ` sont fixés par `compose.yaml`, quelle que soit la valeur Doppler.
