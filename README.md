@@ -40,8 +40,24 @@ node ace test --suite unit
 
 ## Documentation
 
+- [Guide administrateur](_docs/guide-admin.md) — utilisation du panel admin (productions, upload, publication)
+- [Quick Start admin](_docs/guide-admin-quickstart.md) — version condensée (publication, upload, édition)
 - [Workflow Git](_docs/git-workflow.md) — stratégie de branches et conventions
 - [Déploiement Render](_docs/deployment-render.md) — guide staging/démo
+
+### Export PDF des guides
+
+```bash
+pip install -r scripts/requirements-pdf.txt
+npm install   # Playwright déjà présent (Japa) — Chrome ou Edge requis pour Mermaid
+npm run docs:pdf
+# ou : python scripts/md_to_pdf.py
+```
+
+Génère `_docs/pdf/guide-admin.pdf` et `_docs/pdf/guide-admin-quickstart.pdf`.  
+Les **diagrammes Mermaid** sont rendus en PNG et embarqués dans le PDF (`scripts/render_mermaid.mjs` + Playwright). Accès réseau requis une fois pour charger mermaid.js depuis le CDN.
+
+Sur Windows, le moteur PDF **xhtml2pdf** est utilisé automatiquement. Sur Linux/macOS avec GTK, **weasyprint** est préféré (`--backend weasyprint`).
 
 ## Documentation BMad (planification)
 

@@ -12,9 +12,11 @@
     "build": "node ace build",
     "dev": "node ace serve --hmr",
     "test": "node ace test",
+    "test:local": "bash scripts/test-local.sh",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "typecheck": "tsc --noEmit && tsc --noEmit --project inertia/tsconfig.json"
+    "typecheck": "tsc --noEmit && tsc --noEmit --project inertia/tsconfig.json",
+    "docs:pdf": "python scripts/md_to_pdf.py"
   },
   "imports": {
     "#controllers/*": "./app/controllers/*.js",
