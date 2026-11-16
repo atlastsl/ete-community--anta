@@ -1,5 +1,7 @@
 # Rétrospective — Déploiement Anta sur Render
 
+> **Historique.** Render a été décommissionné en Story 8.5 (novembre 2026) : le staging tourne sur `https://anta.peraha.com` (VPS, voir `docs/staging-vps.md`). Les leçons AdonisJS ci-dessous (devDeps au build, `.adonisjs/` commité, démarrage depuis `build/`, `DB_SSL`) restent valables.
+
 **Date :** 2026-06-01
 **Contexte :** Premier déploiement d'Anta (AdonisJS 6 + Inertia/React + Tuyau) sur Render (environnement staging/démo), branche `staging`.
 **Résultat :** ✅ Service live sur https://anta-staging.onrender.com après une série de blocages enchaînés.
