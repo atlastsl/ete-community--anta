@@ -1,52 +1,9 @@
 import { test } from '@japa/runner'
-import { readFileSync, existsSync } from 'node:fs'
+import { readFileSync, existsSync, readdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { parse } from 'yaml'
 
 const r = (p: string) => resolve(process.cwd(), p)
-
-test.group('Infrastructure | render.yaml', () => {
-  const renderConfig = parse(readFileSync(r('render.yaml'), 'utf-8'))
-
-  test('render.yaml est un YAML valide avec au moins un service', ({ assert }) => {
-    assert.isArray(renderConfig.services)
-    assert.isAtLeast(renderConfig.services.length, 1)
-  })
-
-  test('service anta-staging surveille la branche staging', ({ assert }) => {
-    const svc = renderConfig.services.find((s: any) => s.name === 'anta-staging')
-    assert.exists(svc, 'service anta-staging absent')
-    assert.equal(svc.branch, 'staging')
-    assert.equal(svc.type, 'web')
-    assert.equal(svc.runtime, 'node')
-  })
-
-  test('build et start commands sont corrects', ({ assert }) => {
-    const svc = renderConfig.services[0]
-    assert.include(svc.buildCommand, 'npm install')
-    assert.include(svc.buildCommand, 'node ace build')
-    assert.include(svc.startCommand, 'migration:run')
-    // Le serveur tourne depuis build/ (cd build && node bin/server.js) pour le manifest Vite
-    assert.include(svc.startCommand, 'cd build')
-    assert.include(svc.startCommand, 'bin/server.js')
-  })
-
-  test('les secrets sont marqués sync: false (pas de leak)', ({ assert }) => {
-    const svc = renderConfig.services[0]
-    const sensitiveKeys = [
-      'APP_KEY',
-      'DB_PASSWORD',
-      'R2_SECRET_ACCESS_KEY',
-      'RESEND_API_KEY',
-      'SUPER_ADMIN_PASSWORD',
-    ]
-    for (const key of sensitiveKeys) {
-      const v = svc.envVars.find((e: any) => e.key === key)
-      assert.exists(v, `${key} absent de render.yaml`)
-      assert.equal(v.sync, false, `${key} doit être sync: false`)
-    }
-  })
-})
 
 test.group('Infrastructure | GitHub Actions CI', () => {
   const ci = parse(readFileSync(r('.github/workflows/ci.yml'), 'utf-8'))
@@ -129,7 +86,7 @@ test.group('Infrastructure | Documentation', () => {
     assert.isTrue(existsSync(r('README.md')))
     const readme = readFileSync(r('README.md'), 'utf-8')
     assert.include(readme, '_docs/git-workflow.md')
-    assert.include(readme, '_docs/deployment-render.md')
+    assert.include(readme, 'docs/staging-vps.md')
   })
 
   test('_docs/git-workflow.md existe et documente les 3 branches', ({ assert }) => {
@@ -140,11 +97,22 @@ test.group('Infrastructure | Documentation', () => {
     assert.include(content, 'staging')
   })
 
-  test('_docs/deployment-render.md existe et documente le keep-alive', ({ assert }) => {
-    assert.isTrue(existsSync(r('_docs/deployment-render.md')))
-    const content = readFileSync(r('_docs/deployment-render.md'), 'utf-8')
-    assert.include(content, 'cron-job.org')
-    assert.include(content, 'render.com')
+  test('Render décommissionné : plus de render.yaml ni de lien onrender.com (Story 8.5)', ({
+    assert,
+  }) => {
+    assert.isFalse(existsSync(r('render.yaml')))
+    assert.isFalse(existsSync(r('_docs/deployment-render.md')))
+    // Docs vivantes seulement : _bmad-output/ et la rétrospective Render restent historiques
+    const docs = [
+      'README.md',
+      '_docs/git-workflow.md',
+      ...readdirSync(r('docs'))
+        .filter((f) => f.endsWith('.md'))
+        .map((f) => `docs/${f}`),
+    ]
+    for (const doc of docs) {
+      assert.notInclude(readFileSync(r(doc), 'utf-8'), 'onrender.com', doc)
+    }
   })
 })
 
