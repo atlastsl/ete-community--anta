@@ -6,7 +6,7 @@ tmp/*
 
 # Note : .adonisjs/ et database/schema.ts SONT committés — le codegen Tuyau
 # (registry importé par inertia/client.ts) n'est pas régénéré de façon fiable
-# par `node ace build` sur un clone frais (ex. Render). Les versionner évite
+# par `node ace build` sur un clone frais (ex. build Docker). Les versionner évite
 # un échec de build vite (ENOENT .adonisjs/client/registry).
 
 # Storage local (R2 utilisé en remote)

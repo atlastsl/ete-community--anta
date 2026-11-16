@@ -1,6 +1,6 @@
 # Story 8.5 : Décommissionnement de Render
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -27,25 +27,25 @@ Le volet dépôt est sans risque avant la suppression du service : Render ne rel
 
 ## Tasks / Subtasks
 
-- [ ] T1 — Retirer Render du dépôt (AC 2)
-  - [ ] Supprimer `render.yaml` et `_docs/deployment-render.md`.
-  - [ ] `.dockerignore` : retirer la ligne `render.yaml`.
-  - [ ] `.gitignore` (commentaire l. 9) : « clone frais (ex. Render) » → « clone frais (ex. build Docker) ».
-  - [ ] `.npmrc` : **garder** `include=dev` (copié par le stage builder du `Dockerfile`, l. 13 ; le stage runtime l'écarte exprès, l. 19). Reformuler le commentaire sans Render : toute plateforme qui force `NODE_ENV=production` au build.
-- [ ] T2 — Documentation (AC 2, 3)
-  - [ ] `README.md` : lien « Déploiement Render » → `docs/staging-vps.md` (staging VPS), plus `docs/docker.md` et `docs/dev-vps.md` ; ligne `staging` du tableau des branches → « Test/démo — déployée sur `https://anta.peraha.com` (VPS, `deploy-staging.yml`) ».
-  - [ ] `_docs/git-workflow.md` : ligne `staging` du tableau ; section « Déploiement test (Render) » → « Déploiement test (staging VPS) » : PR `development → staging`, merge → `deploy-staging.yml` (tests, image GHCR, déploiement, `/health`), vérifier `https://anta.peraha.com`, rollback par `workflow_dispatch image_tag` (renvoyer vers `docs/staging-vps.md`). Retirer le paragraphe cold start / cron-job.org. Section production : « Epic 8, Story 8.6 » au lieu de « migration depuis Render ». Exemple de commit `add Render rollback procedure` → un exemple neutre.
-  - [ ] `_docs/retrospective-deploiement.md` : **historique, ne pas réécrire**. Ajouter sous le titre un encadré : Render décommissionné en Story 8.5 (2026-11), staging désormais sur `https://anta.peraha.com` ; les leçons AdonisJS (build, `.adonisjs/`, démarrage depuis `build/`, `DB_SSL`) restent valables.
-  - [ ] `docs/staging-vps.md` (§ DNS, l. 143) : « l'ancien CNAME vers Render » peut rester (historique du changement DNS) ; vérifier qu'aucune phrase ne présente Render comme encore actif.
-  - [ ] `_bmad-output/implementation-artifacts/deferred-work.md` : barrer les 2 items liés à Render dans « Quick Dev spec-fix-upload-limit-100mb » (timeout / body-cap Free tier, tmp sur disque éphémère Render) avec la mention « obsolète — Render décommissionné (8.5) ; sur le VPS, limite nginx `client_max_body_size` (8.3) ». Ne rien supprimer d'autre.
-- [ ] T3 — Tests `tests/unit/infrastructure/config_files.spec.ts` (AC 2, 3)
-  - [ ] Supprimer le groupe `Infrastructure | render.yaml` (et l'import `yaml`/`parse` s'il n'est plus utilisé dans le fichier ; le groupe CI l'utilise, vérifier).
-  - [ ] `README.md existe et référence les docs` : attendre `docs/staging-vps.md` à la place de `_docs/deployment-render.md`.
-  - [ ] Remplacer le test `_docs/deployment-render.md existe…` par un test de non-régression : `render.yaml` et `_docs/deployment-render.md` absents ; aucune occurrence de `onrender.com` dans `README.md`, `_docs/git-workflow.md`, `docs/*.md`.
-  - [ ] Lancer `npm run test:local` (Docker `anta-test-db`, port 5433), `npm run lint`, `npm run typecheck`.
-- [ ] T4 — Hors dépôt, côté workspace (AC 2, 3), sans attendre Aurélien
-  - [ ] Skill `/root/maxxing/.claude/skills/deploiement-adonisjs-render/` : la renommer `deploiement-adonisjs-docker` (dossier + `name:`) et la réécrire pour le déploiement actuel : `.npmrc include=dev` au build, `.adonisjs/` et `database/schema.ts` commités, démarrage depuis `build/`, `migration:run --force` au démarrage, `DB_SSL=true` sur le pooler Supabase, image multi-stage + Compose + `/health` (renvois vers `docs/docker.md` et `docs/staging-vps.md`). Retirer les points propres à Render (resync `render.yaml`, keep-alive).
-  - [ ] Mémoire projet `/root/maxxing/projects/anta/memory.md` : la ligne « Staging » ne mentionne plus Render qu'au passé, **après** l'AC 1 (avant, Render existe encore : écrire alors « suppression en attente de la recette »).
+- [x] T1 — Retirer Render du dépôt (AC 2)
+  - [x] Supprimer `render.yaml` et `_docs/deployment-render.md`.
+  - [x] `.dockerignore` : retirer la ligne `render.yaml`.
+  - [x] `.gitignore` (commentaire l. 9) : « clone frais (ex. Render) » → « clone frais (ex. build Docker) ».
+  - [x] `.npmrc` : **garder** `include=dev` (copié par le stage builder du `Dockerfile`, l. 13 ; le stage runtime l'écarte exprès, l. 19). Reformuler le commentaire sans Render : toute plateforme qui force `NODE_ENV=production` au build.
+- [x] T2 — Documentation (AC 2, 3)
+  - [x] `README.md` : lien « Déploiement Render » → `docs/staging-vps.md` (staging VPS), plus `docs/docker.md` et `docs/dev-vps.md` ; ligne `staging` du tableau des branches → « Test/démo — déployée sur `https://anta.peraha.com` (VPS, `deploy-staging.yml`) ».
+  - [x] `_docs/git-workflow.md` : ligne `staging` du tableau ; section « Déploiement test (Render) » → « Déploiement test (staging VPS) » : PR `development → staging`, merge → `deploy-staging.yml` (tests, image GHCR, déploiement, `/health`), vérifier `https://anta.peraha.com`, rollback par `workflow_dispatch image_tag` (renvoyer vers `docs/staging-vps.md`). Retirer le paragraphe cold start / cron-job.org. Section production : « Epic 8, Story 8.6 » au lieu de « migration depuis Render ». Exemple de commit `add Render rollback procedure` → un exemple neutre.
+  - [x] `_docs/retrospective-deploiement.md` : **historique, ne pas réécrire**. Ajouter sous le titre un encadré : Render décommissionné en Story 8.5 (2026-11), staging désormais sur `https://anta.peraha.com` ; les leçons AdonisJS (build, `.adonisjs/`, démarrage depuis `build/`, `DB_SSL`) restent valables.
+  - [x] `docs/staging-vps.md` (§ DNS, l. 143) : « l'ancien CNAME vers Render » peut rester (historique du changement DNS) ; vérifier qu'aucune phrase ne présente Render comme encore actif.
+  - [x] `_bmad-output/implementation-artifacts/deferred-work.md` : barrer les 2 items liés à Render dans « Quick Dev spec-fix-upload-limit-100mb » (timeout / body-cap Free tier, tmp sur disque éphémère Render) avec la mention « obsolète — Render décommissionné (8.5) ; sur le VPS, limite nginx `client_max_body_size` (8.3) ». Ne rien supprimer d'autre.
+- [x] T3 — Tests `tests/unit/infrastructure/config_files.spec.ts` (AC 2, 3)
+  - [x] Supprimer le groupe `Infrastructure | render.yaml` (et l'import `yaml`/`parse` s'il n'est plus utilisé dans le fichier ; le groupe CI l'utilise, vérifier).
+  - [x] `README.md existe et référence les docs` : attendre `docs/staging-vps.md` à la place de `_docs/deployment-render.md`.
+  - [x] Remplacer le test `_docs/deployment-render.md existe…` par un test de non-régression : `render.yaml` et `_docs/deployment-render.md` absents ; aucune occurrence de `onrender.com` dans `README.md`, `_docs/git-workflow.md`, `docs/*.md`.
+  - [x] Lancer `npm run test:local` (Docker `anta-test-db`, port 5433), `npm run lint`, `npm run typecheck`.
+- [x] T4 — Hors dépôt, côté workspace (AC 2, 3), sans attendre Aurélien
+  - [x] Skill `/root/maxxing/.claude/skills/deploiement-adonisjs-render/` : la renommer `deploiement-adonisjs-docker` (dossier + `name:`) et la réécrire pour le déploiement actuel : `.npmrc include=dev` au build, `.adonisjs/` et `database/schema.ts` commités, démarrage depuis `build/`, `migration:run --force` au démarrage, `DB_SSL=true` sur le pooler Supabase, image multi-stage + Compose + `/health` (renvois vers `docs/docker.md` et `docs/staging-vps.md`). Retirer les points propres à Render (resync `render.yaml`, keep-alive).
+  - [x] Mémoire projet `/root/maxxing/projects/anta/memory.md` : la ligne « Staging » ne mentionne plus Render qu'au passé, **après** l'AC 1 (avant, Render existe encore : écrire alors « suppression en attente de la recette »).
 - [ ] T5 — Checklist d'Aurélien (AC 1), à reporter dans la section « Actions manuelles » de cette story et à lui présenter
   - [ ] Préalables : recette 8.3 faite (login admin, upload > 10 Mo, e-mail Mailgun) ; premier run de `deploy-staging.yml` vert sur `staging`.
   - [ ] Render : Dashboard → service `anta-staging` → Settings → **Delete Web Service**.
@@ -90,16 +90,43 @@ Le volet dépôt est sans risque avant la suppression du service : Render ne rel
 
 ## Actions manuelles (Aurélien)
 
-À remplir au dev : checklist T5 et état de chaque action.
+Toutes **en attente** (2026-11-16). Préalables : recette 8.3 + premier run vert de `deploy-staging.yml`.
+
+| Action | État |
+|---|---|
+| Supprimer le service Render `anta-staging` (Settings → Delete Web Service) | à faire |
+| cron-job.org : désactiver puis supprimer « Anta staging keep-alive » | à faire |
+| GitHub : retirer l'accès de l'app Render au dépôt | à faire |
+| Protection de branche : aucun check de statut Render requis | à vérifier |
+| CORS du bucket R2 : retirer `https://anta-staging.onrender.com` si présent ; lien « Website » du dépôt | à vérifier |
+| Rotation des secrets partagés (Supabase, R2, Mailgun) si le compte Render était partagé | recommandé |
+
+Ensuite : ligne « Staging » de `/root/maxxing/projects/anta/memory.md` au passé, cocher T5, story → done après review.
 
 ## Dev Agent Record
 
 ### Agent Model Used
 
+claude-opus-5-5 (Claude Code), 2026-11-16
+
 ### Debug Log References
+
+- Rouge : `config_files.spec.ts` modifié d'abord → 2 échecs (`render.yaml` présent, README sans `docs/staging-vps.md`).
+- Vert : `npm run test:local -- unit functional` → 444/444 (448 en 8.4 − 4 tests du groupe `render.yaml`). `npm run lint` (1 formatage Prettier corrigé) et `npm run typecheck` OK.
+- Grep final : plus de `onrender.com` hors `_bmad-output/` et `_docs/retrospective-deploiement.md` (historiques) ; `.env.example` n'en contenait pas.
 
 ### Completion Notes List
 
 - Ultimate context engine analysis completed - comprehensive developer guide created
+- Volet dépôt fait (AC 2, AC 3 pour le dépôt) : `render.yaml` et le guide Render supprimés ; README et `_docs/git-workflow.md` décrivent le staging VPS (déploiement `deploy-staging.yml`, rollback `image_tag`) ; rétrospective Render conservée avec un encadré « historique ».
+- `.npmrc` conservé (stage de build du `Dockerfile`), seul son commentaire change.
+- `deferred-work.md` : item timeout/body-cap Render barré (obsolète, nginx 110m en 8.3) ; item tmp conservé, recentré sur le conteneur du VPS (le problème n'a pas disparu avec Render).
+- Skill workspace renommée `deploiement-adonisjs-docker` et réécrite pour l'image multi-stage + Compose (ancienne `deploiement-adonisjs-render` supprimée ; seule référence restante : le rapport d'import du 2026-11-15, archive).
+- Planification (`epics.md`, `architecture.md`) non modifiée : historique + PR #11.
+- AC 1 et mémoire projet : en attente d'Aurélien (section « Actions manuelles »). Test de non-régression ajouté pour que Render ne revienne pas dans les docs vivantes.
 
 ### File List
+
+- Supprimés : `render.yaml`, `_docs/deployment-render.md`
+- Modifiés : `README.md`, `_docs/git-workflow.md`, `_docs/retrospective-deploiement.md`, `.dockerignore`, `.gitignore`, `.npmrc`, `tests/unit/infrastructure/config_files.spec.ts`, `_bmad-output/implementation-artifacts/deferred-work.md`, `_bmad-output/implementation-artifacts/8-5-decommissionnement-render.md`
+- Hors dépôt : `/root/maxxing/.claude/skills/deploiement-adonisjs-docker/SKILL.md` (remplace `deploiement-adonisjs-render/`)

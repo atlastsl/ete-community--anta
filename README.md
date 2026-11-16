@@ -41,7 +41,9 @@ node ace test --suite unit
 ## Documentation
 
 - [Workflow Git](_docs/git-workflow.md) — stratégie de branches et conventions
-- [Déploiement Render](_docs/deployment-render.md) — guide staging/démo
+- [Staging VPS](docs/staging-vps.md) — `https://anta.peraha.com`, déploiement CI/CD et rollback
+- [Docker](docs/docker.md) — image, Compose, health check
+- [Dev sur VPS](docs/dev-vps.md) — Tailscale, Doppler
 
 ## Documentation BMad (planification)
 
@@ -56,4 +58,4 @@ node ace test --suite unit
 | ------------- | ------------------------------------------------------------- |
 | `master`      | Production (VPS — Epic 8)                                     |
 | `development` | Centralisation des features (branche par défaut)              |
-| `staging`     | Test/démo — connectée à Render auto-deploy                    |
+| `staging`     | Test/démo — déployée sur `https://anta.peraha.com` (VPS)      |
