@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sélecteur d'auteurs (admin) — Anta (maquette Phase 2)</title>
+<!-- Maquette UX Phase 2 — FR17, FR52–FR54 ; D13, D16 (consentement facultatif), D18
+     Référence visuelle : design actuel (inertia/css/app.css, PublicLayout, ProductionCard, AdminLayout).
+     Tailwind CDN + Google Fonts à la demande du workflow (rendu plus fidèle au site réel). -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = { theme: { extend: { fontFamily: {
+  sans: ['Inter', 'system-ui', 'sans-serif'],
+  display: ['"Playfair Display"', 'Georgia', 'serif'] } } } };
+</script>
+<style>
+  h1, h2 { font-family: "Playfair Display", Georgia, serif; font-weight: 600; }
+  :focus-visible { outline: 2px solid #15803d; outline-offset: 2px; }
+  .mock-note { font-family: Inter, system-ui, sans-serif; }
+</style>
+</head>
+<body class="bg-[#fafaf9] font-sans text-stone-900 antialiased">
+<div class="flex min-h-screen">
+  <aside class="flex w-64 shrink-0 flex-col border-r border-stone-200 bg-white">
+    <div class="border-b border-stone-200 px-6 py-5"><img src="../../../../../public/images/logo_anta.png" alt="Anta — administration" class="h-8 w-8"></div>
+    <nav aria-label="Administration" class="flex-1 py-4"><a href="admin-author-picker.html" aria-current="page" class="flex items-center gap-3 border-l-[3px] px-6 py-2.5 text-sm border-green-700 bg-green-100 font-medium text-green-700"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/></svg>Productions</a><a href="admin-authors-list.html" class="flex items-center gap-3 border-l-[3px] px-6 py-2.5 text-sm border-transparent text-stone-700 hover:bg-stone-50"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>Auteurs</a><a href="admin-featured.html" class="flex items-center gap-3 border-l-[3px] px-6 py-2.5 text-sm border-transparent text-stone-700 hover:bg-stone-50"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"/></svg>À la une</a><a href="#" class="flex items-center gap-3 border-l-[3px] px-6 py-2.5 text-sm border-transparent text-stone-700 hover:bg-stone-50"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>Statistiques</a><a href="#" class="flex items-center gap-3 border-l-[3px] px-6 py-2.5 text-sm border-transparent text-stone-700 hover:bg-stone-50"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Utilisateurs</a><a href="#" class="flex items-center gap-3 border-l-[3px] px-6 py-2.5 text-sm border-transparent text-stone-700 hover:bg-stone-50"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 12h-5"/><path d="M15 8h-5"/><path d="M19 17V5a2 2 0 0 0-2-2H4"/><path d="M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3"/></svg>Journal</a></nav>
+    <div class="border-t border-stone-200 px-6 py-4 text-sm">
+      <span class="inline-flex rounded-full bg-green-700 px-2 py-0.5 text-xs font-medium text-white">Super admin</span>
+      <p class="mt-2 truncate text-stone-600">admin@anta.community</p>
+      <button class="mt-2 inline-flex items-center gap-2 text-stone-700 hover:text-green-700"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/></svg>Déconnexion</button>
+    </div>
+  </aside>
+  <main id="contenu" class="min-w-0 flex-1 px-8 py-8">
+<div class="mx-auto max-w-3xl">
+  <nav class="text-sm text-stone-500" aria-label="Fil d'Ariane"><a href="#" class="hover:text-green-700">Productions</a> <span class="text-stone-300">/</span> Modifier</nav>
+  <h1 class="mt-2 text-2xl font-semibold text-stone-900">Modifier la production</h1>
+  <p class="mt-1 text-sm text-stone-600">Paludisme et résistance aux antipaludiques dans le district de santé de Dschang</p>
+  <div class="mt-6 space-y-8">
+    <fieldset class="rounded-lg border border-stone-200 bg-white p-6 opacity-60" aria-hidden="true"><legend class="px-2 text-sm font-semibold">Informations générales</legend><div class="h-10 rounded-md bg-stone-100"></div></fieldset>
+    <fieldset class="rounded-lg border border-stone-200 bg-white p-6" id="auteurs">
+  <legend class="px-2 text-sm font-semibold">Auteurs <span class="text-red-600" aria-hidden="true">*</span><span class="sr-only"> (obligatoire)</span></legend>
+  <p class="text-sm text-stone-600">Sélectionnez les auteurs dans l'ordre de la publication. Au moins un auteur est requis pour publier.</p>
+  <ol class="mt-4 divide-y divide-stone-100 rounded-lg border border-stone-200" aria-label="Auteurs sélectionnés (ordre de publication)">
+    <li class="flex items-center gap-3 px-3 py-2.5">
+  <span class="w-5 text-right text-sm font-semibold tabular-nums text-stone-500">1</span>
+  <div class="size-8 shrink-0 overflow-hidden rounded-full border border-stone-200" aria-hidden="true" style="background:radial-gradient(circle at 50% 38%,#d6b08c 0 22%,transparent 23%),radial-gradient(ellipse at 50% 100%,#57534e 0 45%,transparent 46%),linear-gradient(#e7e5e4,#d6d3d1)"></div>
+  <div class="min-w-0 flex-1"><p class="text-sm font-medium text-stone-900">Jean-Paul TCHOFFO</p><p class="truncate text-xs text-stone-500">Université de Dschang — Département de science du sol</p></div>
+  <button type="button" class="inline-flex size-9 items-center justify-center rounded-md border border-stone-300 bg-white text-stone-700 shadow-sm hover:border-green-700 hover:text-green-700 disabled:pointer-events-none disabled:opacity-40 size-8" aria-label="Monter Jean-Paul TCHOFFO" disabled><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg></button>
+  <button type="button" class="inline-flex size-9 items-center justify-center rounded-md border border-stone-300 bg-white text-stone-700 shadow-sm hover:border-green-700 hover:text-green-700 disabled:pointer-events-none disabled:opacity-40 size-8" aria-label="Descendre Jean-Paul TCHOFFO"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg></button>
+  <button type="button" class="inline-flex size-8 items-center justify-center rounded-md text-stone-500 hover:bg-red-50 hover:text-red-600" aria-label="Retirer Jean-Paul TCHOFFO"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+</li>
+    <li class="flex items-center gap-3 px-3 py-2.5">
+  <span class="w-5 text-right text-sm font-semibold tabular-nums text-stone-500">2</span>
+  <div class="size-8 text-xs bg-green-100 text-green-800 flex shrink-0 items-center justify-center rounded-full font-semibold" aria-hidden="true">AM</div>
+  <div class="min-w-0 flex-1"><p class="text-sm font-medium text-stone-900">Aïcha MBARGA</p><p class="truncate text-xs text-stone-500">Université de Yaoundé I — Département de biologie végétale</p></div>
+  <button type="button" class="inline-flex size-9 items-center justify-center rounded-md border border-stone-300 bg-white text-stone-700 shadow-sm hover:border-green-700 hover:text-green-700 disabled:pointer-events-none disabled:opacity-40 size-8" aria-label="Monter Aïcha MBARGA"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg></button>
+  <button type="button" class="inline-flex size-9 items-center justify-center rounded-md border border-stone-300 bg-white text-stone-700 shadow-sm hover:border-green-700 hover:text-green-700 disabled:pointer-events-none disabled:opacity-40 size-8" aria-label="Descendre Aïcha MBARGA"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg></button>
+  <button type="button" class="inline-flex size-8 items-center justify-center rounded-md text-stone-500 hover:bg-red-50 hover:text-red-600" aria-label="Retirer Aïcha MBARGA"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+</li>
+    <li class="flex items-center gap-3 px-3 py-2.5">
+  <span class="w-5 text-right text-sm font-semibold tabular-nums text-stone-500">3</span>
+  <div class="size-8 text-xs bg-green-100 text-green-800 flex shrink-0 items-center justify-center rounded-full font-semibold" aria-hidden="true">PE</div>
+  <div class="min-w-0 flex-1"><p class="text-sm font-medium text-stone-900">Paul ESSOMBA</p><p class="truncate text-xs text-stone-500">Université de Douala</p></div>
+  <button type="button" class="inline-flex size-9 items-center justify-center rounded-md border border-stone-300 bg-white text-stone-700 shadow-sm hover:border-green-700 hover:text-green-700 disabled:pointer-events-none disabled:opacity-40 size-8" aria-label="Monter Paul ESSOMBA"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg></button>
+  <button type="button" class="inline-flex size-9 items-center justify-center rounded-md border border-stone-300 bg-white text-stone-700 shadow-sm hover:border-green-700 hover:text-green-700 disabled:pointer-events-none disabled:opacity-40 size-8" aria-label="Descendre Paul ESSOMBA" disabled><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg></button>
+  <button type="button" class="inline-flex size-8 items-center justify-center rounded-md text-stone-500 hover:bg-red-50 hover:text-red-600" aria-label="Retirer Paul ESSOMBA"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+</li>
+  </ol>
+  <div class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
+    <div class="relative flex-1">
+      <label for="auth" class="mb-1 block text-sm font-medium text-stone-700">Ajouter un auteur</label>
+      <div class="relative"><span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span>
+      <input id="auth" role="combobox" aria-expanded="true" aria-controls="auth-list" aria-autocomplete="list" aria-activedescendant="ao-0" value="Kamdem" class="h-9 w-full rounded-md border border-stone-300 bg-white px-3 text-sm shadow-sm focus:border-green-700 focus:outline-none focus:ring-[3px] focus:ring-green-700/30 pl-9 border-green-700 ring-[3px] ring-green-700/30"></div>
+      <ul id="auth-list" role="listbox" aria-label="Auteurs enregistrés" class="absolute inset-x-0 top-full z-10 mt-1 divide-y divide-stone-100 overflow-hidden rounded-md border border-stone-200 bg-white shadow-lg">
+      <li role="option" id="ao-0" aria-selected="true" class="flex items-center gap-3 bg-green-50 px-3 py-2.5"><div class="size-8 text-xs bg-green-100 text-green-800 flex shrink-0 items-center justify-center rounded-full font-semibold" aria-hidden="true">SK</div><div class="min-w-0 flex-1"><p class="text-sm font-medium">Serge <mark class="bg-transparent font-semibold text-green-800">KAMDEM</mark></p><p class="truncate text-xs text-stone-500">Université de Dschang — Département de lettres modernes françaises</p></div></li>
+      <li role="option" id="ao-1" aria-selected="false" class="flex items-center gap-3 px-3 py-2.5 hover:bg-stone-50"><div class="flex size-8 items-center justify-center rounded-full bg-stone-100 text-xs font-semibold text-stone-600" aria-hidden="true">SK</div><div class="min-w-0 flex-1"><p class="text-sm font-medium">Serge KAMDEM</p><p class="text-xs text-stone-500">Aucune affiliation</p></div><span class="rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800">À compléter</span></li>
+      <li role="option" id="ao-2" aria-selected="false" class="flex items-center gap-3 px-3 py-2.5 hover:bg-stone-50"><div class="flex size-8 items-center justify-center rounded-full bg-green-100 text-xs font-semibold text-green-800" aria-hidden="true">HK</div><div class="min-w-0 flex-1"><p class="text-sm font-medium">Hélène KAMDEM-FOTSO</p><p class="truncate text-xs text-stone-500">Université de Yaoundé I — Département d'histoire</p></div></li>
+      <li role="option" id="ao-3" aria-selected="false" class="flex items-center gap-2 px-3 py-2.5 text-sm font-medium text-green-700 hover:bg-stone-50"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>Créer un auteur « Kamdem »</li>
+    </ul>
+    </div>
+    <button type="button" class="inline-flex whitespace-nowrap items-center gap-1.5 rounded-md border border-stone-300 bg-white text-sm font-medium text-stone-800 shadow-sm hover:border-green-700 hover:text-green-700 h-9 px-3"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>Créer un auteur</button>
+  </div>
+</fieldset>
+    <div class="h-28"></div>
+  </div>
+  <div class="mock-note my-10 flex items-center gap-3 text-xs font-medium uppercase tracking-widest text-stone-400"><span class="h-px flex-1 bg-stone-300"></span>Fenêtre « Créer un auteur » ouverte<span class="h-px flex-1 bg-stone-300"></span></div>
+  <div class="relative overflow-hidden rounded-lg border border-stone-200">
+  <div class="pointer-events-none p-8 opacity-60" aria-hidden="true"><fieldset class="rounded-lg border border-stone-200 bg-white p-6" id="auteurs">
+  <legend class="px-2 text-sm font-semibold">Auteurs <span class="text-red-600" aria-hidden="true">*</span><span class="sr-only"> (obligatoire)</span></legend>
+  <p class="text-sm text-stone-600">Sélectionnez les auteurs dans l'ordre de la publication. Au moins un auteur est requis pour publier.</p>
+  <ol class="mt-4 divide-y divide-stone-100 rounded-lg border border-stone-200" aria-label="Auteurs sélectionnés (ordre de publication)">
+    <li class="flex items-center gap-3 px-3 py-2.5">
+  <span class="w-5 text-right text-sm font-semibold tabular-nums text-stone-500">1</span>
+  <div class="size-8 shrink-0 overflow-hidden rounded-full border border-stone-200" aria-hidden="true" style="background:radial-gradient(circle at 50% 38%,#d6b08c 0 22%,transparent 23%),radial-gradient(ellipse at 50% 100%,#57534e 0 45%,transparent 46%),linear-gradient(#e7e5e4,#d6d3d1)"></div>
+  <div class="min-w-0 flex-1"><p class="text-sm font-medium text-stone-900">Jean-Paul TCHOFFO</p><p class="truncate text-xs text-stone-500">Université de Dschang — Département de science du sol</p></div>
+  <button type="button" class="inline-flex size-9 items-center justify-center rounded-md border border-stone-300 bg-white text-stone-700 shadow-sm hover:border-green-700 hover:text-green-700 disabled:pointer-events-none disabled:opacity-40 size-8" aria-label="Monter Jean-Paul TCHOFFO" disabled><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg></button>
+  <button type="button" class="inline-flex size-9 items-center justify-center rounded-md border border-stone-300 bg-white text-stone-700 shadow-sm hover:border-green-700 hover:text-green-700 disabled:pointer-events-none disabled:opacity-40 size-8" aria-label="Descendre Jean-Paul TCHOFFO"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg></button>
+  <button type="button" class="inline-flex size-8 items-center justify-center rounded-md text-stone-500 hover:bg-red-50 hover:text-red-600" aria-label="Retirer Jean-Paul TCHOFFO"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+</li>
+    <li class="flex items-center gap-3 px-3 py-2.5">
+  <span class="w-5 text-right text-sm font-semibold tabular-nums text-stone-500">2</span>
+  <div class="size-8 text-xs bg-green-100 text-green-800 flex shrink-0 items-center justify-center rounded-full font-semibold" aria-hidden="true">AM</div>
+  <div class="min-w-0 flex-1"><p class="text-sm font-medium text-stone-900">Aïcha MBARGA</p><p class="truncate text-xs text-stone-500">Université de Yaoundé I — Département de biologie végétale</p></div>
+  <button type="button" class="inline-flex size-9 items-center justify-center rounded-md border border-stone-300 bg-white text-stone-700 shadow-sm hover:border-green-700 hover:text-green-700 disabled:pointer-events-none disabled:opacity-40 size-8" aria-label="Monter Aïcha MBARGA"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg></button>
+  <button type="button" class="inline-flex size-9 items-center justify-center rounded-md border border-stone-300 bg-white text-stone-700 shadow-sm hover:border-green-700 hover:text-green-700 disabled:pointer-events-none disabled:opacity-40 size-8" aria-label="Descendre Aïcha MBARGA"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg></button>
+  <button type="button" class="inline-flex size-8 items-center justify-center rounded-md text-stone-500 hover:bg-red-50 hover:text-red-600" aria-label="Retirer Aïcha MBARGA"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+</li>
+    <li class="flex items-center gap-3 px-3 py-2.5">
+  <span class="w-5 text-right text-sm font-semibold tabular-nums text-stone-500">3</span>
+  <div class="size-8 text-xs bg-green-100 text-green-800 flex shrink-0 items-center justify-center rounded-full font-semibold" aria-hidden="true">PE</div>
+  <div class="min-w-0 flex-1"><p class="text-sm font-medium text-stone-900">Paul ESSOMBA</p><p class="truncate text-xs text-stone-500">Université de Douala</p></div>
+  <button type="button" class="inline-flex size-9 items-center justify-center rounded-md border border-stone-300 bg-white text-stone-700 shadow-sm hover:border-green-700 hover:text-green-700 disabled:pointer-events-none disabled:opacity-40 size-8" aria-label="Monter Paul ESSOMBA"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg></button>
+  <button type="button" class="inline-flex size-9 items-center justify-center rounded-md border border-stone-300 bg-white text-stone-700 shadow-sm hover:border-green-700 hover:text-green-700 disabled:pointer-events-none disabled:opacity-40 size-8" aria-label="Descendre Paul ESSOMBA" disabled><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg></button>
+  <button type="button" class="inline-flex size-8 items-center justify-center rounded-md text-stone-500 hover:bg-red-50 hover:text-red-600" aria-label="Retirer Paul ESSOMBA"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+</li>
+  </ol>
+  <div class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
+    <div class="relative flex-1">
+      <label for="auth" class="mb-1 block text-sm font-medium text-stone-700">Ajouter un auteur</label>
+      <div class="relative"><span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span>
+      <input id="auth" role="combobox" aria-expanded="false" aria-controls="auth-list" aria-autocomplete="list" placeholder="Nom ou prénom…" class="h-9 w-full rounded-md border border-stone-300 bg-white px-3 text-sm shadow-sm focus:border-green-700 focus:outline-none focus:ring-[3px] focus:ring-green-700/30 pl-9"></div>
+      
+    </div>
+    <button type="button" class="inline-flex whitespace-nowrap items-center gap-1.5 rounded-md border border-stone-300 bg-white text-sm font-medium text-stone-800 shadow-sm hover:border-green-700 hover:text-green-700 h-9 px-3"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>Créer un auteur</button>
+  </div>
+</fieldset></div>
+  <div class="absolute inset-0 bg-stone-900/50"></div>
+  <div class="absolute inset-0 flex items-start justify-center overflow-auto p-6">
+    <div role="dialog" aria-modal="true" aria-labelledby="dlg-t" aria-describedby="dlg-d" class="w-full max-w-lg rounded-lg border border-stone-200 bg-white p-6 shadow-lg">
+      <div class="flex items-start justify-between gap-4"><div><h2 id="dlg-t" class="text-lg font-semibold text-stone-900">Créer un auteur</h2>
+      <p id="dlg-d" class="mt-1 text-sm text-stone-600">L'auteur créé sera ajouté à la production.</p></div>
+      <button class="inline-flex size-8 items-center justify-center rounded-md text-stone-500 hover:bg-stone-100" aria-label="Fermer"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></div>
+      <form class="mt-5 space-y-4">
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div><label for="nom" class="mb-1 block text-sm font-medium text-stone-700">Nom(s) <span class="text-red-600" aria-hidden="true">*</span><span class="sr-only"> (obligatoire)</span></label><input id="nom" required value="KAMDEM" class="h-9 w-full rounded-md border border-stone-300 bg-white px-3 text-sm shadow-sm focus:border-green-700 focus:outline-none focus:ring-[3px] focus:ring-green-700/30"></div>
+          <div><label for="prenom" class="mb-1 block text-sm font-medium text-stone-700">Prénom(s) <span class="text-red-600" aria-hidden="true">*</span><span class="sr-only"> (obligatoire)</span></label><input id="prenom" required value="Hervé" class="h-9 w-full rounded-md border border-stone-300 bg-white px-3 text-sm shadow-sm focus:border-green-700 focus:outline-none focus:ring-[3px] focus:ring-green-700/30"></div>
+        </div>
+        <fieldset class="rounded-lg border border-stone-200 p-4"><legend class="px-1 text-sm font-medium text-stone-700">Affiliations</legend>
+          <div class="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+            <div><label for="inst1" class="mb-1 block text-sm font-medium text-stone-700">Université ou institution <span class="text-red-600" aria-hidden="true">*</span><span class="sr-only"> (obligatoire)</span></label><input id="inst1" required value="Université de Dschang" class="h-9 w-full rounded-md border border-stone-300 bg-white px-3 text-sm shadow-sm focus:border-green-700 focus:outline-none focus:ring-[3px] focus:ring-green-700/30"></div>
+            <div><label for="dep1" class="mb-1 block text-sm font-medium text-stone-700">Département <span class="font-normal text-stone-500">(facultatif)</span></label><input id="dep1" value="Département de géographie" class="h-9 w-full rounded-md border border-stone-300 bg-white px-3 text-sm shadow-sm focus:border-green-700 focus:outline-none focus:ring-[3px] focus:ring-green-700/30"></div>
+            <button type="button" class="inline-flex size-9 items-center justify-center rounded-md text-stone-400" disabled aria-label="Retirer l'affiliation 1 (au moins une affiliation requise)"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+          </div>
+          <div class="mt-3 grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+            <div><label for="inst2" class="mb-1 block text-sm font-medium text-stone-700">Université ou institution <span class="text-red-600" aria-hidden="true">*</span><span class="sr-only"> (obligatoire)</span></label><input id="inst2" placeholder="Ex. Université Laval" class="h-9 w-full rounded-md border border-stone-300 bg-white px-3 text-sm shadow-sm focus:border-green-700 focus:outline-none focus:ring-[3px] focus:ring-green-700/30"></div>
+            <div><label for="dep2" class="mb-1 block text-sm font-medium text-stone-700">Département <span class="font-normal text-stone-500">(facultatif)</span></label><input id="dep2" class="h-9 w-full rounded-md border border-stone-300 bg-white px-3 text-sm shadow-sm focus:border-green-700 focus:outline-none focus:ring-[3px] focus:ring-green-700/30"></div>
+            <button type="button" class="inline-flex size-9 items-center justify-center rounded-md text-stone-500 hover:bg-red-50 hover:text-red-600" aria-label="Retirer l'affiliation 2"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+          </div>
+          <button type="button" class="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-green-700 hover:underline"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>Ajouter une affiliation</button>
+        </fieldset>
+        <div><label for="gs" class="mb-1 block text-sm font-medium text-stone-700">Lien Google Scholar <span class="font-normal text-stone-500">(facultatif)</span></label>
+          <input id="gs" type="url" placeholder="https://scholar.google.com/citations?user=…" class="h-9 w-full rounded-md border border-stone-300 bg-white px-3 text-sm shadow-sm focus:border-green-700 focus:outline-none focus:ring-[3px] focus:ring-green-700/30"></div>
+        <div><span class="mb-1 block text-sm font-medium text-stone-700">Photo <span class="font-normal text-stone-500">(facultative)</span></span>
+          <label class="flex cursor-pointer items-center gap-3 rounded-lg border-2 border-dashed border-stone-300 bg-stone-50 p-3 text-sm text-stone-600 hover:border-green-700 focus-within:border-green-700"><svg class="size-5 text-stone-400 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 5h6"/><path d="M19 2v6"/><path d="M21 11.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7.5"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/><circle cx="9" cy="9" r="2"/></svg><span>Choisir une image <span class="text-xs text-stone-500">· JPEG, PNG ou WebP, 5 Mo max</span></span><input type="file" accept="image/jpeg,image/png,image/webp" class="sr-only"></label></div>
+        <div class="rounded-md border border-stone-200 bg-stone-50 p-3">
+          <div class="flex items-start gap-3"><input id="consent" type="checkbox" class="mt-0.5 size-4 rounded border-stone-300 accent-green-700" aria-describedby="consent-help">
+          <div><label for="consent" class="text-sm font-medium text-stone-800">L'auteur a consenti à la publication de son profil</label>
+          <p id="consent-help" class="mt-0.5 text-xs text-stone-600">Facultatif. Sans ce consentement, la fiche est créée mais le profil reste non public : le nom apparaît sur les productions, sans lien vers un profil. Vous pourrez le confirmer plus tard dans la fiche de l'auteur.</p></div></div>
+        </div>
+        <div class="flex justify-end gap-3 pt-2">
+          <button type="button" class="inline-flex whitespace-nowrap items-center gap-1.5 rounded-md border border-stone-300 bg-white text-sm font-medium text-stone-800 shadow-sm hover:border-green-700 hover:text-green-700 h-9 px-4">Annuler</button>
+          <button type="submit" class="inline-flex items-center gap-1.5 rounded-md bg-green-700 text-sm font-medium text-white hover:bg-green-800 h-9 px-4">Créer et ajouter</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <div class="h-[46rem]"></div>
+</div>
+</div>
+  </main>
+</div>
+</body>
+</html>

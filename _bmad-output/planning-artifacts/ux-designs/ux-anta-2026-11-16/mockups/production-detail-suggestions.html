@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Détail — suggestions — Anta (maquette Phase 2)</title>
+<!-- Maquette UX Phase 2 — FR59, FR61 ; D12 (nom sans profil = texte simple), D13, D22 (4 cartes, 2 col. mobile, squelette)
+     Référence visuelle : design actuel (inertia/css/app.css, PublicLayout, ProductionCard, AdminLayout).
+     Tailwind CDN + Google Fonts à la demande du workflow (rendu plus fidèle au site réel). -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = { theme: { extend: { fontFamily: {
+  sans: ['Inter', 'system-ui', 'sans-serif'],
+  display: ['"Playfair Display"', 'Georgia', 'serif'] } } } };
+</script>
+<style>
+  h1, h2 { font-family: "Playfair Display", Georgia, serif; font-weight: 600; }
+  :focus-visible { outline: 2px solid #15803d; outline-offset: 2px; }
+  .mock-note { font-family: Inter, system-ui, sans-serif; }
+</style>
+</head>
+<body class="flex min-h-screen flex-col bg-[#fafaf9] font-sans text-stone-900 antialiased">
+<a href="#contenu" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-full focus:bg-green-700 focus:px-4 focus:py-2 focus:text-white">Aller au contenu</a>
+<header class="sticky top-0 z-20 border-b border-stone-200 bg-[#fafaf9]/95 backdrop-blur">
+  <div class="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+    <a href="home.html" class="inline-flex items-center"><img src="../../../../../public/images/logo_anta.png" alt="Anta — accueil" class="h-10 w-10"></a>
+    <div class="flex items-center text-sm" role="group" aria-label="Langue">
+      <button class="min-h-11 px-2 font-semibold text-green-700" aria-pressed="true">FR</button>
+      <span class="text-stone-300" aria-hidden="true">|</span>
+      <button class="min-h-11 px-2 text-stone-600 hover:text-green-700" aria-pressed="false">EN</button>
+    </div>
+  </div>
+</header><main id="contenu" class="mx-auto w-full max-w-7xl flex-1 px-6 py-8">
+<nav aria-label="Fil d'Ariane" class="text-sm text-stone-500"><ol class="flex flex-wrap items-center gap-2">
+  <li><a href="home.html" class="hover:text-green-700">Accueil</a></li><li aria-hidden="true" class="text-stone-300">/</li>
+  <li><a href="#" class="hover:text-green-700">Productions</a></li><li aria-hidden="true" class="text-stone-300">/</li>
+  <li aria-current="page" class="max-w-xs truncate text-stone-700">Paludisme et résistance aux antipaludiques dans le district de santé de Dschang</li></ol></nav>
+<div class="mt-4 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+  <div><h1 class="font-display text-3xl leading-tight">Paludisme et résistance aux antipaludiques dans le district de santé de Dschang</h1>
+  <p class="mt-2 text-stone-600">Par <a href="author-profile.html" class=" underline decoration-stone-300 underline-offset-2 hover:text-green-700 hover:decoration-green-700">Clarisse FOTSO</a>, <a href="author-profile.html" class=" underline decoration-stone-300 underline-offset-2 hover:text-green-700 hover:decoration-green-700">Jean-Paul TCHOFFO</a>, <span>Paul ESSOMBA</span></p>
+  <p class="mock-note mt-1 text-xs text-stone-400">(Paul ESSOMBA n'a pas de profil public : texte simple, sans lien — D12)</p></div>
+  <button class="inline-flex h-9 shrink-0 items-center gap-2 rounded-md border border-stone-300 bg-white px-3 text-sm font-medium shadow-sm hover:border-green-700 hover:text-green-700"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg>Partager</button>
+</div>
+<div class="mt-8 grid gap-8 lg:grid-cols-3">
+  <div class="space-y-4 lg:col-span-2">
+    <h2 class="text-xl text-stone-900">Résumé</h2>
+    <p class="text-stone-700">Étude transversale menée dans six formations sanitaires sur la prévalence des marqueurs moléculaires de résistance à l'artémisinine. Les résultats montrent une prévalence de 3,4 % des mutations <i>kelch13</i> associées à une clairance retardée, sans échec thérapeutique documenté à J28.</p>
+    <div class="rounded-lg border border-dashed border-stone-300 bg-white p-6 text-center text-sm text-stone-400 mock-note">… fichiers et lecteur (inchangés) …</div>
+  </div>
+  <aside class="rounded-lg border border-stone-200 bg-white p-5">
+    <div class="flex gap-6"><span class="inline-flex items-center gap-2"><span class="text-green-700"><svg class="size-5 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg></span><span class="text-lg font-semibold">1 417</span></span>
+    <span class="inline-flex items-center gap-2"><span class="text-green-700"><svg class="size-5 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg></span><span class="text-lg font-semibold">976</span></span></div>
+    <dl class="mt-4 text-sm"><div class="border-t border-stone-100 py-3"><dt class="text-xs uppercase tracking-wide text-stone-500">Auteurs</dt><dd class="mt-1 text-stone-900"><a href="author-profile.html" class=" underline decoration-stone-300 underline-offset-2 hover:text-green-700 hover:decoration-green-700">Clarisse FOTSO</a><br><a href="author-profile.html" class=" underline decoration-stone-300 underline-offset-2 hover:text-green-700 hover:decoration-green-700">Jean-Paul TCHOFFO</a><br><span>Paul ESSOMBA</span></dd></div>
+    <div class="border-t border-stone-100 py-3"><dt class="text-xs uppercase tracking-wide text-stone-500">Domaine</dt><dd class="mt-1 text-stone-900">Santé publique</dd></div></dl>
+  </aside>
+</div>
+<div class="mock-note my-10 flex items-center gap-3 text-xs font-medium uppercase tracking-widest text-stone-400"><span class="h-px flex-1 bg-stone-300"></span>État chargé<span class="h-px flex-1 bg-stone-300"></span></div>
+<section class="mt-12" aria-labelledby="h-sim">
+  <h2 id="h-sim" class="mb-5 text-xl text-stone-900">Productions similaires</h2>
+  <div class="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4"><article class="flex flex-col overflow-hidden rounded-lg border border-stone-200 bg-white transition-colors hover:border-green-700">
+  <div class="aspect-video w-full bg-stone-200" style="background:linear-gradient(135deg,#1c1917 0%,#44403c 60%,#15803d 100%)" aria-hidden="true"></div>
+  <div class="flex flex-1 flex-col p-4 sm:p-5">
+    <h3 class="font-display text-base sm:text-lg leading-snug"><a href="production-detail-suggestions.html" class="hover:text-green-700">Conférence : l'intelligence artificielle au service de l'agriculture africaine</a></h3>
+    <p class="mt-1 text-sm text-stone-600">Par <a href="author-profile.html" class=" underline decoration-stone-300 underline-offset-2 hover:text-green-700 hover:decoration-green-700">Jean-Paul TCHOFFO</a></p>
+    <p class="mt-1 text-xs uppercase tracking-wide text-stone-600">Vidéo · Agronomie</p>
+    <p class="mt-3 text-sm text-stone-700 line-clamp-2 hidden sm:block">Captation de la conférence inaugurale des Journées scientifiques de l'Université de Dschang consacrée aux usages de l'IA en agriculture de précision.</p>
+    <div class="mt-auto"><div class="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-sm text-stone-500"><span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg><span class="sr-only">Vues :</span>2 431</span><span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg><span class="sr-only">Téléchargements :</span>0</span></div></div>
+  </div>
+</article><article class="flex flex-col overflow-hidden rounded-lg border border-stone-200 bg-white transition-colors hover:border-green-700">
+  
+  <div class="flex flex-1 flex-col p-4 sm:p-5">
+    <h3 class="font-display text-base sm:text-lg leading-snug"><a href="production-detail-suggestions.html" class="hover:text-green-700">Le conte oral bamiléké comme outil d'éducation civique</a></h3>
+    <p class="mt-1 text-sm text-stone-600">Par <a href="author-profile.html" class=" underline decoration-stone-300 underline-offset-2 hover:text-green-700 hover:decoration-green-700">Serge KAMDEM</a></p>
+    <p class="mt-1 text-xs uppercase tracking-wide text-stone-600">Article · Lettres</p>
+    <p class="mt-3 text-sm text-stone-700 line-clamp-2 hidden sm:block">L'article étudie la transmission des valeurs communautaires à travers un corpus de quarante contes recueillis dans la Menoua et leur réemploi possible à l'école primaire.</p>
+    <div class="mt-auto"><div class="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-sm text-stone-500"><span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg><span class="sr-only">Vues :</span>1 742</span><span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg><span class="sr-only">Téléchargements :</span>388</span></div></div>
+  </div>
+</article><article class="flex flex-col overflow-hidden rounded-lg border border-stone-200 bg-white transition-colors hover:border-green-700">
+  <div class="aspect-video w-full bg-stone-200" style="background:linear-gradient(135deg,#4d7c0f 0%,#a16207 55%,#78350f 100%)" aria-hidden="true"></div>
+  <div class="flex flex-1 flex-col p-4 sm:p-5">
+    <h3 class="font-display text-base sm:text-lg leading-snug"><a href="production-detail-suggestions.html" class="hover:text-green-700">Gestion durable des sols volcaniques dans les hautes terres de l'Ouest Cameroun</a></h3>
+    <p class="mt-1 text-sm text-stone-600">Par <a href="author-profile.html" class=" underline decoration-stone-300 underline-offset-2 hover:text-green-700 hover:decoration-green-700">Jean-Paul TCHOFFO</a>, <a href="author-profile.html" class=" underline decoration-stone-300 underline-offset-2 hover:text-green-700 hover:decoration-green-700">Aïcha MBARGA</a></p>
+    <p class="mt-1 text-xs uppercase tracking-wide text-stone-600">Thèse · Agronomie</p>
+    <p class="mt-3 text-sm text-stone-700 line-clamp-2 hidden sm:block">Cette thèse analyse l'évolution de la fertilité des andosols des monts Bambouto sous différentes pratiques culturales et propose un référentiel de gestion adapté aux exploitations familiales.</p>
+    <div class="mt-auto"><div class="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-sm text-stone-500"><span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg><span class="sr-only">Vues :</span>3 214</span><span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg><span class="sr-only">Téléchargements :</span>1 087</span></div></div>
+  </div>
+</article><article class="flex flex-col overflow-hidden rounded-lg border border-stone-200 bg-white transition-colors hover:border-green-700">
+  <div class="aspect-video w-full bg-stone-200" style="background:linear-gradient(135deg,#9a3412 0%,#c2410c 40%,#fcd34d 100%)" aria-hidden="true"></div>
+  <div class="flex flex-1 flex-col p-4 sm:p-5">
+    <h3 class="font-display text-base sm:text-lg leading-snug"><a href="production-detail-suggestions.html" class="hover:text-green-700">Entrepreneuriat féminin et microfinance à Abidjan</a></h3>
+    <p class="mt-1 text-sm text-stone-600">Par <a href="author-profile.html" class=" underline decoration-stone-300 underline-offset-2 hover:text-green-700 hover:decoration-green-700">Awa KONÉ</a></p>
+    <p class="mt-1 text-xs uppercase tracking-wide text-stone-600">Mémoire · Gestion</p>
+    <p class="mt-3 text-sm text-stone-700 line-clamp-2 hidden sm:block">Enquête qualitative auprès de trente commerçantes d'Adjamé et de Treichville sur l'usage du microcrédit et ses effets sur la croissance de leur activité.</p>
+    <div class="mt-auto"><div class="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-sm text-stone-500"><span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg><span class="sr-only">Vues :</span>873</span><span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg><span class="sr-only">Téléchargements :</span>615</span></div></div>
+  </div>
+</article></div>
+</section>
+<div class="mock-note my-10 flex items-center gap-3 text-xs font-medium uppercase tracking-widest text-stone-400"><span class="h-px flex-1 bg-stone-300"></span>Variante : chargement (squelette)<span class="h-px flex-1 bg-stone-300"></span></div>
+<section class="mt-4" aria-labelledby="h-sim2" aria-busy="true">
+  <h2 id="h-sim2" class="mb-5 text-xl text-stone-900">Productions similaires</h2>
+  <p class="sr-only" role="status">Chargement des productions similaires…</p>
+  <div class="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4" aria-hidden="true"><div class="overflow-hidden rounded-lg border border-stone-200 bg-white">
+  <div class="aspect-video w-full animate-pulse bg-stone-200"></div>
+  <div class="space-y-2 p-4 sm:p-5"><div class="h-4 w-11/12 animate-pulse rounded bg-stone-200"></div><div class="h-4 w-2/3 animate-pulse rounded bg-stone-200"></div>
+  <div class="h-3 w-1/2 animate-pulse rounded bg-stone-100"></div><div class="h-3 w-1/3 animate-pulse rounded bg-stone-100"></div>
+  <div class="flex gap-3 pt-3"><div class="h-3 w-10 animate-pulse rounded bg-stone-100"></div><div class="h-3 w-10 animate-pulse rounded bg-stone-100"></div></div></div>
+</div><div class="overflow-hidden rounded-lg border border-stone-200 bg-white">
+  <div class="aspect-video w-full animate-pulse bg-stone-200"></div>
+  <div class="space-y-2 p-4 sm:p-5"><div class="h-4 w-11/12 animate-pulse rounded bg-stone-200"></div><div class="h-4 w-2/3 animate-pulse rounded bg-stone-200"></div>
+  <div class="h-3 w-1/2 animate-pulse rounded bg-stone-100"></div><div class="h-3 w-1/3 animate-pulse rounded bg-stone-100"></div>
+  <div class="flex gap-3 pt-3"><div class="h-3 w-10 animate-pulse rounded bg-stone-100"></div><div class="h-3 w-10 animate-pulse rounded bg-stone-100"></div></div></div>
+</div><div class="overflow-hidden rounded-lg border border-stone-200 bg-white">
+  <div class="aspect-video w-full animate-pulse bg-stone-200"></div>
+  <div class="space-y-2 p-4 sm:p-5"><div class="h-4 w-11/12 animate-pulse rounded bg-stone-200"></div><div class="h-4 w-2/3 animate-pulse rounded bg-stone-200"></div>
+  <div class="h-3 w-1/2 animate-pulse rounded bg-stone-100"></div><div class="h-3 w-1/3 animate-pulse rounded bg-stone-100"></div>
+  <div class="flex gap-3 pt-3"><div class="h-3 w-10 animate-pulse rounded bg-stone-100"></div><div class="h-3 w-10 animate-pulse rounded bg-stone-100"></div></div></div>
+</div><div class="overflow-hidden rounded-lg border border-stone-200 bg-white">
+  <div class="aspect-video w-full animate-pulse bg-stone-200"></div>
+  <div class="space-y-2 p-4 sm:p-5"><div class="h-4 w-11/12 animate-pulse rounded bg-stone-200"></div><div class="h-4 w-2/3 animate-pulse rounded bg-stone-200"></div>
+  <div class="h-3 w-1/2 animate-pulse rounded bg-stone-100"></div><div class="h-3 w-1/3 animate-pulse rounded bg-stone-100"></div>
+  <div class="flex gap-3 pt-3"><div class="h-3 w-10 animate-pulse rounded bg-stone-100"></div><div class="h-3 w-10 animate-pulse rounded bg-stone-100"></div></div></div>
+</div></div>
+  <p class="mock-note mt-4 text-xs text-stone-400">Le squelette réserve la hauteur de la grille ; en cas d'erreur ou au-delà de 2 s, la section entière est masquée sans message (D22).</p>
+</section>
+</main><footer class="mt-12 border-t border-stone-200 bg-stone-50">
+  <div class="mx-auto grid max-w-7xl gap-8 px-6 py-10 sm:grid-cols-3">
+    <div>
+      <img src="../../../../../public/images/logo_anta.png" alt="Anta" class="h-8 w-8">
+      <p class="mt-3 max-w-xs text-sm text-stone-600">Anta est la bibliothèque numérique académique de l'association ETEC Community : thèses, mémoires, articles et conférences en accès libre.</p>
+    </div>
+    <nav aria-labelledby="f-explorer">
+      <h2 id="f-explorer" class="text-sm font-semibold text-stone-900">Explorer</h2>
+      <ul class="mt-3 space-y-2 text-sm text-stone-600">
+        <li><a href="home.html" class="hover:text-green-700">Accueil</a></li>
+        <li><a href="#" class="hover:text-green-700">Recherche avancée</a></li>
+        <li><a href="authors-list.html" class="hover:text-green-700">Auteurs</a></li>
+        <li><a href="#" class="hover:text-green-700">Politique de confidentialité</a></li>
+      </ul>
+    </nav>
+    <div>
+      <h2 class="text-sm font-semibold text-stone-900">Contact</h2>
+      <p class="mt-3 text-sm text-stone-600"><a href="mailto:contact@anta.community" class="hover:text-green-700">contact@anta.community</a></p>
+    </div>
+  </div>
+  <div class="border-t border-stone-200"><p class="mx-auto max-w-7xl px-6 py-4 text-sm text-stone-600">© 2026 ETEC Community. Tous droits réservés.</p></div>
+</footer>
+</body>
+</html>
