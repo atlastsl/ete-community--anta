@@ -1,0 +1,17 @@
+# Reverse proxy d'Anta (Epic 8). Le domaine vient de la variable DOMAIN
+# (`anta.peraha.com` en staging). Caddy obtient et renouvelle le certificat
+# Let's Encrypt automatiquement et redirige HTTP -> HTTPS (NFR4).
+
+{$DOMAIN} {
+	encode zstd gzip
+
+	# Parité avec `bodyparser` (limit: '110mb' = 110 Mio) pour les uploads.
+	request_body {
+		max_size 110MiB
+	}
+
+	# Ajoute X-Forwarded-For / X-Forwarded-Proto (lus via `trustProxy`, config/app.ts).
+	reverse_proxy app:3333
+
+	log
+}

@@ -20,6 +20,9 @@ router
   .as('production.download')
 router.get('/privacy-policy', [controllers.public.Pages, 'privacy']).as('privacy-policy')
 
+// Health check (Docker / déploiement) — sans base de données ni rendu.
+router.get('/health', ({ response }) => response.ok({ status: 'ok' })).as('health')
+
 // Beacon de vue (FR25) — public, exempté de CSRF dans config/shield.ts (fire-and-forget).
 router.post('/stats/view', [controllers.public.Stats, 'view']).as('stats.view')
 
