@@ -77,7 +77,7 @@
 
 - **Paramètre `page` non borné** : `Math.max(1, Number(page) || 1)` laisse passer `Infinity`, `1.5`, `1e21` (offset incohérent). Même patron dans les contrôleurs admin productions, activity_logs, authors et public productions. Action : helper commun `Number.isSafeInteger` + `Math.floor`.
 - **Bouton dans un lien** : `<Link><Button/></Link>` produit `<a><button>` (HTML invalide, deux arrêts de tabulation). Patron de toutes les pages admin. Action : `Button asChild` autour du `Link`.
-- **Normalisation des clés** : `normalizeKey` (NFD) n'unifie pas `'`/`’`/`ʼ`, trait d'union/espace, ni `ł`, `ø`, `æ`, `đ`. Conforme à P2.1 ; à reconsidérer avant le dédoublonnage des auteurs/institutions (9.5/9.6).
+- **Normalisation des clés** : `normalizeKey` (NFD) n'unifie pas `'`/`’`/`ʼ`, trait d'union/espace, ni `ł`, `ø`, `æ`, `đ`. Conforme à P2.1 ; à reconsidérer avant le dédoublonnage des auteurs/institutions (9.5/9.6). **Auteurs : traité en 9.5** pour la proposition de conversion (`AuthorConversionService.groupKey` assimile apostrophes et tirets ; `normalizeKey` inchangé). Reste ouvert pour les institutions (`institution_key`).
 
 ## Deferred from: code review of 9-2-liste-des-auteurs-filtres-et-suppression (2026-11-18)
 
