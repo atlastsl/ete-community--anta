@@ -1,12 +1,17 @@
 import { unlink } from 'node:fs/promises'
 import type { HttpContext } from '@adonisjs/core/http'
+import logger from '@adonisjs/core/services/logger'
 import { errors as lucidErrors } from '@adonisjs/lucid'
 import { errors as vineErrors } from '@vinejs/vine'
 import type { MultipartFile } from '@adonisjs/core/bodyparser'
 import Author from '#models/author'
 import ActionType from '#enums/action_type'
 import ActivityLogService from '#services/activity_log_service'
-import AuthorService, { type AuthorListFilters, type AuthorPayload } from '#services/author_service'
+import AuthorService, {
+  type AuthorListFilters,
+  type AuthorPayload,
+  type PickerAuthor,
+} from '#services/author_service'
 import ImageService, { ImageValidationError, type ImageVariant } from '#services/image_service'
 import { normalizeKey } from '#helpers/normalize'
 import { authorValidator, assertAffiliationRule } from '#validators/admin/author_validator'
@@ -149,7 +154,7 @@ export default class AuthorsController {
   }
 
   private async storeAuthor(ctx: HttpContext) {
-    const author = await this.createAuthor(ctx)
+    const { author } = await this.createAuthor(ctx)
     ctx.session.flash('success', 'authors.flash.created')
     return ctx.response.redirect(`/admin/authors/${author.id}/edit`)
   }
@@ -162,10 +167,8 @@ export default class AuthorsController {
    */
   async quickStore(ctx: HttpContext) {
     try {
-      const author = await this.createAuthor(ctx)
-      await author.load('affiliations')
-      const [picked] = await AuthorService.toPickerAuthors([author])
-      return ctx.response.created({ author: picked })
+      const { author, affiliations } = await this.createAuthor(ctx)
+      return ctx.response.created({ author: await this.quickAuthor(author, affiliations) })
     } catch (error) {
       if (error instanceof vineErrors.E_VALIDATION_ERROR) {
         return ctx.response.unprocessableEntity({ errors: error.messages })
@@ -177,10 +180,46 @@ export default class AuthorsController {
   }
 
   /**
+   * Picker shape of the card just created. The card is committed: a failure here must not
+   * turn into an error (the admin would create it again), so it falls back on the submitted
+   * affiliations, without photo URL.
+   */
+  private async quickAuthor(
+    author: Author,
+    affiliations: AuthorPayload['affiliations']
+  ): Promise<PickerAuthor> {
+    try {
+      await author.load('affiliations')
+      const [picked] = await AuthorService.toPickerAuthors([author])
+      return picked
+    } catch (error) {
+      logger.error(
+        { err: error, authorId: author.id },
+        'Quick author created, serialization failed'
+      )
+      const primary = affiliations[0]
+      return {
+        id: author.id,
+        name: AuthorService.displayName(author).trim(),
+        firstNames: author.firstNames,
+        lastNames: author.lastNames,
+        primaryInstitution: primary?.institution.trim() ?? null,
+        primaryDepartment: primary?.department?.trim() || null,
+        isIncomplete: affiliations.length === 0,
+        isPublic: author.consentConfirmedAt !== null,
+        photoUrl: null,
+      }
+    }
+  }
+
+  /**
    * Validates, decodes the photo, creates the card and journals `create` (+ `consent_confirm`
    * when the box was ticked). Shared by `store` and `quickStore`.
    */
-  private async createAuthor({ request, auth }: HttpContext): Promise<Author> {
+  private async createAuthor({
+    request,
+    auth,
+  }: HttpContext): Promise<{ author: Author; affiliations: AuthorPayload['affiliations'] }> {
     const validated = await request.validateUsing(authorValidator)
     const data = { ...validated, affiliations: this.affiliationsOf(validated, request) }
     assertAffiliationRule(data, { isMigrated: false })
@@ -200,7 +239,7 @@ export default class AuthorsController {
     if (author.consentConfirmedAt !== null) {
       await this.logConsent(auth.user!.id, author, ActionType.CONSENT_CONFIRM)
     }
-    return author
+    return { author, affiliations: data.affiliations }
   }
 
   async edit({ params, inertia }: HttpContext) {

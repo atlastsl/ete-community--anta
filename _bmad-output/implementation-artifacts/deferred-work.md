@@ -112,3 +112,8 @@
 - **Auteur supprimé entre-temps** : l'erreur `productions.form.errors.author_unknown` ne nomme pas la fiche disparue ; l'admin doit retirer lui-même l'auteur concerné (la suppression est déjà refusée pour une fiche liée, cas limite d'une fiche ajoutée à la sélection non enregistrée).
 - **Index trigram de la recherche d'auteurs** : `LIKE '%t%' OR similarity` non indexé (voir plus haut), conservé pour `GET /admin/authors/search` (D-9.7-b).
 
+## Deferred from: code review of 9-8-creer-un-auteur-sans-quitter-le-formulaire-de-production (2026-11-18)
+
+- **Fichiers temporaires multipart non supprimés avant le contrôleur** : quand Shield (CSRF) ou l'authentification refusent une requête multipart, le bodyparser a déjà écrit le fichier dans `tmpdir()` et aucun `finally` de contrôleur ne s'exécute. Préexistant, toutes les routes multipart (auteurs, fichiers de production). Action : middleware de nettoyage après réponse, ou `tmpFileName` dans un dossier purgé périodiquement.
+- **Clé d'idempotence pour `POST /admin/authors/quick`** : une perte de réseau après le commit fait renvoyer la fenêtre par l'admin → seconde fiche. Action : en-tête `Idempotency-Key` généré à l'ouverture de la fenêtre, mémorisé quelques minutes côté serveur.
+- **Avertissement d'homonyme avant création** (question PO) : la fenêtre ne signale pas une fiche existante au nom proche ; la liste de résultats du combobox reste la seule aide.

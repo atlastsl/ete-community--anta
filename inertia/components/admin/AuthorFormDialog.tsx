@@ -30,11 +30,31 @@ type Props = {
   onOpenChange: (open: boolean) => void
   /** Called with the created card (picker shape) before the window closes. */
   onCreated: (author: PickerAuthor) => void
+  /** Called once the window is closed and the focus restored (announcements go there). */
+  onClosed?: () => void
   /** Element focused when the window closes (the trigger, or the search input after a creation). */
   returnFocusRef: RefObject<HTMLElement | null>
 }
 
 type ValidationMessage = { field: string; message: string }
+
+/** Error keys shown under a field of `AuthorForm`; any other key also gets the generic alert. */
+const DISPLAYED_ERROR =
+  /^(?:lastNames|firstNames|affiliations|googleScholarUrl|photo|consent|affiliations\.\d+\.(?:institution|department))$/
+
+/**
+ * Responses meaning the session (or its CSRF secret) is gone: with `redirect: 'manual'`, the
+ * login / Shield redirect is an `opaqueredirect` of status 0; 401, 403 and 419 likewise.
+ */
+function isSessionFailure(response: Response): boolean {
+  return (
+    response.type === 'opaqueredirect' ||
+    response.status === 0 ||
+    response.status === 401 ||
+    response.status === 403 ||
+    response.status === 419
+  )
+}
 
 /**
  * « Create an author » window of the production form (Story 9.8, FR54, D16, mockup
@@ -50,6 +70,7 @@ export default function AuthorFormDialog({
   initialQuery,
   onOpenChange,
   onCreated,
+  onClosed,
   returnFocusRef,
 }: Props) {
   const { t } = useTranslation()
@@ -59,6 +80,7 @@ export default function AuthorFormDialog({
   const [submitting, setSubmitting] = useState(false)
   // A second click before the re-render would send a second POST (two cards).
   const inFlight = useRef(false)
+  const content = useRef<HTMLDivElement>(null)
   // Each opening starts from the query of that opening.
   const [shownOpen, setShownOpen] = useState(false)
   if (open !== shownOpen) {
@@ -114,7 +136,14 @@ export default function AuthorFormDialog({
           serverErrors[error.field] ??= error.message
         }
         setErrors(serverErrors)
-        if (Object.keys(serverErrors).length === 0) setFailure(t('authors.dialog.error'))
+        const keys = Object.keys(serverErrors)
+        if (keys.length === 0 || keys.some((key) => !DISPLAYED_ERROR.test(key))) {
+          setFailure(t('authors.dialog.error'))
+        }
+        return
+      }
+      if (isSessionFailure(response)) {
+        setFailure(t('authors.dialog.session_expired'))
         return
       }
       if (response.status !== 201) throw new Error(`quick_store_failed_${response.status}`)
@@ -132,16 +161,22 @@ export default function AuthorFormDialog({
   return (
     <Dialog open={open} onOpenChange={requestClose}>
       <DialogContent
-        role="dialog"
+        ref={content}
         showCloseButton={false}
         className="max-h-[90vh] overflow-y-auto sm:max-w-lg"
         onInteractOutside={(event) => event.preventDefault()}
         onEscapeKeyDown={(event) => {
           if (inFlight.current) event.preventDefault()
         }}
+        onOpenAutoFocus={(event) => {
+          // First field (« Last name(s) »), not the × button.
+          event.preventDefault()
+          content.current?.querySelector<HTMLElement>('form input:not([type="hidden"])')?.focus()
+        }}
         onCloseAutoFocus={(event) => {
           event.preventDefault()
           returnFocusRef.current?.focus()
+          onClosed?.()
         }}
       >
         <DialogHeader>

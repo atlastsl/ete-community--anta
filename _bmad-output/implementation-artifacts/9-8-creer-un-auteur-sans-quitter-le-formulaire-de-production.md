@@ -4,7 +4,7 @@ baseline_commit: 49cbb80
 
 # Story 9.8 : Créer un auteur sans quitter le formulaire de production
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -51,12 +51,31 @@ afin de **ne pas perdre ma saisie et de le retrouver sélectionné automatiqueme
   - [x] 2.2 `inertia/lib/xsrf.ts` : `xsrfToken()` (cookie `XSRF-TOKEN`, `decodeURIComponent`).
 - [x] **T3 — `AuthorFormDialog.tsx`** (AC 2–5) : état local `AuthorFormData`, `AuthorForm requireAffiliation`, validation client, `fetch`, 201/422/autres, `Loader2`, fermeture bloquée pendant l'envoi, `onInteractOutside` neutralisé, `onCloseAutoFocus` → cible de retour, `event.stopPropagation()` sur `submit`, défilement `max-h` du contenu.
 - [x] **T4 — `AuthorCombobox.tsx`** (AC 1, 3, 4) : option de création (index `results.length`), navigation sur `results.length + 1`, Entrée/clic, bouton outline, dialog monté dans le combobox, retour de focus, `onSelect(author)` + saisie vidée + annonce.
-- [x] **T5 — i18n FR/EN** : `authors.picker.create_option`, `authors.dialog.{title,description,submit,close,added,error}` ; réutiliser `authors.create_button`, `authors.flash.created`, `actions.cancel`.
+- [x] **T5 — i18n FR/EN** : `authors.picker.create_option`, `authors.dialog.{description,submit,close,added,error,session_expired}` ; titre = `authors.create_button` réutilisé (pas de clé `authors.dialog.title`) ; réutiliser aussi, `authors.flash.created`, `actions.cancel`.
 - [x] **T6 — Tests** (AC 1–7)
   - [x] 6.1 `tests/functional/admin/authors_quick.spec.ts` : 201 (forme `{ author }`, affiliations ordonnées, journal `create`), consentement (`isPublic`, `consent_confirm`), 422 JSON (noms manquants, sans affiliation, consentement sans affiliation, Scholar invalide), CSRF refusé, non authentifié, photo (variantes) et photo refusée (422 `photo`), rien créé en cas d'échec.
   - [x] 6.2 `tests/unit/components/author_form_dialog.spec.ts` (lecture de source) : `role="dialog"`, `AuthorForm`, `fetch` + en-têtes, `urlFor('admin.authors.quick-store')`, aucun `router`, `stopPropagation`, `onCloseAutoFocus`, `Loader2`, option de création dernière, bouton `type="button"`, D36, i18n FR/EN.
   - [x] 6.3 Étendre le test de clés i18n (`authors_index_page.spec.ts`) au dialog et au combobox.
 - [x] **T7 — Finitions** (AC 8) : `/tmp/d37/gen.sh`, lint, typecheck, build, suite complète ; story → `review`.
+
+### Review Findings
+
+Revue de code du 2026-11-18 (couches adversariale, cas limites, conformité aux AC), constats vérifiés avant correction.
+
+- [x] [Review][Patch] Surlignage de « Créer un auteur » volé à l'arrivée des résultats (option choisie au clavier pendant le chargement → Entrée ajoutait un auteur existant) ; après une erreur, ↓ perdait le surlignage au nouvel essai [AuthorCombobox.tsx] — `createActive` (ref synchronisée par un effet déclaré avant la recherche) : surlignage conservé (`found.length`, ou 0 sans résultat / après erreur) ; Entrée sur « Créer » ouvre sans relancer la recherche.
+- [x] [Review][Patch] Session expirée ou jeton CSRF refusé (redirection opaque, 0, 401, 403, 419) affichés comme une panne générique [AuthorFormDialog.tsx] — message dédié `authors.dialog.session_expired` (FR/EN) ; 5xx et erreur réseau gardent le message générique.
+- [x] [Review][Patch] 422 sur une clé sans champ affiché (`affiliations.0`, `removePhoto`) silencieux [AuthorFormDialog.tsx] — alerte générique en plus (`DISPLAYED_ERROR`).
+- [x] [Review][Patch] Focus initial sur × [AuthorFormDialog.tsx] — `onOpenAutoFocus` → premier champ (Nom(s)).
+- [x] [Review][Patch] Ouvrir la fenêtre depuis le champ marquait « Auteurs » touché (erreur « au moins un auteur » derrière la fenêtre) [AuthorCombobox.tsx] — `openingCreate` : ce blur n'appelle pas `onBlur`.
+- [x] [Review][Patch] Toast et annonce émis pendant que Radix masque la page (`aria-hidden`) [AuthorCombobox.tsx, AuthorFormDialog.tsx] — émis après fermeture (`onClosed` depuis `onCloseAutoFocus`, tâche suivante).
+- [x] [Review][Patch] Échec après le commit (préchargement / sérialisation) → 500 alors que la fiche existe (recréée au nouvel essai) [authors_controller.ts] — `quickAuthor` : repli 201 minimal (affiliations soumises, sans photo), erreur journalisée ; test.
+- [x] [Review][Patch] Mise en page mobile [AuthorCombobox.tsx] — `flex flex-col gap-2 sm:flex-row sm:items-start`.
+- [x] [Review][Patch] Tests : fichier temporaire multipart supprimé après 201 et après 422 photo (AC 7) ; assertions de source ciblées (`stopPropagation` dans `handleSubmit`, `<li>` de création hors de toute condition) ; `role="dialog"` redondant retiré (posé par Radix) ; test « parcours navigateur » avec la valeur décodée `e:…` comme `xsrfToken()` ; motif `DISPLAYED_ERROR` testé sur des cas réels ; test 9.7 « nouvelle saisie » aligné (seule « Créer » garde son surlignage).
+- [x] [Review][Defer] Fichiers temporaires multipart laissés quand Shield ou l'authentification refusent la requête avant le contrôleur — préexistant, toutes les routes multipart.
+- [x] [Review][Defer] Clé d'idempotence pour `quick-store` (double envoi après une perte de réseau).
+- [x] [Review][Defer] Avertissement d'homonyme avant création — question PO.
+
+Écartés : `consent` cité parmi les clés 422 non affichées (faux : `AuthorForm` affiche `consent-error` sous la case ; gardé dans les champs affichés) ; « 11 tests et non 10 » (les notes indiquaient déjà 11 fonctionnels ; « 8/10 » du journal décrit le premier passage rouge) ; déplacement des helpers purs hors d'`inertia/` (aucun module partagé existant dans le projet : non fait, testés par lecture de source).
 
 ## Dev Notes
 
@@ -126,7 +145,7 @@ Claude Opus 5.5 (claude-opus-5-5)
 - `AuthorFormDialog` : `Dialog` shadcn (`role="dialog"`, `sm:max-w-lg`, défilement), `AuthorForm requireAffiliation`, préremplissage D36 (`splitAuthorQuery`), validation client, `fetch` multipart (`toAuthorFormData`, `X-XSRF-TOKEN` via `xsrfToken()`, `Accept: application/json`, `redirect: 'manual'`), erreurs 422 en ligne (focus sur le premier champ invalide par `AuthorForm`), échec générique `role="alert"`, `Loader2` + bouton désactivé, double envoi bloqué, fermeture impossible pendant l'envoi, clic extérieur ignoré, `submit` stoppé (portail React), focus rendu par `onCloseAutoFocus`.
 - `AuthorCombobox` : option « Créer un auteur « {saisie} » » toujours dernière (index `results.length`, ↑ ↓ / Entrée / clic ; active par défaut quand aucun résultat), bouton outline « Créer un auteur » `type="button"`, dialog monté dans le combobox ; après création : `onSelect` (fin de sélection, sans doublon via `ProductionForm`), saisie vidée, focus au champ, toast « Auteur créé. », annonce « {nom} créé et ajouté aux auteurs. » ; Annuler/Échap → focus au déclencheur.
 - i18n FR/EN : `authors.picker.create_option`, `authors.dialog.{description,submit,close,added,error}` (titre = `authors.create_button`, toast = `authors.flash.created`, `actions.cancel`).
-- Tests : 11 fonctionnels (`authors_quick.spec.ts`), 14 par lecture de source (`author_form_dialog.spec.ts`) ; suite complète 790 verts (base 765), lint, typecheck, build verts ; `package.json` inchangé ; `.adonisjs/*` régénérés.
+- Tests : 11 fonctionnels (`authors_quick.spec.ts`), 14 par lecture de source (`author_form_dialog.spec.ts`) ; suite complète 790 verts (base 765) ; après revue : 12 fonctionnels, 19 par lecture de source, suite 796 verts, lint, typecheck, build verts ; `package.json` inchangé ; `.adonisjs/*` régénérés.
 
 ### File List
 
@@ -141,9 +160,13 @@ Claude Opus 5.5 (claude-opus-5-5)
 - `tests/functional/admin/authors_quick.spec.ts` (nouveau)
 - `tests/unit/components/author_form_dialog.spec.ts` (nouveau)
 - `tests/unit/components/authors_index_page.spec.ts`
+- `_bmad-output/implementation-artifacts/9-8-creer-un-auteur-sans-quitter-le-formulaire-de-production.md`
+- `_bmad-output/implementation-artifacts/deferred-work.md` (revue)
+- `tests/unit/components/author_picker.spec.ts` (revue)
 - `.adonisjs/client/registry/index.ts`, `.adonisjs/client/registry/schema.d.ts`, `.adonisjs/client/registry/tree.d.ts`, `.adonisjs/server/routes.d.ts` (régénérés)
 
 ## Change Log
 
 - 2026-11-18 : création de la story (contexte complet).
 - 2026-11-18 : implémentation (endpoint JSON `quick-store`, `AuthorFormDialog`, option et bouton de création dans `AuthorCombobox`, i18n, 25 tests) → `review`.
+- 2026-11-18 : revue de code — 9 correctifs (surlignage « Créer », session expirée, 422 hors champ, focus initial, blur, annonces après fermeture, repli 201 après commit, mobile, tests), 3 reports → `done`.

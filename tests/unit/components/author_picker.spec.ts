@@ -152,11 +152,11 @@ test.group('Sélecteur d’auteurs | revue de code 9.7', () => {
   test('nouvelle saisie : options effacées, aucune sélection pendant le chargement', ({
     assert,
   }) => {
-    const effect = combobox.slice(combobox.indexOf('useEffect(() => {'))
-    assert.match(
-      effect,
-      /^useEffect\(\(\) => \{\s*\/\/[^\n]*\n\s*setResults\(\[\]\)\s*setActiveIndex\(-1\)/
+    // 9.8 : seule l'option « Créer » (toujours valide) garde son surlignage.
+    const effect = combobox.slice(
+      combobox.indexOf('const controller = new AbortController()') - 600
     )
+    assert.match(effect, /setResults\(\[\]\)\s*setActiveIndex\(createActive\.current \? 0 : -1\)/)
     assert.include(combobox, "if (status === 'loading') return")
     assert.include(combobox, "status !== 'loading' && showList && activeIndex >= 0")
   })

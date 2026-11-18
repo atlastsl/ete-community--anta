@@ -1,5 +1,5 @@
 import { test } from '@japa/runner'
-import { writeFileSync, mkdirSync } from 'node:fs'
+import { writeFileSync, mkdirSync, readdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import db from '@adonisjs/lucid/services/db'
@@ -44,6 +44,17 @@ function makeTextAsJpg(name: string): string {
   const path = join(TMP, name)
   writeFileSync(path, 'pas une image', 'utf-8')
   return path
+}
+
+const UUID_NAME = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/** Fichiers temporaires multipart du bodyparser (`tmpdir()/<uuid>`). */
+function uploadTmpFiles(): Set<string> {
+  return new Set(readdirSync(tmpdir()).filter((name) => UUID_NAME.test(name)))
+}
+
+function newEntries(before: Set<string>): string[] {
+  return [...uploadTmpFiles()].filter((name) => !before.has(name))
 }
 
 function fieldsOf(body: { errors?: { field: string; message: string }[] }): Record<string, string> {
@@ -211,8 +222,8 @@ test.group('Admin authors | création rapide (9.8)', (group) => {
     page.assertStatus(200)
     const token = page.cookies()['XSRF-TOKEN']?.value
     assert.isString(token)
-    // Valeur brute du cookie telle que le navigateur la lit (chiffrée, encodée URI).
-    const header = encodeURIComponent(`e:${encryption.encrypt(token, undefined, 'XSRF-TOKEN')}`)
+    // Valeur décodée, comme `xsrfToken()` (inertia/lib/xsrf.ts) la renvoie.
+    const header = `e:${encryption.encrypt(token, undefined, 'XSRF-TOKEN')}`
 
     const response = await client
       .post(URL)
@@ -281,13 +292,15 @@ test.group('Admin authors | création rapide (9.8)', (group) => {
   }) => {
     const fakeDisk = drive.fake('r2')
     const admin = await createAdminUser()
+    const photo = await makePng('quick.png')
+    const before = uploadTmpFiles()
     const response = await client
       .post(URL)
       .header('Accept', 'application/json')
       .field('lastNames', 'Fictivo')
       .field('firstNames', 'Ada')
       .field('affiliations[0][institution]', 'Université Exemple')
-      .file('photo', await makePng('quick.png'))
+      .file('photo', photo)
       .loginAs(admin)
       .withCsrfToken()
       .redirects(0)
@@ -297,11 +310,13 @@ test.group('Admin authors | création rapide (9.8)', (group) => {
     assert.isNotNull(author.photoKey)
     fakeDisk.assertExists(AuthorService.photoKeys(author.photoKey!))
     assert.isString(response.body().author.photoUrl)
+    assert.deepEqual(newEntries(before), [], 'fichier temporaire multipart supprimé')
   })
 
   test('photo refusée → 422 photo, rien créé', async ({ client, assert }) => {
     drive.fake('r2')
     const admin = await createAdminUser()
+    const before = uploadTmpFiles()
     const response = await client
       .post(URL)
       .header('Accept', 'application/json')
@@ -316,5 +331,45 @@ test.group('Admin authors | création rapide (9.8)', (group) => {
     response.assertStatus(422)
     assert.match(fieldsOf(response.body()).photo, /^authors\.form\.errors\.photo_/)
     assert.isNull(await Author.findBy('lastNames', 'Fictivo'))
+    assert.deepEqual(newEntries(before), [], 'fichier temporaire multipart supprimé')
+  })
+
+  test('échec après le commit (sérialisation) → 201 minimal, fiche non recréée', async ({
+    client,
+    assert,
+  }) => {
+    const admin = await createAdminUser()
+    const original = AuthorService.toPickerAuthors
+    AuthorService.toPickerAuthors = async () => {
+      throw new Error('panne simulée')
+    }
+    try {
+      const response = await client
+        .post(URL)
+        .header('Accept', 'application/json')
+        .field('lastNames', 'Fictivo')
+        .field('firstNames', 'Ada')
+        .field('affiliations[0][institution]', 'Université Exemple')
+        .field('affiliations[0][department]', 'Chimie')
+        .loginAs(admin)
+        .withCsrfToken()
+        .redirects(0)
+
+      response.assertStatus(201)
+      const author = await Author.findByOrFail('lastNames', 'Fictivo')
+      assert.deepEqual(response.body().author, {
+        id: author.id,
+        name: 'Ada Fictivo',
+        firstNames: 'Ada',
+        lastNames: 'Fictivo',
+        primaryInstitution: 'Université Exemple',
+        primaryDepartment: 'Chimie',
+        isIncomplete: false,
+        isPublic: false,
+        photoUrl: null,
+      })
+    } finally {
+      AuthorService.toPickerAuthors = original
+    }
   })
 })

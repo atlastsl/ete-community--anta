@@ -70,15 +70,29 @@ export default function AuthorCombobox({
   const inputElement = useRef<HTMLInputElement | null>(null)
   const createButton = useRef<HTMLButtonElement>(null)
   const returnFocus = useRef<HTMLElement | null>(null)
+  // The « Create » option is highlighted (chosen with ↓ / the mouse, also while loading or
+  // after an error): it stays highlighted when the options are replaced.
+  const createActive = useRef(false)
+  // The search input loses the focus because the window opens: not a « touched » blur.
+  const openingCreate = useRef(false)
+  // Toast and announcement of a creation, emitted once the window is closed (Radix hides
+  // the rest of the page from assistive technologies while it is open).
+  const pendingCreated = useRef<PickerAuthor | null>(null)
 
   // NFC: a decomposed « é » counts as one character, as on the server (normalizeKey).
   const term = query.normalize('NFC').trim()
   const excludeKey = selectedIds.join(',')
 
+  // Declared before the search effect: read by it in the same commit.
   useEffect(() => {
-    // A new term invalidates the current options immediately.
+    createActive.current = activeIndex >= 0 && activeIndex === results.length
+  })
+
+  useEffect(() => {
+    // A new term invalidates the current options immediately (the « Create » option, always
+    // valid, keeps its highlight: index 0 while there is no result).
     setResults([])
-    setActiveIndex(-1)
+    setActiveIndex(createActive.current ? 0 : -1)
     if (term.length < AUTHOR_SEARCH_MIN_LENGTH) {
       setStatus('idle')
       return
@@ -98,13 +112,14 @@ export default function AuthorCombobox({
         const body = (await response.json()) as { authors: PickerAuthor[] }
         const found = body.authors.filter((author) => !excluded.includes(author.id))
         setResults(found)
-        // First result, or the « Create » option when nothing was found.
-        setActiveIndex(0)
+        // The « Create » option if it was chosen meanwhile; else the first result (or the
+        // « Create » option when nothing was found).
+        setActiveIndex(createActive.current ? found.length : 0)
         setStatus('ready')
       } catch (error) {
         if ((error as Error).name === 'AbortError') return
         setResults([])
-        setActiveIndex(-1)
+        setActiveIndex(createActive.current ? 0 : -1)
         setStatus('error')
       }
     }, AUTHOR_SEARCH_DEBOUNCE_MS)
@@ -128,6 +143,7 @@ export default function AuthorCombobox({
   }
 
   function openCreate(trigger: 'input' | 'button') {
+    openingCreate.current = trigger === 'input'
     setDialogQuery(query)
     returnFocus.current = trigger === 'input' ? inputElement.current : createButton.current
     setOpen(false)
@@ -141,9 +157,21 @@ export default function AuthorCombobox({
     setResults([])
     setStatus('idle')
     setActiveIndex(-1)
-    notify.success(t('authors.flash.created'))
-    const text = t('authors.dialog.added', { name: pickerAuthorLabel(author) })
-    setNotice((previous) => (previous === text ? `${text}\u00a0` : text))
+    pendingCreated.current = author
+  }
+
+  /** The window is closed and the focus restored: announce a creation, if any. */
+  function handleDialogClosed() {
+    openingCreate.current = false
+    const author = pendingCreated.current
+    pendingCreated.current = null
+    if (!author) return
+    // Next task: Radix removes `aria-hidden` from the page when the window unmounts.
+    window.setTimeout(() => {
+      notify.success(t('authors.flash.created'))
+      const text = t('authors.dialog.added', { name: pickerAuthorLabel(author) })
+      setNotice((previous) => (previous === text ? `${text}\u00a0` : text))
+    }, 0)
   }
 
   useEffect(() => {
@@ -174,6 +202,7 @@ export default function AuthorCombobox({
       case 'ArrowUp': {
         event.preventDefault()
         setOpen(true)
+        // Retry and navigation are independent: the retry keeps a highlighted « Create ».
         if (event.key === 'ArrowDown') retryAfterError()
         if (!hasTerm) return
         const delta = event.key === 'ArrowDown' ? 1 : -1
@@ -189,10 +218,12 @@ export default function AuthorCombobox({
       case 'Enter':
         // Never submits the production form from the search input.
         event.preventDefault()
-        retryAfterError()
         if (showList && activeIndex === createIndex) {
           openCreate('input')
-        } else if (status !== 'loading' && showList && activeIndex >= 0 && results[activeIndex]) {
+          return
+        }
+        retryAfterError()
+        if (status !== 'loading' && showList && activeIndex >= 0 && results[activeIndex]) {
           select(results[activeIndex])
         }
         return
@@ -236,7 +267,7 @@ export default function AuthorCombobox({
       <p role="status" className="sr-only">
         {announcement}
       </p>
-      <div className="mt-1 flex items-start gap-2">
+      <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-start">
         <div className="relative min-w-0 flex-1">
           <Search
             className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-stone-400"
@@ -271,6 +302,10 @@ export default function AuthorCombobox({
             }}
             onBlur={() => {
               setOpen(false)
+              if (openingCreate.current) {
+                openingCreate.current = false
+                return
+              }
               onBlur?.()
             }}
             onKeyDown={handleKeyDown}
@@ -378,6 +413,7 @@ export default function AuthorCombobox({
         initialQuery={dialogQuery}
         onOpenChange={setDialogOpen}
         onCreated={handleCreated}
+        onClosed={handleDialogClosed}
         returnFocusRef={returnFocus}
       />
     </div>

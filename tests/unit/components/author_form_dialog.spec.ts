@@ -15,7 +15,8 @@ const packageJson = JSON.parse(read('package.json'))
 test.group('AuthorFormDialog | fenêtre « Créer un auteur »', () => {
   test('Dialog shadcn role="dialog", titre, description, max-w-lg, défilement', ({ assert }) => {
     assert.include(dialog, "from '~/components/ui/dialog'")
-    assert.include(dialog, 'role="dialog"')
+    // role="dialog" posé par Radix (DialogContent), pas répété dans la source.
+    assert.include(dialog, '<DialogContent')
     assert.include(dialog, "<DialogTitle>{t('authors.create_button')}</DialogTitle>")
     assert.include(
       dialog,
@@ -63,9 +64,54 @@ test.group('AuthorFormDialog | fenêtre « Créer un auteur »', () => {
   })
 
   test('submit stoppé (portail React → formulaire de production)', ({ assert }) => {
-    assert.include(dialog, 'event.preventDefault()')
-    assert.include(dialog, 'event.stopPropagation()')
+    const handler = dialog.slice(
+      dialog.indexOf('async function handleSubmit('),
+      dialog.indexOf('if (inFlight.current) return', dialog.indexOf('async function handleSubmit('))
+    )
+    assert.include(handler, 'event.preventDefault()')
+    assert.include(handler, 'event.stopPropagation()')
     assert.include(dialog, '<form onSubmit={handleSubmit} noValidate>')
+  })
+
+  test('focus initial sur le premier champ, pas sur ×', ({ assert }) => {
+    const open = dialog.slice(
+      dialog.indexOf('onOpenAutoFocus='),
+      dialog.indexOf('onCloseAutoFocus=')
+    )
+    assert.include(open, 'event.preventDefault()')
+    assert.include(
+      open,
+      '.querySelector<HTMLElement>(\'form input:not([type="hidden"])\')?.focus()'
+    )
+  })
+
+  test('session expirée distinguée ; 422 sur un champ non affiché → alerte générique', ({
+    assert,
+  }) => {
+    assert.include(dialog, "response.type === 'opaqueredirect'")
+    for (const status of [0, 401, 403, 419]) {
+      assert.include(dialog, `response.status === ${status}`)
+    }
+    assert.include(dialog, "setFailure(t('authors.dialog.session_expired'))")
+    assert.include(dialog, 'keys.some((key) => !DISPLAYED_ERROR.test(key))')
+    const pattern = dialog.match(/const DISPLAYED_ERROR =\s*\n?\s*(\/.*\/)\n/)
+    assert.isNotNull(pattern)
+    const displayed = new RegExp(pattern![1].slice(1, -1))
+    for (const key of [
+      'lastNames',
+      'firstNames',
+      'affiliations',
+      'affiliations.2.institution',
+      'affiliations.0.department',
+      'googleScholarUrl',
+      'photo',
+      'consent',
+    ]) {
+      assert.isTrue(displayed.test(key), key)
+    }
+    for (const key of ['affiliations.0', 'removePhoto', 'affiliations.0.other', 'x']) {
+      assert.isFalse(displayed.test(key), key)
+    }
   })
 
   test('422 en ligne, échec générique role="alert", Loader2 et bouton désactivé', ({ assert }) => {
@@ -87,7 +133,7 @@ test.group('AuthorFormDialog | fenêtre « Créer un auteur »', () => {
     assert.include(dialog, 'onEscapeKeyDown=')
     assert.include(dialog, 'if (!next && inFlight.current) return')
     assert.include(dialog, 'onCloseAutoFocus=')
-    assert.include(dialog, 'returnFocusRef.current?.focus()')
+    assert.include(dialog, 'returnFocusRef.current?.focus()\n          onClosed?.()')
     assert.include(dialog, "{t('actions.cancel')}")
     assert.include(dialog, "aria-label={t('authors.dialog.close')}")
     assert.notMatch(dialog, /<button(?![^>]*type=)/)
@@ -101,9 +147,41 @@ test.group('AuthorCombobox | création (Story 9.8)', () => {
     assert.include(combobox, "t('authors.picker.create_option', { query: term })")
     assert.include(combobox, 'id={optionId(createIndex)}')
     assert.include(combobox, 'aria-selected={activeIndex === createIndex}')
-    // Après la liste des résultats, dans la listbox.
-    assert.isAbove(combobox.indexOf('id={optionId(createIndex)}'), combobox.indexOf('results.map('))
-    assert.isBelow(combobox.indexOf('id={optionId(createIndex)}'), combobox.indexOf('</ul>'))
+    // Après la liste des résultats, dans la listbox, jamais sous condition d'état.
+    const createLi = combobox.lastIndexOf('<li', combobox.indexOf('id={optionId(createIndex)}'))
+    const between = combobox.slice(combobox.indexOf('results.map('), createLi)
+    assert.isAbove(createLi, combobox.indexOf('results.map('))
+    assert.isBelow(createLi, combobox.indexOf('</ul>'))
+    assert.match(between, /\)\s*\}\)\}\s*\{\/\*[^*]*\*\/\}\s*$/)
+    assert.notMatch(between.slice(between.lastIndexOf('})}')), /&&|\?/)
+  })
+
+  test('surlignage de « Créer » conservé à l’arrivée des résultats, après erreur et nouvel essai', ({
+    assert,
+  }) => {
+    assert.include(
+      combobox,
+      'createActive.current = activeIndex >= 0 && activeIndex === results.length'
+    )
+    assert.include(combobox, 'setActiveIndex(createActive.current ? found.length : 0)')
+    assert.equal(combobox.split('setActiveIndex(createActive.current ? 0 : -1)').length - 1, 2)
+    // L'effet de synchronisation précède l'effet de recherche.
+    assert.isBelow(
+      combobox.indexOf('createActive.current = activeIndex'),
+      combobox.indexOf('const timer = window.setTimeout')
+    )
+  })
+
+  test('ouvrir la fenêtre ne marque pas le champ « touché »', ({ assert }) => {
+    assert.include(combobox, "openingCreate.current = trigger === 'input'")
+    assert.match(
+      combobox,
+      /if \(openingCreate\.current\) \{\s*openingCreate\.current = false\s*return\s*\}\s*onBlur\?\.\(\)/
+    )
+  })
+
+  test('mise en page mobile : champ et bouton empilés, côte à côte dès sm', ({ assert }) => {
+    assert.include(combobox, 'className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-start"')
   })
 
   test('clavier : ↑ ↓ incluent l’option, Entrée l’ouvre', ({ assert }) => {
@@ -134,12 +212,22 @@ test.group('AuthorCombobox | création (Story 9.8)', () => {
     assert.include(combobox, 'returnFocusRef={returnFocus}')
   })
 
-  test('ajout en fin de sélection (onSelect), saisie vidée, toast et annonce', ({ assert }) => {
-    const handler = combobox.slice(combobox.indexOf('function handleCreated'))
-    assert.include(handler, 'onSelect(author)')
-    assert.include(handler, "setQuery('')")
-    assert.include(handler, "notify.success(t('authors.flash.created'))")
-    assert.include(handler, "t('authors.dialog.added', { name: pickerAuthorLabel(author) })")
+  test('ajout en fin de sélection (onSelect), saisie vidée ; toast et annonce après fermeture', ({
+    assert,
+  }) => {
+    const created = combobox.slice(
+      combobox.indexOf('function handleCreated'),
+      combobox.indexOf('function handleDialogClosed')
+    )
+    assert.include(created, 'onSelect(author)')
+    assert.include(created, "setQuery('')")
+    assert.include(created, 'pendingCreated.current = author')
+    assert.notInclude(created, 'notify.success')
+    const closed = combobox.slice(combobox.indexOf('function handleDialogClosed'))
+    assert.include(closed, 'window.setTimeout(')
+    assert.include(closed, "notify.success(t('authors.flash.created'))")
+    assert.include(closed, "t('authors.dialog.added', { name: pickerAuthorLabel(author) })")
+    assert.include(combobox, 'onClosed={handleDialogClosed}')
     assert.include(combobox, 'const announcement = searchAnnouncement || notice')
   })
 })
@@ -154,6 +242,10 @@ test.group('Story 9.8 | i18n et dépendances', () => {
     assert.equal(fr.authors.flash.created, 'Auteur créé.')
     assert.include(fr.authors.dialog.added, '{{name}}')
     assert.include(en.authors.dialog.added, '{{name}}')
+    assert.equal(
+      fr.authors.dialog.session_expired,
+      "Session expirée : reconnectez-vous dans un autre onglet ; la production n'est pas encore enregistrée."
+    )
     assert.sameMembers(Object.keys(fr.authors.dialog), Object.keys(en.authors.dialog))
   })
 

@@ -343,7 +343,8 @@
       "submit": "Create and add",
       "close": "Close",
       "added": "{{name}} created and added to the authors.",
-      "error": "The author could not be created. Check your connection and try again."
+      "error": "The author could not be created. Check your connection and try again.",
+      "session_expired": "Session expired: sign in again in another tab; the production is not saved yet."
     }
   },
   "users": {
