@@ -34,7 +34,13 @@ export default function AuthorForm({ data, setData, errors, requireAffiliation }
   const [focusTarget, setFocusTarget] = useState<{ index: number; direction: Direction } | null>(
     null
   )
+  // Errors keyed by index (`affiliations.0.institution`) no longer match their row once the
+  // list is reordered or shortened: hide them until the next submit returns fresh errors.
+  const [indexedErrorsStale, setIndexedErrorsStale] = useState(false)
   const moveButtons = useRef(new Map<string, HTMLButtonElement | null>())
+  const [focusAdd, setFocusAdd] = useState(false)
+  const container = useRef<HTMLDivElement>(null)
+  const addButton = useRef<HTMLButtonElement>(null)
 
   const affiliations = data.affiliations
   const count = affiliations.length
@@ -50,7 +56,27 @@ export default function AuthorForm({ data, setData, errors, requireAffiliation }
     setFocusTarget(null)
   }, [focusTarget])
 
+  useEffect(() => {
+    if (!focusAdd) return
+    addButton.current?.focus()
+    setFocusAdd(false)
+  }, [focusAdd])
+
+  // New errors (client or server): reset the stale flag and focus the first invalid field.
+  useEffect(() => {
+    setIndexedErrorsStale(false)
+    if (!Object.values(errors).some(Boolean)) return
+    const invalid = container.current?.querySelector<HTMLElement>('[aria-invalid="true"]')
+    ;(invalid ?? (errors.affiliations ? addButton.current : null))?.focus()
+  }, [errors])
+
+  // Same text twice in a row is not re-read by screen readers: alternate a trailing NBSP.
+  function announce(text: string) {
+    setAnnouncement((previous) => (previous === text ? `${text}\u00a0` : text))
+  }
+
   function message(key: string): string | null {
+    if (indexedErrorsStale && key.startsWith('affiliations.')) return null
     const value = errors[key]
     return value ? t(value, { defaultValue: value }) : null
   }
@@ -68,7 +94,8 @@ export default function AuthorForm({ data, setData, errors, requireAffiliation }
     const next = [...affiliations]
     ;[next[index], next[target]] = [next[target], next[index]]
     setData('affiliations', next)
-    setAnnouncement(t('authors.form.moved', { n: target + 1 }))
+    setIndexedErrorsStale(true)
+    announce(t('authors.form.moved', { n: target + 1 }))
     setFocusTarget({ index: target, direction })
   }
 
@@ -77,7 +104,10 @@ export default function AuthorForm({ data, setData, errors, requireAffiliation }
       'affiliations',
       affiliations.filter((_, i) => i !== index)
     )
-    setAnnouncement(t('authors.form.removed'))
+    setIndexedErrorsStale(true)
+    announce(t('authors.form.removed'))
+    // The focused × button is unmounted: move the focus to "Add" once it is re-enabled.
+    setFocusAdd(true)
   }
 
   function add() {
@@ -86,7 +116,7 @@ export default function AuthorForm({ data, setData, errors, requireAffiliation }
   }
 
   return (
-    <div className="space-y-6">
+    <div ref={container} className="space-y-6">
       <Section legend={t('authors.form.sections.identity')}>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field
@@ -195,9 +225,11 @@ export default function AuthorForm({ data, setData, errors, requireAffiliation }
         )}
 
         <Button
+          ref={addButton}
           type="button"
           variant="ghost"
           className="mt-3"
+          aria-describedby={message('affiliations') ? 'affiliations-error' : undefined}
           onClick={add}
           disabled={count >= AFFILIATIONS_MAX}
         >

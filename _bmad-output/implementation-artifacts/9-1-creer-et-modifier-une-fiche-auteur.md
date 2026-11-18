@@ -4,7 +4,7 @@ baseline_commit: 6bf12f1449742ada5f50191189376e8c952356ae
 
 # Story 9.1 : Créer et modifier une fiche auteur
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -85,6 +85,24 @@ afin de **constituer le référentiel d'auteurs auquel les productions seront ra
   - [x] 8.4 Functional `tests/functional/admin/authors_crud.spec.ts` (patron `productions_create.spec.ts` : `beginGlobalTransaction`, `loginAs`, `.withCsrfToken()`, `.redirects(0)`, envoi JSON `.json({...})` pour le tableau d'objets ; noms **fictifs**) : GET liste / create / edit 200 + composant ; non authentifié → 302 `/admin/login` (5 routes) ; rôle `admin` (pas seulement super admin) autorisé ; store → fiche + affiliations ordonnées + `search_name` + `institution_key` + `created_by_id` + log `create` avec `metadata.name` ; slug `prenom-nom`, collision → `-2`, renommage → slug inchangé ; erreurs (session `errors` avec les bonnes clés, rien créé) ; store sans affiliation → refus ; update → affiliations remplacées (ordre inversé persisté, aucune violation de `UNIQUE (author_id, position)`), log `update` avec `fields` ; update sans changement → aucun log ; fiche migrée (`migrationKey` posé par le test) sans affiliation → update accepté ; `:id` non UUID et UUID inconnu → 404 ; liste triée par nom, 20/page, page 2.
   - [x] 8.5 Functional `activity_logs.spec.ts` : une entrée `author` avec metadata → prop `resourceName`.
   - [x] 8.6 `tests/unit/i18n/translations.spec.ts` vert (parité) ; `npm run typecheck` et `npm run lint` verts ; suite complète `npm run test:local` verte (aucune régression).
+
+### Review Findings
+
+Revue adversariale du 2026-11-18 (Blind Hunter, Edge Case Hunter, Acceptance Auditor), constats vérifiés dans le code avant correction.
+
+- [x] [Review][Patch] `updated_at` inchangé quand seules les affiliations changent (Lucid saute l'UPDATE sans colonne modifiée) [app/services/author_service.ts] — `updatedAt` posé explicitement ; test fonctionnel ajouté.
+- [x] [Review][Patch] Deux enregistrements simultanés d'une fiche : le 2e `DELETE` ne voit pas les lignes insérées par le 1er → violation `UNIQUE (author_id, position)`, 500 [app/services/author_service.ts] — verrou `SELECT … FOR UPDATE` sur l'auteur dans la transaction.
+- [x] [Review][Patch] Course sur le slug (vérification puis insertion) → violation `authors_slug_unique`, 500 [app/services/author_service.ts] — création relancée (3 essais) sur cette seule contrainte ; tests unitaires `tests/unit/services/author_service.spec.ts`.
+- [x] [Review][Patch] Erreurs indexées (`affiliations.N.*`) affichées sous la mauvaise ligne après un déplacement ou un retrait [inertia/components/admin/AuthorForm.tsx] — masquées jusqu'au prochain envoi.
+- [x] [Review][Patch] Focus perdu après le retrait d'une affiliation [inertia/components/admin/AuthorForm.tsx] — focus sur « Ajouter une affiliation ».
+- [x] [Review][Patch] Annonce identique répétée non relue par les lecteurs d'écran [inertia/components/admin/AuthorForm.tsx] — espace insécable alterné.
+- [x] [Review][Patch] Échec de validation non signalé au clavier ; erreur de liste `affiliations-error` reliée à aucun contrôle [inertia/components/admin/AuthorForm.tsx] — focus sur le premier champ invalide (erreurs client ou serveur), `aria-describedby` sur « Ajouter une affiliation ».
+- [x] [Review][Patch] Page au-delà de la dernière → état « aucun auteur » trompeur [inertia/pages/admin/Authors/Index.tsx] — état vide seulement si `pagination.total === 0`.
+- [x] [Review][Defer] Paramètre `page` non borné (`Infinity`, `1.5`) [app/controllers/admin/authors_controller.ts:19] — deferred, pre-existing (même patron dans 4 contrôleurs).
+- [x] [Review][Defer] `<Link><Button/></Link>` (bouton dans un lien) [inertia/pages/admin/Authors/*.tsx] — deferred, pre-existing (patron de toutes les pages admin).
+- [x] [Review][Defer] `normalizeKey` n'unifie pas apostrophes typographiques, traits d'union ni lettres sans décomposition (`ł`, `ø`) [app/helpers/normalize.ts] — deferred : conforme à l'architecture P2.1 ; à reconsidérer pour le dédoublonnage 9.5/9.6.
+
+Écartés : URL Scholar non restreinte à `scholar.google.*` (AC4 exige seulement `http(s)`), écrasement silencieux en cas d'édition concurrente (dernier enregistrement gagnant, acceptable pour quelques admins), slugs `auteur` pour les noms non latins (repli prévu par AC2), débordement d'`institution_key` en hangul (irréaliste), écarts marginaux entre la validation d'URL client et serveur (le serveur tranche).
 
 ## Dev Notes
 
@@ -173,6 +191,8 @@ Claude Opus 5.5 (claude-opus-5-5)
 
 ### File List
 
+- `tests/unit/services/author_service.spec.ts` (revue)
+
 - `.adonisjs/client/registry/index.ts`, `.adonisjs/client/registry/schema.d.ts`, `.adonisjs/client/registry/tree.d.ts`, `.adonisjs/server/controllers.ts`, `.adonisjs/server/pages.d.ts`, `.adonisjs/server/routes.d.ts` (générés)
 - `app/controllers/admin/activity_logs_controller.ts` (modifié)
 - `app/controllers/admin/authors_controller.ts` (nouveau)
@@ -199,3 +219,4 @@ Claude Opus 5.5 (claude-opus-5-5)
 ### Change Log
 
 - 2026-11-18 : implémentation de la story 9.1 (référentiel d'auteurs : tables, modèles, service, CRUD admin création / modification, journal avec metadata).
+- 2026-11-18 : code review — 8 correctifs (verrou de ligne, `updated_at`, relance sur collision de slug, accessibilité du formulaire, état vide de la liste), 3 reports ; 502 tests verts.

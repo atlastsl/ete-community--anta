@@ -72,3 +72,10 @@
 - **Seeder démo : pic d'évolution sur un seul jour** : `production_demo_seeder` insère les `stats_views`/`stats_downloads` sans date → la colonne prend `default now()` → toute l'évolution 30j s'affiche en un pic le jour du seed. Artefact démo (pas de données prod). Action éventuelle : répartir `recorded_at`/`downloaded_at` sur les 30-60 derniers jours dans le seeder pour une démo réaliste.
 - **Fuseau horaire des stats (robustesse)** : le bucketing 30j repose sur la cohérence de zone Luxon entre `DateTime.now()` (squelette) et `recordedAt` hydraté par Lucid (vérifié cohérent par défaut, même zone process). Action de robustesse (non urgent) : fixer explicitement la zone (ex. UTC) côté Lucid + service pour éviter toute dérive si la config TZ du process change.
 - **Dropdown admins non borné (logs)** : `ActivityLogsController` charge tous les admins pour le filtre (borné par l'effectif admin, trivial). Action si l'effectif grandit : recherche/typeahead.
+
+## Deferred from: code review of 9-1-creer-et-modifier-une-fiche-auteur (2026-11-18)
+
+- **Paramètre `page` non borné** : `Math.max(1, Number(page) || 1)` laisse passer `Infinity`, `1.5`, `1e21` (offset incohérent). Même patron dans les contrôleurs admin productions, activity_logs, authors et public productions. Action : helper commun `Number.isSafeInteger` + `Math.floor`.
+- **Bouton dans un lien** : `<Link><Button/></Link>` produit `<a><button>` (HTML invalide, deux arrêts de tabulation). Patron de toutes les pages admin. Action : `Button asChild` autour du `Link`.
+- **Normalisation des clés** : `normalizeKey` (NFD) n'unifie pas `'`/`’`/`ʼ`, trait d'union/espace, ni `ł`, `ø`, `æ`, `đ`. Conforme à P2.1 ; à reconsidérer avant le dédoublonnage des auteurs/institutions (9.5/9.6).
+

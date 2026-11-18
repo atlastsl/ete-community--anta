@@ -330,6 +330,27 @@ test.group('Admin authors | modification', (group) => {
     assert.isNull(await AdminActivityLog.query().where('resourceId', author.id).first())
   })
 
+  test('PUT ne changeant que les affiliations → updated_at avancé', async ({ client, assert }) => {
+    const admin = await createAdminUser()
+    const author = await createAuthor('Jean', 'Fictif', ['Université A', 'Université B'])
+    await db.from('authors').where('id', author.id).update({ updated_at: '2026-01-01T00:00:00Z' })
+
+    const response = await client
+      .put(`/admin/authors/${author.id}`)
+      .json({
+        lastNames: 'Fictif',
+        firstNames: 'Jean',
+        affiliations: [{ institution: 'Université B' }, { institution: 'Université A' }],
+      })
+      .loginAs(admin)
+      .withCsrfToken()
+      .redirects(0)
+
+    response.assertStatus(302)
+    await author.refresh()
+    assert.isAbove(author.updatedAt!.toMillis(), Date.parse('2026-01-02T00:00:00Z'))
+  })
+
   test('PUT sans affiliation : refusé pour une fiche du panel, accepté pour une fiche migrée', async ({
     client,
     assert,

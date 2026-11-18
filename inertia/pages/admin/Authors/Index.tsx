@@ -40,10 +40,10 @@ export default function AdminAuthorsIndex({ authors, pagination }: Props) {
     <div className="mx-auto max-w-6xl">
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold text-stone-900">{t('authors.heading')}</h1>
-        {authors.length > 0 && createButton}
+        {pagination.total > 0 && createButton}
       </div>
 
-      {authors.length === 0 ? (
+      {pagination.total === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <BookUser className="size-12 text-stone-300" aria-hidden />
           <p className="mt-4 text-lg font-medium text-stone-700">{t('authors.empty_title')}</p>

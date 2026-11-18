@@ -69,5 +69,24 @@ test.group('Pages Authors | création, édition, liste', () => {
     assert.include(indexPage, "t('authors.empty_title')")
     assert.include(indexPage, 'scope="col"')
     assert.include(indexPage, 'Pagination')
+    assert.include(indexPage, 'pagination.total === 0', 'état vide seulement si aucune fiche')
+  })
+
+  test('après déplacement ou retrait : erreurs indexées masquées, focus et annonce répétable', ({
+    assert,
+  }) => {
+    assert.include(form, "if (indexedErrorsStale && key.startsWith('affiliations.')) return null")
+    assert.include(form, 'setFocusAdd(true)')
+    assert.include(form, '\\u00a0')
+  })
+
+  test('nouvelles erreurs : focus sur le premier champ invalide, erreur de liste reliée', ({
+    assert,
+  }) => {
+    assert.include(form, '[aria-invalid="true"]')
+    assert.include(
+      form,
+      "aria-describedby={message('affiliations') ? 'affiliations-error' : undefined}"
+    )
   })
 })

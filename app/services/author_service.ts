@@ -1,4 +1,5 @@
 import db from '@adonisjs/lucid/services/db'
+import { DateTime } from 'luxon'
 import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 import Author from '#models/author'
 import AuthorAffiliation from '#models/author_affiliation'
@@ -15,6 +16,14 @@ export type AuthorPayload = {
 
 /** Fields compared to build the `fields` list of the `update` activity entry. */
 export type AuthorField = 'lastNames' | 'firstNames' | 'googleScholarUrl' | 'affiliations'
+
+/** Attempts when two concurrent creates pick the same free slug (check-then-insert). */
+const SLUG_ATTEMPTS = 3
+
+function isSlugConflict(error: unknown): boolean {
+  const e = error as { code?: string; constraint?: string }
+  return e?.code === '23505' && e.constraint === 'authors_slug_unique'
+}
 
 const emptyToNull = (value: string | null | undefined): string | null =>
   value === undefined || value === null || value.trim() === '' ? null : value.trim()
@@ -37,6 +46,16 @@ export default class AuthorService {
   }
 
   static async create(payload: AuthorPayload, adminId: string | null): Promise<Author> {
+    for (let attempt = 1; ; attempt++) {
+      try {
+        return await this.createOnce(payload, adminId)
+      } catch (error) {
+        if (!isSlugConflict(error) || attempt >= SLUG_ATTEMPTS) throw error
+      }
+    }
+  }
+
+  private static async createOnce(payload: AuthorPayload, adminId: string | null) {
     return db.transaction(async (trx) => {
       const author = new Author()
       author.useTransaction(trx)
@@ -74,10 +93,15 @@ export default class AuthorService {
     if (fields.length === 0) return { author, fields }
 
     await db.transaction(async (trx) => {
+      // Serializes concurrent saves of one card: without the lock, the second DELETE misses
+      // the rows the first one inserted and its INSERT breaks UNIQUE (author_id, position).
+      await Author.query({ client: trx }).where('id', author.id).forUpdate().firstOrFail()
       author.useTransaction(trx)
       author.lastNames = after.lastNames
       author.firstNames = after.firstNames
       author.googleScholarUrl = after.googleScholarUrl
+      // An affiliations-only change leaves no dirty column: Lucid would skip the UPDATE.
+      author.updatedAt = DateTime.now()
       await author.save()
       if (fields.includes('affiliations')) {
         await this.replaceAffiliations(author, payload.affiliations, trx)
