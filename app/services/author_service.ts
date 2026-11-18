@@ -9,6 +9,7 @@ import Author from '#models/author'
 import AuthorAffiliation from '#models/author_affiliation'
 import { normalizeKey } from '#helpers/normalize'
 import FileStorageService from '#services/file_storage_service'
+import ProductionAuthorService from '#services/production_author_service'
 import { AUTHOR_PHOTO_VARIANTS, type ImageVariant } from '#services/image_service'
 import {
   affiliationRequiredError,
@@ -222,9 +223,16 @@ export default class AuthorService {
           author.consentConfirmedAt = locked.consentConfirmedAt
           author.consentConfirmedById = locked.consentConfirmedById
         }
+        // Renaming refreshes `productions.authors` (Story 9.6, P2.1): the productions to
+        // rewrite are chosen with the names still in place (fully attached ones only).
+        const renamed = fields.includes('lastNames') || fields.includes('firstNames')
+        const toRefresh = renamed
+          ? await ProductionAuthorService.fullyAttachedProductionIds(author.id, trx)
+          : []
         // An affiliations-only change leaves no dirty column: Lucid would skip the UPDATE.
         author.updatedAt = DateTime.now()
         await author.save()
+        await ProductionAuthorService.refreshDenormalizedNames(toRefresh, trx)
         if (fields.includes('affiliations')) {
           await this.replaceAffiliations(author, payload.affiliations, trx)
         }

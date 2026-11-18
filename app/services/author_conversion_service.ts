@@ -1,16 +1,20 @@
+import path from 'node:path'
 import db from '@adonisjs/lucid/services/db'
 import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 import { normalizeKey } from '#helpers/normalize'
+import Author from '#models/author'
+import ProductionAuthorService from '#services/production_author_service'
 import { AUTHOR_NAME_MAX } from '#validators/admin/author_validator'
 
 /**
  * Conversion of the free-text author names (`productions.authors`) to author cards
- * (FR56, D19, architecture P2.2) — Story 9.5: proposal and validation only.
+ * (FR56, D19, architecture P2.2).
  *
- * Both steps are read-only: every query runs in a `REPEATABLE READ, READ ONLY`
- * transaction that is always rolled back. Writing (`authors:apply`) belongs to Story 9.6,
- * which must reuse `sourceKey` (CSV row ↔ jsonb name) and `matchKey` (the "attached"
- * rule of `collectUnattached`, see `matchKey`).
+ * Story 9.5: proposal and validation; Story 9.6: application and verification. Proposal,
+ * validation and verification are read-only: every query runs in a `REPEATABLE READ,
+ * READ ONLY` transaction that is always rolled back. `apply` writes in one transaction.
+ * Every step shares `sourceKey` (CSV row ↔ jsonb name) and `matchKey` (the "attached"
+ * rule, see `matchKey`).
  */
 
 /** Exact column order of the conversion CSV (P2.2). */
@@ -143,6 +147,48 @@ export type ValidationPlan = {
 }
 
 export type ValidationReport = { errors: string[]; warnings: string[]; plan: ValidationPlan }
+
+/** A CSV row as used by `apply`, keyed by the `sourceKey` of its `source_name`. */
+type MappingRow = { authorKey: string; slug: string; firstNames: string; lastNames: string }
+
+export type ApplyResult = {
+  dryRun: boolean
+  /** Cards created (`migration_key = author_key`, non-public, without affiliation). */
+  created: { slug: string; migrationKey: string; firstNames: string; lastNames: string }[]
+  /** Existing cards that received links: by `existing_author_slug` or `migration_key`. */
+  reused: { slug: string; via: 'slug' | 'migration_key'; ignoredNames: string | null }[]
+  /** Pivot rows actually created (production slug → author slug, final position). */
+  links: { production: string; author: string; position: number }[]
+  /** Productions whose names are now all attached (pivot rewritten, jsonb refreshed). */
+  converted: string[]
+  /** Productions already fully attached: untouched. */
+  skipped: string[]
+  /** Productions keeping names without CSV row: links written, jsonb NOT refreshed. */
+  partial: { production: string; names: string[] }[]
+  /** Rows of `productions` whose jsonb changed. */
+  refreshed: number
+}
+
+export type ApplyOutcome = { errors: string[]; warnings: string[]; result: ApplyResult | null }
+
+export type VerifyReport = {
+  productions: number
+  /** Non-blank string names of `productions.authors`. */
+  occurrences: number
+  attached: number
+  /** Floored percentage, `100` only when every occurrence is attached. */
+  rate: number
+  unattached: { production: string; names: string[] }[]
+  /** Positions that are not exactly 1..n. */
+  positions: { production: string; positions: number[] }[]
+  /** Linked authors whose name is absent from `productions.authors`. */
+  desync: { production: string; authors: string[] }[]
+  /** Cards without production: from the conversion (listed) or the panel (counted). */
+  orphans: { migrated: string[]; panel: number }
+  blank: number
+  nonString: number
+  complete: boolean
+}
 
 export class CsvFormatError extends Error {}
 
@@ -843,5 +889,372 @@ export default class AuthorConversionService {
     plan.links = [...byProduction.values()].reduce((sum, set) => sum + set.size, 0)
 
     return { errors, warnings, plan }
+  }
+
+  /** Names of a `productions.authors` value: non-blank strings, canonical (`sourceKey`). */
+  static namesOf(value: unknown): string[] {
+    if (!Array.isArray(value)) return []
+    return value
+      .filter((item): item is string => typeof item === 'string')
+      .map((item) => this.sourceKey(item))
+      .filter(Boolean)
+  }
+
+  /** Absolute path of `file` (relative to `appRoot`) when it lies inside `tmp/`, else null. */
+  static resolveUnderTmp(appRoot: string, file: string): string | null {
+    const target = path.isAbsolute(file) ? file : path.join(appRoot, file)
+    const relative = path.relative(path.join(appRoot, 'tmp'), target)
+    if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) return null
+    return target
+  }
+
+  /** CSV rows keyed by `sourceKey(source_name)` (first row wins; `validate` ran first). */
+  private static mappingOf(text: string): Map<string, MappingRow> {
+    const rows = new Map<string, MappingRow>()
+    for (const { values } of this.parseCsv(text).records) {
+      const sourceName = this.sourceKey(values.source_name)
+      if (!sourceName || rows.has(sourceName)) continue
+      rows.set(sourceName, {
+        authorKey: values.author_key ?? '',
+        slug: values.existing_author_slug ?? '',
+        firstNames: collapse(values.first_names),
+        lastNames: collapse(values.last_names),
+      })
+    }
+    return rows
+  }
+
+  /**
+   * Applies a validated conversion CSV (Story 9.6, P2.2). The CSV is validated again
+   * first: on errors nothing is written. Then, in one transaction (productions locked):
+   * cards upserted by `migration_key` (never overwritten) or reused by slug (never
+   * written), pivot rewritten in the jsonb order (duplicates linked once, at their first
+   * occurrence, positions 1..n), fully attached productions skipped, and
+   * `refreshDenormalizedNames` on the productions now fully attached. `dryRun` computes
+   * the same result and rolls back. No activity log entry (no acting admin).
+   */
+  static async apply(text: string, options: { dryRun?: boolean } = {}): Promise<ApplyOutcome> {
+    const { errors, warnings } = await this.validate(text)
+    if (errors.length > 0) return { errors, warnings, result: null }
+    const mapping = this.mappingOf(text)
+    const dryRun = options.dryRun === true
+
+    const trx = await db.transaction()
+    try {
+      const result = await this.applyIn(trx, mapping, dryRun)
+      if (dryRun) await trx.rollback()
+      else await trx.commit()
+      return { errors, warnings, result }
+    } catch (error) {
+      if (!trx.isCompleted) await trx.rollback()
+      throw error
+    }
+  }
+
+  private static async applyIn(
+    trx: TransactionClientContract,
+    mapping: Map<string, MappingRow>,
+    dryRun: boolean
+  ): Promise<ApplyResult> {
+    const result: ApplyResult = {
+      dryRun,
+      created: [],
+      reused: [],
+      links: [],
+      converted: [],
+      skipped: [],
+      partial: [],
+      refreshed: 0,
+    }
+    // Locks every production: an edit through the old form waits for the conversion.
+    const productions = await trx.rawQuery(
+      'SELECT id, slug, authors FROM productions ORDER BY slug, id FOR UPDATE'
+    )
+    const linkRows = await trx.rawQuery(
+      `SELECT pa.production_id, pa.author_id, a.slug, a.search_name
+         FROM production_authors pa
+         JOIN authors a ON a.id = pa.author_id
+        ORDER BY pa.production_id, pa.position`
+    )
+    type Link = { authorId: string; slug: string; key: string }
+    const linksOf = new Map<string, Link[]>()
+    for (const row of linkRows.rows as any[]) {
+      linksOf.set(row.production_id, [
+        ...(linksOf.get(row.production_id) ?? []),
+        { authorId: row.author_id, slug: row.slug, key: this.matchKey(row.search_name) },
+      ])
+    }
+
+    const authors = await this.existingAuthors(trx)
+    const bySlug = new Map(authors.map((author) => [author.slug, author]))
+    const byMigrationKey = new Map(
+      authors.filter((a) => a.migrationKey).map((a) => [a.migrationKey as string, a])
+    )
+    const slugOf = new Map(authors.map((author) => [author.id, author.slug]))
+    const targets = new Map<string, string>()
+
+    const resolve = async (row: MappingRow): Promise<string> => {
+      const cacheKey = row.slug ? `slug:${row.slug}` : `key:${row.authorKey}`
+      const cached = targets.get(cacheKey)
+      if (cached) return cached
+      let id: string
+      if (row.slug) {
+        const card = bySlug.get(row.slug)
+        if (!card) throw new Error(`existing_author_slug « ${row.slug} » introuvable`)
+        id = card.id
+        result.reused.push({ slug: card.slug, via: 'slug', ignoredNames: null })
+      } else {
+        const card = byMigrationKey.get(row.authorKey)
+        if (card) {
+          id = card.id
+          const same =
+            collapse(card.firstNames) === row.firstNames &&
+            collapse(card.lastNames) === row.lastNames
+          result.reused.push({
+            slug: card.slug,
+            via: 'migration_key',
+            ignoredNames: same ? null : `${row.firstNames} ${row.lastNames}`.trim(),
+          })
+        } else {
+          const author = await Author.create(
+            {
+              firstNames: row.firstNames,
+              lastNames: row.lastNames,
+              migrationKey: row.authorKey,
+              createdById: null,
+              consentConfirmedAt: null,
+              consentConfirmedById: null,
+            },
+            { client: trx }
+          )
+          id = author.id
+          slugOf.set(author.id, author.slug)
+          result.created.push({
+            slug: author.slug,
+            migrationKey: row.authorKey,
+            firstNames: row.firstNames,
+            lastNames: row.lastNames,
+          })
+        }
+      }
+      targets.set(cacheKey, id)
+      return id
+    }
+
+    const toRefresh: string[] = []
+    type ProductionRow = { id: string; slug: string; authors: unknown }
+    for (const production of productions.rows as ProductionRow[]) {
+      const names = this.namesOf(production.authors)
+      if (names.length === 0) continue
+      const existing = linksOf.get(production.id) ?? []
+      const linkedByKey = new Map<string, string>()
+      for (const link of existing) {
+        if (!linkedByKey.has(link.key)) linkedByKey.set(link.key, link.authorId)
+      }
+
+      const order: string[] = []
+      const missing: string[] = []
+      let newlyAttached = false
+      for (const name of names) {
+        let authorId = linkedByKey.get(this.matchKey(name))
+        if (!authorId) {
+          const row = mapping.get(name)
+          if (!row) {
+            if (!missing.includes(name)) missing.push(name)
+            continue
+          }
+          authorId = await resolve(row)
+          newlyAttached = true
+        }
+        if (!order.includes(authorId)) order.push(authorId)
+      }
+
+      if (!newlyAttached) {
+        if (missing.length > 0) result.partial.push({ production: production.slug, names: missing })
+        else result.skipped.push(production.slug)
+        continue
+      }
+
+      // Existing links whose name is not in the jsonb are kept, at the end (D-9.6-g).
+      for (const link of existing) {
+        if (!order.includes(link.authorId)) order.push(link.authorId)
+      }
+      const before = existing.map((link) => link.authorId)
+      if (before.join(',') !== order.join(',')) {
+        // Ordered table: DELETE + INSERT, never UPDATE of positions (P2.1).
+        await trx.rawQuery('DELETE FROM production_authors WHERE production_id = ?', [
+          production.id,
+        ])
+        await trx.rawQuery(
+          `INSERT INTO production_authors (production_id, author_id, position)
+           SELECT (e->>'p')::uuid, (e->>'a')::uuid, (e->>'n')::smallint
+             FROM jsonb_array_elements(?::jsonb) AS e
+           ON CONFLICT DO NOTHING`,
+          [
+            JSON.stringify(
+              order.map((authorId, index) => ({ p: production.id, a: authorId, n: index + 1 }))
+            ),
+          ]
+        )
+        order.forEach((authorId, index) => {
+          if (!before.includes(authorId)) {
+            result.links.push({
+              production: production.slug,
+              author: slugOf.get(authorId) ?? authorId,
+              position: index + 1,
+            })
+          }
+        })
+      }
+
+      if (missing.length > 0) {
+        // Refreshing would erase the free-text names left (D-9.6-e).
+        result.partial.push({ production: production.slug, names: missing })
+      } else {
+        toRefresh.push(production.id)
+        result.converted.push(production.slug)
+      }
+    }
+
+    result.refreshed = await ProductionAuthorService.refreshDenormalizedNames(toRefresh, trx)
+    return result
+  }
+
+  /** Text report of `apply` (contains names: written under `tmp/` only, never committed). */
+  static formatApplyReport(
+    result: ApplyResult,
+    meta: { file: string; date: Date; warnings?: string[] }
+  ): string {
+    const lines: string[] = [
+      `Conversion des auteurs — ${result.dryRun ? 'SIMULATION (--dry-run, transaction annulée)' : 'APPLICATION'}`,
+      `Date : ${meta.date.toISOString()}`,
+      `Fichier : ${meta.file}`,
+      '',
+      `Fiches créées : ${result.created.length}`,
+      `Fiches existantes utilisées : ${result.reused.length}`,
+      `Liens créés : ${result.links.length}`,
+      `Productions converties : ${result.converted.length}`,
+      `Productions ignorées (déjà rattachées) : ${result.skipped.length}`,
+      `Productions partiellement rattachées : ${result.partial.length}`,
+      `productions.authors réécrits : ${result.refreshed}`,
+    ]
+    const section = (title: string, items: string[]) => {
+      lines.push('', `## ${title} (${items.length})`)
+      lines.push(...(items.length > 0 ? items.map((item) => `- ${item}`) : ['(aucune)']))
+    }
+    section(
+      'Fiches créées',
+      result.created.map((c) =>
+        `${c.slug} [migration_key ${c.migrationKey}] ${c.firstNames} ${c.lastNames}`.trim()
+      )
+    )
+    section(
+      'Fiches existantes utilisées',
+      result.reused.map(
+        (r) =>
+          `${r.slug} (par ${r.via === 'slug' ? 'existing_author_slug' : 'migration_key'})` +
+          (r.ignoredNames ? ` : noms du CSV ignorés « ${r.ignoredNames} », fiche conservée` : '')
+      )
+    )
+    section(
+      'Liens créés',
+      result.links.map((l) => `${l.production} → ${l.author} (position ${l.position})`)
+    )
+    section('Productions ignorées (déjà rattachées)', result.skipped)
+    section(
+      'Productions partiellement rattachées (noms sans ligne CSV, productions.authors non réécrit)',
+      result.partial.map((p) => `${p.production} : ${p.names.map((n) => `« ${n} »`).join(', ')}`)
+    )
+    if (meta.warnings && meta.warnings.length > 0)
+      section('Avertissements du contrôle', meta.warnings)
+    return `${lines.join('\n')}\n`
+  }
+
+  /**
+   * Checks the conversion (read-only): names of `productions.authors` without a linked
+   * author (`matchKey`), positions other than 1..n, linked authors missing from the jsonb,
+   * orphan cards. `complete` = 100 % attached, no position or desync issue (D-9.6-h).
+   */
+  static async verify(): Promise<VerifyReport> {
+    return this.readOnly(async (trx) => {
+      const productions = await trx.rawQuery(
+        'SELECT id, slug, authors FROM productions ORDER BY slug, id'
+      )
+      const links = await trx.rawQuery(
+        `SELECT pa.production_id, pa.position, a.slug, a.search_name
+           FROM production_authors pa
+           JOIN authors a ON a.id = pa.author_id
+          ORDER BY pa.production_id, pa.position`
+      )
+      const orphans = await trx.rawQuery(
+        `SELECT a.slug, a.migration_key
+           FROM authors a
+          WHERE NOT EXISTS (SELECT 1 FROM production_authors pa WHERE pa.author_id = a.id)
+          ORDER BY a.slug`
+      )
+
+      type LinkRow = { position: number; slug: string; key: string }
+      const linksOf = new Map<string, LinkRow[]>()
+      for (const row of links.rows as any[]) {
+        linksOf.set(row.production_id, [
+          ...(linksOf.get(row.production_id) ?? []),
+          { position: Number(row.position), slug: row.slug, key: this.matchKey(row.search_name) },
+        ])
+      }
+
+      const report: VerifyReport = {
+        productions: productions.rows.length,
+        occurrences: 0,
+        attached: 0,
+        rate: 100,
+        unattached: [],
+        positions: [],
+        desync: [],
+        orphans: { migrated: [], panel: 0 },
+        blank: 0,
+        nonString: 0,
+        complete: false,
+      }
+      for (const production of productions.rows as {
+        id: string
+        slug: string
+        authors: unknown
+      }[]) {
+        const elements = Array.isArray(production.authors) ? production.authors : []
+        for (const element of elements) {
+          if (typeof element !== 'string') report.nonString++
+          else if (!this.sourceKey(element)) report.blank++
+        }
+        const names = this.namesOf(production.authors)
+        const linked = linksOf.get(production.id) ?? []
+        const keys = new Set(linked.map((link) => link.key))
+        const missing = names.filter((name) => !keys.has(this.matchKey(name)))
+        report.occurrences += names.length
+        report.attached += names.length - missing.length
+        if (missing.length > 0) {
+          report.unattached.push({ production: production.slug, names: [...new Set(missing)] })
+        }
+        const positions = linked.map((link) => link.position)
+        if (positions.some((position, index) => position !== index + 1)) {
+          report.positions.push({ production: production.slug, positions })
+        }
+        const nameKeys = new Set(names.map((name) => this.matchKey(name)))
+        const absent = linked.filter((link) => !nameKeys.has(link.key)).map((link) => link.slug)
+        if (absent.length > 0) report.desync.push({ production: production.slug, authors: absent })
+      }
+      for (const row of orphans.rows as { slug: string; migration_key: string | null }[]) {
+        if (row.migration_key) report.orphans.migrated.push(row.slug)
+        else report.orphans.panel++
+      }
+      report.rate =
+        report.occurrences === 0
+          ? 100
+          : Math.floor((report.attached * 10000) / report.occurrences) / 100
+      report.complete =
+        report.attached === report.occurrences &&
+        report.positions.length === 0 &&
+        report.desync.length === 0
+      return report
+    })
   }
 }

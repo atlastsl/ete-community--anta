@@ -539,3 +539,60 @@ test.group('AuthorService | consent (Story 9.4)', (group) => {
     assert.equal(saved.lastNames, 'Fictif')
   })
 })
+
+test.group('AuthorService | renaming refreshes productions (Story 9.6)', (group) => {
+  group.each.setup(async () => {
+    await db.beginGlobalTransaction()
+    return () => db.rollbackGlobalTransaction()
+  })
+
+  async function production(names: string[]) {
+    return Production.create({
+      title: `Production ${Math.floor(Math.random() * 1_000_000)}`,
+      status: 'published',
+      authorNames: names,
+      tags: [],
+      licenseStatus: 'member',
+    })
+  }
+
+  async function namesOf(id: string): Promise<string[]> {
+    const row = await db.from('productions').where('id', id).first()
+    return row.authors
+  }
+
+  test('new last name → fully attached productions rewritten, partial ones kept', async ({
+    assert,
+  }) => {
+    const author = await AuthorService.create(PAYLOAD, null)
+    const coauthor = await Author.create({ firstNames: 'Awa', lastNames: 'Exemple' })
+    const full = await production(['Jean Fictif', 'Awa Exemple'])
+    const partial = await production(['Jean Fictif', 'Nom Libre'])
+    await db.table('production_authors').multiInsert([
+      { production_id: full.id, author_id: author.id, position: 1 },
+      { production_id: full.id, author_id: coauthor.id, position: 2 },
+      { production_id: partial.id, author_id: author.id, position: 1 },
+    ])
+
+    const { fields } = await AuthorService.update(author, { ...PAYLOAD, lastNames: 'FICTIVO' })
+
+    assert.include(fields, 'lastNames')
+    assert.deepEqual(await namesOf(full.id), ['Jean FICTIVO', 'Awa Exemple'])
+    assert.deepEqual(await namesOf(partial.id), ['Jean Fictif', 'Nom Libre'])
+  })
+
+  test('affiliations only → productions untouched', async ({ assert }) => {
+    const author = await AuthorService.create(PAYLOAD, null)
+    const linked = await production(['FICTIF Jean'])
+    await db
+      .table('production_authors')
+      .insert({ production_id: linked.id, author_id: author.id, position: 1 })
+
+    await AuthorService.update(author, {
+      ...PAYLOAD,
+      affiliations: [{ institution: 'Institut Exemple' }],
+    })
+
+    assert.deepEqual(await namesOf(linked.id), ['FICTIF Jean'])
+  })
+})

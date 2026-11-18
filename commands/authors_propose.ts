@@ -24,19 +24,11 @@ export default class AuthorsPropose extends BaseCommand {
   @flags.boolean({ description: 'Écraser le fichier s’il existe déjà' })
   declare force: boolean
 
-  /** Absolute path of `out` when it lies inside `tmp/`, otherwise null. */
-  private resolveOut(): string | null {
-    const target = path.isAbsolute(this.out) ? this.out : this.app.makePath(this.out)
-    const relative = path.relative(this.app.makePath('tmp'), target)
-    if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) return null
-    return target
-  }
-
   async run() {
     // Lazy import: Ace loads every command module for its metadata before the app
     // boots (providers not registered yet, e.g. `vine.file` used by the validators).
     const { default: AuthorConversionService } = await import('#services/author_conversion_service')
-    const target = this.resolveOut()
+    const target = AuthorConversionService.resolveUnderTmp(this.app.makePath(), this.out)
     if (!target) {
       this.logger.error(`--out doit désigner un fichier sous tmp/ (reçu : ${this.out})`)
       this.exitCode = 1
