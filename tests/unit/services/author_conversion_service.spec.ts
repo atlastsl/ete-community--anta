@@ -410,3 +410,253 @@ test.group('AuthorConversionService | validate', (group) => {
     assert.match(report.errors[0], /absent du CSV/)
   })
 })
+
+test.group('AuthorConversionService | review fixes (pure)', () => {
+  test('sourceKey: NFC, zero-width characters removed; zero-width only = blank', ({ assert }) => {
+    assert.equal(
+      S.sourceKey('E\u0301loi\u0308se\u200B  Fic\u200Ctive\uFEFF'),
+      '\u00C9lo\u00EFse Fictive'
+    )
+    assert.equal(S.sourceKey('\u200B\u200D\uFEFF'), '')
+  })
+
+  test('groupSources never drops a name without letters (« - », « – »)', ({ assert }) => {
+    const groups = S.groupSources([source('-'), source('–'), source('A Fictif')])
+    assert.lengthOf(groups, 3)
+    for (const group of groups) assert.match(group.authorKey, /^[a-z0-9][a-z0-9'-]*$/)
+    assert.isTrue(groups.find((g) => g.representative.sourceName === '-')!.fallbackKey)
+    assert.isFalse(groups.find((g) => g.representative.sourceName === 'A Fictif')!.fallbackKey)
+  })
+
+  test('generated author_key: valid pattern, ≤ 191 characters, unique across groups', ({
+    assert,
+  }) => {
+    assert.equal(S.authorKeyOf(S.groupKey('A. Fictif')), 'a-fictif')
+    assert.equal(S.authorKeyOf(S.groupKey('Łukasz Fictif')), 'fictif-ukasz')
+    assert.equal(S.authorKeyOf(''), 'auteur')
+    const long = S.authorKeyOf(S.groupKey(`Jean ${'Fictif'.repeat(60)}`))
+    assert.isAtMost(long.length, 191)
+    assert.match(long, /^[a-z0-9][a-z0-9'-]*[a-z0-9]$/)
+    const keys = S.groupSources([source('A. Fictif'), source('A Fictif')]).map((g) => g.authorKey)
+    assert.sameMembers(keys, ['a-fictif', 'a-fictif-2'])
+  })
+
+  test('splitName: initials, Roman numerals, « LAST, First », uncertain and several authors', ({
+    assert,
+  }) => {
+    assert.deepInclude(S.splitName('J.P. Fictif'), { firstNames: 'J.P.', lastNames: 'Fictif' })
+    assert.deepInclude(S.splitName('Jean FICTIF III'), { lastNames: 'FICTIF' })
+    assert.deepInclude(S.splitName('Henri IV Fictif'), { lastNames: 'Fictif' })
+    assert.deepInclude(S.splitName('Fictiva, Aminata'), {
+      firstNames: 'Aminata',
+      lastNames: 'Fictiva',
+    })
+    assert.include(S.splitName('FICTIF Jean EXEMPLE').notes, 'découpage incertain')
+    assert.notInclude(S.splitName('Jean FICTIF EXEMPLE').notes, 'découpage incertain')
+    assert.include(S.splitName('Aminata Fictiva et Jean Exemple').notes, 'plusieurs auteurs ?')
+    assert.include(S.splitName('A. Fictif & B. Exemple').notes, 'plusieurs auteurs ?')
+    assert.include(S.splitName('A Fictif; B Exemple').notes, 'plusieurs auteurs ?')
+    assert.notInclude(S.splitName('Etienne Fictif').notes, 'plusieurs auteurs ?')
+  })
+
+  test('CSV: formula cells neutralised with a leading quote, round trip identical', ({
+    assert,
+  }) => {
+    const names = ['=1+1 Fictif', '+Fictif', '-', '@Fictif', "'=déjà échappé", "'Simple"]
+    const rows: ProposalRow[] = names.map((sourceName) => ({
+      sourceName,
+      occurrences: 1,
+      productions: [],
+      authorKey: 'k',
+      firstNames: '',
+      lastNames: 'X',
+      existingAuthorSlug: '',
+      confidence: 'exact',
+      note: '',
+    }))
+    const text = S.toCsv(rows)
+    assert.include(text, "\r\n'=1+1 Fictif;")
+    assert.include(text, "\r\n'-;")
+    assert.include(text, "\r\n''=déjà échappé;")
+    assert.include(text, "\r\n'Simple;")
+    assert.deepEqual(
+      S.parseCsv(text).records.map((r) => r.values.source_name),
+      names
+    )
+  })
+
+  test('parse: Excel « sep=; » line skipped, other declared separator refused', ({ assert }) => {
+    const parsed = S.parseCsv('\uFEFFsep=;\r\nsource_name;author_key\r\nA Fictif;a-fictif\r\n')
+    assert.deepEqual(parsed.header, ['source_name', 'author_key'])
+    assert.equal(parsed.records[0].values.author_key, 'a-fictif')
+    assert.throws(() => S.parseCsv('sep=,\r\nsource_name,author_key'), /attendu « ; »/)
+  })
+
+  test('parse: non UTF-8 text and duplicate header names are structural errors', ({ assert }) => {
+    assert.throws(() => S.parseCsv(`${HEADER}\r\nFictif \uFFFD;1`), /encodage non UTF-8/)
+    assert.throws(
+      () => S.parseCsv('source_name;author_key;author_key\r\nA;b;c'),
+      /colonnes en double dans l'en-tête : author_key/
+    )
+  })
+})
+
+test.group('AuthorConversionService | review fixes (database)', (group) => {
+  group.each.setup(async () => {
+    await db.beginGlobalTransaction()
+    return () => db.rollbackGlobalTransaction()
+  })
+
+  test('a name without letters is proposed (noted) and the raw proposal stays valid', async ({
+    assert,
+  }) => {
+    await createProduction(['-', 'A Fictif'])
+    const { rows } = await S.propose()
+    const dash = rowOf(rows, '-')
+    assert.match(dash.note, /sans lettre ni chiffre/)
+    assert.match(dash.authorKey, /^[a-z0-9][a-z0-9'-]*$/)
+    const report = await S.validate(S.toCsv(rows))
+    assert.deepEqual(report.errors, [])
+  })
+
+  test('attached: word order, hyphen and apostrophe variants of a linked card', async ({
+    assert,
+  }) => {
+    const card = await Author.create({ firstNames: 'Jean-Paul', lastNames: "d'Exemplaire" })
+    const production = await createProduction([
+      'd’Exemplaire Jean Paul',
+      'D’EXEMPLAIRE Jean-Paul',
+      'Awa Fictive',
+    ])
+    await link(production, card)
+    const { rows, summary } = await S.propose()
+    assert.deepEqual(
+      rows.map((r) => r.sourceName),
+      ['Awa Fictive']
+    )
+    assert.equal(summary.attached, 2)
+  })
+
+  test('zero-width only names are blank; non-string jsonb elements are counted, not proposed', async ({
+    assert,
+  }) => {
+    const production = await createProduction(['A Fictif'])
+    await db.rawQuery('UPDATE productions SET authors = ?::jsonb WHERE id = ?', [
+      JSON.stringify(['A Fictif', '\u200B\uFEFF', 42, null, { name: 'B Fictif' }, ['C']]),
+      production.id,
+    ])
+    const { rows, summary } = await S.propose()
+    assert.deepEqual(
+      rows.map((r) => r.sourceName),
+      ['A Fictif']
+    )
+    assert.equal(summary.blank, 1)
+    assert.equal(summary.nonString, 4)
+  })
+
+  test('slug row: key of another card is an error; differing names are a warning', async ({
+    assert,
+  }) => {
+    const first = await Author.create({
+      firstNames: 'Awa',
+      lastNames: 'Fictive',
+      migrationKey: 'awa-fictive',
+    })
+    const second = await Author.create({ firstNames: 'Ina', lastNames: 'Exemple' })
+    await createProduction(['A Fictif', 'B Fictif'])
+    const report = await S.validate(
+      csv([
+        { source_name: 'A Fictif', author_key: 'awa-fictive', existing_author_slug: second.slug },
+        {
+          source_name: 'B Fictif',
+          author_key: 'b',
+          existing_author_slug: second.slug,
+          first_names: 'Autre',
+          last_names: 'Nom',
+        },
+      ])
+    )
+    assert.lengthOf(report.errors, 1)
+    assert.match(
+      report.errors[0],
+      new RegExp(`migration_key de la fiche « ${first.slug} », pas de « ${second.slug} »`)
+    )
+    assert.match(report.warnings.join('\n'), /« B Fictif »\) : prénoms \/ noms différents/)
+  })
+
+  test('cell count ≠ header → error with the line; invalid author_key → error', async ({
+    assert,
+  }) => {
+    await createProduction(['A Fictif', 'B Fictif', 'C Fictif'])
+    const report = await S.validate(
+      [
+        HEADER,
+        'A Fictif;1;;a;A;Fictif;;exact',
+        'B Fictif;1;;B Fictif;B;Fictif;;exact;',
+        'C Fictif;1;;-c;C;Fictif;;exact;',
+        '',
+      ].join('\r\n')
+    )
+    const all = report.errors.join('\n')
+    assert.match(all, /ligne 2 \(« A Fictif »\) : 8 cellule\(s\) au lieu de 9/)
+    assert.match(all, /ligne 3 \(« B Fictif »\) : author_key « B Fictif » invalide/)
+    assert.match(all, /ligne 4 \(« C Fictif »\) : author_key « -c » invalide/)
+    assert.lengthOf(report.errors, 3)
+  })
+
+  test('identities compared after collapsing spaces', async ({ assert }) => {
+    await createProduction(['A Fictif', 'A. Fictif'])
+    const report = await S.validate(
+      csv([
+        {
+          source_name: 'A Fictif',
+          author_key: 'a',
+          first_names: 'Jean  Paul',
+          last_names: 'Fictif',
+        },
+        {
+          source_name: 'A. Fictif',
+          author_key: 'a',
+          first_names: 'Jean Paul',
+          last_names: 'Fictif ',
+        },
+      ])
+    )
+    assert.deepEqual(report.errors, [])
+  })
+
+  test('stale row never fails the CSV; invalid rows do not feed the homonym warning', async ({
+    assert,
+  }) => {
+    await createProduction(['A Fictif', 'A. Fictif'])
+    const report = await S.validate(
+      csv([
+        { source_name: 'A Fictif', author_key: 'a-1', first_names: 'A', last_names: 'Fictif' },
+        { source_name: 'A. Fictif', author_key: 'A 2', first_names: 'A', last_names: 'Fictif' },
+        { source_name: 'Z Fictif' },
+        { source_name: 'Z Fictif', author_key: 'Z!' },
+      ])
+    )
+    assert.lengthOf(report.errors, 1)
+    assert.match(report.errors[0], /« A\. Fictif »\) : author_key « A 2 » invalide/)
+    const all = report.warnings.join('\n')
+    assert.notMatch(all, /homonymes/)
+    assert.match(all, /ligne 4 \(« Z Fictif »\) : n'est plus à rattacher/)
+  })
+
+  test('invalid UTF-8 → single clear error', async ({ assert }) => {
+    const report = await S.validate(`${HEADER}\r\nFictif \uFFFD;1;;k;F;X;;exact;`)
+    assert.deepEqual(report.errors, ['encodage non UTF-8 : réenregistrer en « CSV UTF-8 »'])
+  })
+})
+
+test.group('AuthorConversionService | readOnly snapshot', () => {
+  test('outside a global transaction: REPEATABLE READ, READ ONLY', async ({ assert }) => {
+    const settings = await S.readOnly(async (trx) => {
+      const isolation = await trx.rawQuery('SHOW transaction_isolation')
+      const readOnly = await trx.rawQuery('SHOW transaction_read_only')
+      return [isolation.rows[0].transaction_isolation, readOnly.rows[0].transaction_read_only]
+    })
+    assert.deepEqual(settings, ['repeatable read', 'on'])
+  })
+})

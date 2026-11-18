@@ -4,7 +4,7 @@ baseline_commit: 3dac3cd
 
 # Story 9.5 : Proposition et validation de la table de conversion des auteurs
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -70,6 +70,33 @@ afin de **valider le rattachement avant toute écriture en base** (FR56, D19).
   - [x] 6.1 `npx eslint --fix` sur les nouveaux fichiers, `npm run lint`, `npm run typecheck`, `npm run test:local` complet, build ; `git status` : aucun CSV sous `tmp/` suivi.
   - [x] 6.2 Story : cases, Dev Agent Record, File List, Change Log, Status → review ; `deferred-work.md` : marquer le report « Normalisation des clés » comme traité pour la proposition (groupKey) en gardant `normalizeKey` inchangé.
 
+### Review Findings
+
+- [x] [Review][Patch] Nom source sans lettre ni chiffre perdu (« - », « – ») [author_conversion_service.ts] — `groupSources` regroupe par `matchKey` (`groupKey`, sinon `normalizeKey`, sinon le nom canonique) : aucun nom n'est écarté ; note « nom sans lettre ni chiffre : à vérifier ».
+- [x] [Review][Patch] Injection de formules dans le CSV [author_conversion_service.ts] — à l'écriture, cellule commençant par `=`, `+`, `-`, `@`, tabulation ou CR (éventuellement précédés de `'`) préfixée par `'` ; à la lecture, un `'` initial suivi de ces caractères est retiré : `source_name` fait l'aller-retour à l'identique (amende D-9.5-f).
+- [x] [Review][Patch] Test « déjà rattaché » trop strict [author_conversion_service.ts] — fonction unique exportée `matchKey`, appliquée des deux côtés (`matchKey(search_name)` vs `matchKey(nom)`) : variantes d'ordre, de tiret et d'apostrophe d'une fiche liée à la même production comptent comme rattachées ; documentée pour 9.6 (amende D-9.5-b).
+- [x] [Review][Patch] Caractères invisibles et forme Unicode [author_conversion_service.ts] — `sourceKey` : NFC, suppression de U+200B–U+200D et U+FEFF avant compactage ; un nom fait uniquement de ces caractères est vide.
+- [x] [Review][Patch] Éléments jsonb non textuels proposés comme noms [author_conversion_service.ts, authors_propose.ts] — seuls les éléments `jsonb_typeof = 'string'` sont lus ; les autres sont comptés (`nonString`) et affichés dans le résumé.
+- [x] [Review][Patch] Découpage prénom/nom fragile [author_conversion_service.ts] — jeton en capitales = nom seulement s'il a ≥ 2 lettres, aucun « . » et n'est pas un chiffre romain (I–XXXIX) ; « NOM, Prénom » (une virgule) découpé à la virgule ; notes « découpage incertain » (capitales non contiguës) et « plusieurs auteurs ? » (« et », « and », « & », « ; »).
+- [x] [Review][Patch] Slug et `author_key` contradictoires [author_conversion_service.ts] — erreur si l'`author_key` d'une ligne avec slug est la `migration_key` d'une autre fiche ; avertissement si la ligne porte des prénoms/noms différents de la fiche (ignorés par `apply`).
+- [x] [Review][Patch] Encodage et ligne `sep=;` d'Excel [author_conversion_service.ts] — U+FFFD → erreur unique « encodage non UTF-8 : réenregistrer en « CSV UTF-8 » » ; première ligne `sep=;` ignorée, autre séparateur déclaré refusé avec un message clair.
+- [x] [Review][Patch] Lignes décalées et en-têtes en double [author_conversion_service.ts] — nombre de cellules ≠ en-tête → erreur avec le numéro de ligne (lignes entièrement vides ignorées) ; colonne en double dans l'en-tête → erreur structurelle.
+- [x] [Review][Patch] Forme de l'`author_key` [author_conversion_service.ts] — `validate` exige `^[a-z0-9][a-z0-9'-]*$` et ≤ 255 ; `authorKeyOf` réduit la clé générée à ce motif, la tronque à 191 caractères (`auteur` si vide) et `groupSources` garantit l'unicité (`-2`, `-3`…).
+- [x] [Review][Patch] Identités comparées sur les chaînes brutes [author_conversion_service.ts] — prénoms/noms compactés (espaces) et trimés avant comparaison par `author_key`.
+- [x] [Review][Patch] Ligne périmée qui fait échouer le CSV ; lignes invalides dans les homonymes [author_conversion_service.ts] — « n'est plus à rattacher (ignorée) » décidé avant tout autre contrôle ; seules les lignes valides alimentent les homonymes, l'avertissement `migration_key` et l'identité de référence.
+- [x] [Review][Patch] Instantané non cohérent entre requêtes [author_conversion_service.ts] — `SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY` (READ ONLY seul dans un savepoint, sous transaction globale de test), toujours annulée.
+- [x] [Review][Patch] Écriture du CSV [authors_propose.ts] — mode 0o600, drapeau `wx` sauf `--force` (plus de course entre contrôle et écriture) ; erreur claire si `--out` est un dossier.
+- [x] [Review][Patch] Test de lecture seule trop faible [authors_conversion.spec.ts] — l'instantané compare aussi des empreintes md5 de `authors` (id, migration_key, updated_at), de `productions` (authors, updated_at) et de `production_authors`.
+
+Écartés :
+- Confiance du groupe modifiée par le flou : conforme à l'AC 2 et à D-9.5-c (« chacune de leurs lignes passe en `confidence=fuzzy` ») ; comportement conservé.
+- Fusion par jetons triés de noms inversés (règle de l'AC, contrôlée par Aurélien sur le CSV).
+- Coût quadratique du flou (volume faible).
+- Liens symboliques sous tmp/.
+
+Reportés :
+- [x] [Review][Defer] Liens comptés approximativement dans le rapport de validate quand la fiche est déjà liée (exact en 9.6, ON CONFLICT) — voir `deferred-work.md`.
+
 ## Dev Notes
 
 ### Contraintes non négociables
@@ -82,11 +109,11 @@ afin de **valider le rattachement avant toute écriture en base** (FR56, D19).
 ### Décisions (prises par défaut, à valider par le PO si besoin)
 
 - **D-9.5-a — Clé de regroupement plus tolérante que `normalizeKey`** (report « Normalisation des clés », `deferred-work.md`) : pour `grouped` seulement, `’`/`ʼ`/`‘`/`´`/`` ` `` = `'` et tirets = espace. `exact` garde la stricte égalité de `normalizeKey`. `ł`, `ø`, `æ`, `đ` ne sont pas translittérés (rares ; le fuzzy les signale).
-- **D-9.5-b — « Rattaché » = égalité `normalizeKey(nom)` / `search_name` d'un auteur lié à la même production** (voir AC 1). 9.6 doit utiliser la même définition (`AuthorConversionService.sourceKey` pour apparier CSV et jsonb, et `normalizeKey` pour le test « déjà rattaché »).
+- **D-9.5-b — « Rattaché » = égalité `normalizeKey(nom)` / `search_name` d'un auteur lié à la même production** (voir AC 1). 9.6 doit utiliser la même définition (`AuthorConversionService.sourceKey` pour apparier CSV et jsonb, et `normalizeKey` pour le test « déjà rattaché »). *Amendé en revue : `AuthorConversionService.matchKey` des deux côtés.*
 - **D-9.5-c — `confidence=fuzzy` prime** sur exact/grouped pour signaler une ligne à examiner ; la note garde « regroupé avec … » quand la ligne était aussi groupée.
 - **D-9.5-d — `first_names` vide = avertissement**, pas erreur (noms d'un seul mot, collectifs) ; la fiche créée en 9.6 devra être complétée avant d'être modifiable dans le panel (`firstNames` min 1 au validateur).
 - **D-9.5-e — Fiche existante proposée automatiquement** quand une seule fiche a la même clé de regroupement (même niveau de confiance que `grouped`) ; Aurélien peut vider la cellule.
-- **D-9.5-f — Pas de neutralisation des formules Excel** (`=`, `+`, `-`, `@` en tête) : `source_name` doit faire l'aller-retour à l'identique ; données saisies par des admins.
+- **D-9.5-f — Pas de neutralisation des formules Excel** (`=`, `+`, `-`, `@` en tête) : `source_name` doit faire l'aller-retour à l'identique ; données saisies par des admins. *Amendé en revue : neutralisation par `'` à l'écriture, retirée à la lecture (aller-retour identique).*
 
 ### Détails d'implémentation (pièges)
 
@@ -181,3 +208,4 @@ Claude Opus 5.5 (claude-opus-5-5)
 
 - 2026-11-18 : création de la story (bmad-create-story), Status ready-for-dev.
 - 2026-11-18 : implémentation (bmad-dev-story) — service de conversion, commandes `authors:propose` / `authors:validate`, tests ; `@adonisjs/ace` 14.1.2 ; lint, typecheck, build verts ; `npm run test:local` complet : 652 tests verts (622 avant la story). Status → review.
+- 2026-11-18 : code review (bmad-code-review) — 15 correctifs appliqués (voir Review Findings), 1 écarté (confiance fuzzy conforme à l'AC 2), 1 report ; lint, typecheck, build et `npm run test:local` complet verts : 668 tests verts. Status → done.

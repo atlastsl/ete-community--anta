@@ -1,7 +1,7 @@
 import { test } from '@japa/runner'
 import { randomUUID } from 'node:crypto'
 import { existsSync } from 'node:fs'
-import { readFile, rm, writeFile, mkdir } from 'node:fs/promises'
+import { readFile, rm, stat, writeFile, mkdir } from 'node:fs/promises'
 import app from '@adonisjs/core/services/app'
 import ace from '@adonisjs/core/services/ace'
 import db from '@adonisjs/lucid/services/db'
@@ -24,15 +24,20 @@ async function createProduction(authorNames: string[]): Promise<Production> {
   })
 }
 
-/** Comptages et contenu qui ne doivent jamais changer (lecture seule). */
+/** Comptages et empreintes du contenu qui ne doivent jamais changer (lecture seule). */
 async function snapshot() {
   const [authors] = await db.from('authors').count('* as total')
   const [links] = await db.from('production_authors').count('* as total')
-  const productions = await db
-    .from('productions')
-    .select('id', 'authors', 'updated_at')
-    .orderBy('id')
-  return { authors: authors.total, links: links.total, productions: JSON.stringify(productions) }
+  const digests = await db.rawQuery(
+    `SELECT
+       (SELECT md5(coalesce(string_agg(id::text || '|' || coalesce(migration_key, '') || '|' ||
+          updated_at::text, ',' ORDER BY id), '')) FROM authors) AS authors,
+       (SELECT md5(coalesce(string_agg(id::text || '|' || authors::text || '|' ||
+          updated_at::text, ',' ORDER BY id), '')) FROM productions) AS productions,
+       (SELECT md5(coalesce(string_agg(production_id::text || '|' || author_id::text || '|' ||
+          position::text, ',' ORDER BY production_id, author_id), '')) FROM production_authors) AS links`
+  )
+  return { authors: authors.total, links: links.total, ...digests.rows[0] }
 }
 
 test.group('authors:propose / authors:validate (Story 9.5)', (group) => {
@@ -69,6 +74,8 @@ test.group('authors:propose / authors:validate (Story 9.5)', (group) => {
     command.assertLogMatches(/Proposition écrite/)
     assert.deepEqual(await snapshot(), before)
     const text = await readFile(app.makePath(dir, 'proposal.csv'), 'utf8')
+    const info = await stat(app.makePath(dir, 'proposal.csv'))
+    assert.equal(info.mode & 0o777, 0o600)
     assert.isTrue(text.startsWith('\uFEFF' + CSV_COLUMNS.join(';') + '\r\n'))
     assert.include(text, 'Aminata Fictiva;1;')
     assert.notInclude(text, 'Éloïse Fictive') // déjà rattaché
@@ -97,6 +104,12 @@ test.group('authors:propose / authors:validate (Story 9.5)', (group) => {
     const forced = await ace.create(AuthorsPropose, ['--out', `${dir}/edited.csv`, '--force'])
     await forced.exec()
     forced.assertSucceeded()
+
+    await mkdir(app.makePath(dir, 'folder.csv'))
+    const folder = await ace.create(AuthorsPropose, ['--out', `${dir}/folder.csv`, '--force'])
+    await folder.exec()
+    folder.assertFailed()
+    folder.assertLogMatches(/est un dossier/)
   })
 
   test('validate: exit 0 on the raw proposal, read-only', async ({ assert }) => {
