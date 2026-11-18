@@ -215,10 +215,14 @@ export default class AuthorService {
         // Serializes concurrent saves of one card: without the lock, the second DELETE misses
         // the rows the first one inserted and its INSERT breaks UNIQUE (author_id, position).
         // The locked row also gives the photo actually being replaced (not the stale instance).
-        const locked = await Author.query({ client: trx })
-          .where('id', author.id)
-          .forUpdate()
-          .firstOrFail()
+        // FOR NO KEY UPDATE (not FOR UPDATE): the key columns are never changed here, and a
+        // pivot write (`ProductionAuthorService.sync`, FK check) holds FOR KEY SHARE on the
+        // card while it already locks its production; FOR UPDATE would conflict with it and,
+        // with the productions locked below, invert the lock order (deadlock 40P01).
+        // Deletion keeps FOR UPDATE, which still waits for those KEY SHARE locks.
+        const lockQuery = Author.query({ client: trx }).where('id', author.id)
+        lockQuery.knexQuery.forNoKeyUpdate()
+        const locked = await lockQuery.firstOrFail()
         const isPublic = locked.consentConfirmedAt !== null
         // Counted under the lock: another save may have removed them since the form loaded.
         const affiliationsAfter = fields.includes('affiliations')

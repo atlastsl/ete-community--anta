@@ -6,18 +6,21 @@ type Props = {
   isPublic: boolean
   /** No affiliation: derived, never stored (P2-03). */
   isIncomplete: boolean
+  /** `false`: only « À compléter » (options of the author picker, mockup `admin-author-picker.html`). */
+  showConsent?: boolean
 }
 
 /**
  * Informative (non-interactive) status badges of an author card (Story 9.2, D32).
  * Reused by the edit page (9.4) and the author picker (9.7).
  */
-export default function AuthorStatusBadges({ isPublic, isIncomplete }: Props) {
+export default function AuthorStatusBadges({ isPublic, isIncomplete, showConsent = true }: Props) {
   const { t } = useTranslation()
+  if (!showConsent && !isIncomplete) return null
 
   return (
     <span className="flex flex-wrap gap-1">
-      {isPublic ? (
+      {!showConsent ? null : isPublic ? (
         <Badge variant="outline" className="border-green-600 text-green-700">
           {t('authors.badges.public')}
         </Badge>

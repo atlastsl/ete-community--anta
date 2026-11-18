@@ -106,4 +106,32 @@ test.group('ProductionDemoSeeder | auteurs de démo (Story 9.7)', (group) => {
     const realLinks = await db.from('production_authors').where('production_id', real.id)
     assert.lengthOf(realLinks, 1)
   })
+
+  test('une fiche seed-demo: liée à une vraie production est conservée par la purge', async ({
+    assert,
+  }) => {
+    await runSeeder()
+    const seedCard = await Author.query()
+      .where('migration_key', `${SEED_AUTHOR_PREFIX}1`)
+      .firstOrFail()
+    const real = await Production.create({
+      title: 'Production réelle liée à une fiche de démo',
+      status: 'draft',
+      authorNames: [],
+      tags: [],
+      licenseStatus: 'member',
+    })
+    await db
+      .table('production_authors')
+      .insert({ production_id: real.id, author_id: seedCard.id, position: 1 })
+
+    await runSeeder()
+
+    assert.isNotNull(await Author.find(seedCard.id))
+    const seedAuthors = await Author.query().whereLike('migration_key', `${SEED_AUTHOR_PREFIX}%`)
+    // Réutilisée (même migration_key), pas de doublon.
+    assert.lengthOf(seedAuthors, 24)
+    const links = await db.from('production_authors').where('production_id', real.id)
+    assert.lengthOf(links, 1)
+  })
 })

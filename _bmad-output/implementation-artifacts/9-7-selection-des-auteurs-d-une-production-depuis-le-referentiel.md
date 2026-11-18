@@ -4,7 +4,7 @@ baseline_commit: 7789cf7
 
 # Story 9.7 : Sélection des auteurs d'une production depuis le référentiel (bascule)
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -78,6 +78,28 @@ afin que **chaque production soit rattachée à des auteurs identifiés, sans sa
 - [x] **T8 — Finitions** (AC 13) : `/tmp/d37/gen.sh` (registre Tuyau), lint, typecheck, build, suite complète ; `package.json` inchangé ; story (Dev Agent Record, File List, Change Log) → `review`.
 - [ ] **T9 — Porte manuelle** (AC 12) : déploiement staging après `authors:apply` + `authors:verify` à 100 %, `verify` relancée après déploiement, résultat consigné — **porte manuelle — en attente d'Aurélien**.
 
+### Review Findings
+
+- [x] [Review][Patch] Effacement d'un rattachement partiel [production_author_service.ts, productions_controller.ts] — `sync` ne rafraîchit plus la colonne quand la sélection est inchangée et que le jsonb garde un nom non rattaché (`matchKey`) ou une valeur non textuelle (`protected`) ; `edit` calcule « Auteurs à rattacher » sur les noms non rattachés même avec un pivot non vide (`legacyOf` / `legacyState`), message générique pour les valeurs non textuelles ; une sélection modifiée réécrit la colonne (D-9.7-k).
+- [x] [Review][Patch] Interblocage par inversion d'ordre des verrous [production_author_service.ts, author_service.ts] — `sync` lit les fiches `FOR KEY SHARE` ; `AuthorService.update` verrouille la fiche `FOR NO KEY UPDATE` (via `knexQuery`, Lucid n'expose pas la méthode) ; la suppression garde `FOR UPDATE`. Deux tests à deux connexions (données validées puis nettoyées) prouvent qu'aucun des deux n'attend l'autre (en échec avant correctif : délai dépassé).
+- [x] [Review][Patch] Plus de 20 `exclude[]` (qs `arrayLimit` 20 → objet) [authors_controller.ts, AuthorCombobox.tsx, ProductionForm.tsx] — forme objet acceptée (`Object.values`), identifiants en minuscules ; côté client, résultats filtrés par la sélection et `onSelect` sans effet pour un auteur déjà choisi.
+- [x] [Review][Patch] Sélection d'une option périmée [AuthorCombobox.tsx] — un nouveau terme efface aussitôt les options (`activeIndex` -1) ; Entrée et clic ignorés pendant le chargement.
+- [x] [Review][Patch] Course à la publication [productions_controller.ts] — `publish` en transaction, production verrouillée `FOR UPDATE`, critères et pivot comptés sur la transaction (pas de test de concurrence HTTP ; tests de publication existants verts).
+- [x] [Review][Patch] Règle « noms existants » divergente [productions_controller.ts] — dépublication automatique (repli quand `authorIds` est absent) et avertissement fondés sur `AuthorConversionService.inspectAuthors`.
+- [x] [Review][Patch] Erreurs par élément `authorIds.N` jamais affichées [ProductionForm.tsx] — `fieldError('authors')` reprend toute clé `authorIds` / `authorIds.*` ; test fonctionnel sur la clé flashée `authorIds.0` → `authors_invalid`.
+- [x] [Review][Patch] Casse des identifiants, taille [production_validator.ts, production_author_service.ts] — uuid en minuscules au validateur et au début de `sync`, doublons comparés sans la casse (règle `distinctIgnoringCase` : `distinct` de VineJS voit les valeurs brutes), `maxLength(200)` (clé `authorIds.array.maxLength`).
+- [x] [Review][Patch] Accessibilité [AuthorCombobox.tsx, SelectedAuthorList.tsx, ProductionForm.tsx] — région `role="status"` toujours montée hors du popup (« N auteurs trouvés », aucun résultat, erreur) ; `scrollIntoView({ block: 'nearest' })` ; `mousedown` neutralisé sur le conteneur ; nouvel essai après erreur (focus, ↓, Entrée) ; annonces identiques reprononcées (nœud remonté par compteur) ; groupe `fieldset` + `legend` ; raison sr-only des ↑ / ↓ indisponibles (« Déjà en première / dernière position »).
+- [x] [Review][Patch] Longueur minimale sur le terme normalisé [authors_controller.ts, AuthorCombobox.tsx] — `normalizeKey(q)` côté serveur, NFC côté client.
+- [x] [Review][Patch] Badges selon la maquette [AuthorStatusBadges.tsx, AuthorCombobox.tsx, SelectedAuthorList.tsx] — options : « À compléter » seul (`showConsent={false}`) ; liste sélectionnée : aucun badge (la maquette n'en montre pas).
+- [x] [Review][Patch] Tests ajoutés — règle de focus au retrait, annonce `removed` et libellés FR ; AC 9 (non convertie publiée à qui il manque un autre critère → dépubliée ; `authorIds` absent → reste publiée) ; seeder : fiche `seed-demo:` liée à une vraie production conservée et réutilisée (D-9.7-l) ; AC 11 : page publique de la production avec l'auteur choisi.
+
+Reportés (voir `deferred-work.md`) :
+- [x] [Review][Defer] Surlignage `<mark>` de la correspondance dans les options (DESIGN.md).
+- [x] [Review][Defer] Erreur « auteur inconnu » sans nommer la fiche supprimée entre-temps.
+- [x] [Review][Defer] Index trigram pour la recherche (`LIKE … OR similarity`).
+
+Revue de code close : la porte manuelle T9 (déploiement staging après `authors:verify` à 100 %) reste non cochée, en attente d'Aurélien.
+
 ## Dev Notes
 
 ### Contraintes non négociables
@@ -98,6 +120,8 @@ afin que **chaque production soit rattachée à des auteurs identifiés, sans sa
 - **D-9.7-g — Ordre inchangé** → pas de `DELETE`/`INSERT` (aucune écriture inutile) ; `refreshDenormalizedNames` est toujours appelé (`IS DISTINCT FROM` : resynchronise une colonne désynchronisée sans coût).
 - **D-9.7-h — Indisponible aux extrémités** : boutons ↑/↓ avec `aria-disabled="true"` (et non `disabled`) pour que le focus reste sur le bouton actionné quand l'auteur atteint une extrémité (EXPERIENCE.md : focus conservé) ; le clic est sans effet.
 - **D-9.7-i — Production partiellement rattachée** (pivot non vide + noms libres en plus) : le formulaire montre le pivot ; enregistrer réécrit la colonne depuis le pivot. Après `verify` à 100 % ce cas n'existe pas (porte manuelle).
+- **D-9.7-k — Rattachement partiel** (*revue*) : sélection inchangée + nom libre non rattaché ou valeur non textuelle → aucune écriture ; l'avertissement « Auteurs à rattacher » liste les noms non rattachés (même avec un pivot non vide). Modifier la sélection est un choix explicite (averti) : la colonne est réécrite depuis le pivot. Remplace D-9.7-i.
+- **D-9.7-l — Seeder et fiches liées ailleurs** (*revue*) : une fiche `seed-demo:` liée à une production non démo n'est pas supprimée par la purge ; elle est réutilisée (même `migration_key`) au passage suivant.
 - **D-9.7-j — Seeder** : 24 fiches fictives `seed-demo:1..24`, 1–2 affiliations fictives, un tiers à consentement confirmé (`consent_confirmed_by_id` NULL) ; chaque production : 1–3 auteurs distincts par `sync` ; purge : productions `SEED_DEMO` d'abord (CASCADE pivot), puis fiches `migration_key LIKE 'seed-demo:%'`.
 
 ### Fichiers à modifier — état actuel et préservation
@@ -198,9 +222,12 @@ Claude Opus 5.5 (claude-opus-5-5)
 - `tests/unit/components/author_picker.spec.ts` (nouveau)
 - `tests/functional/admin/productions_create.spec.ts`, `productions_edit.spec.ts`, `productions_publish.spec.ts` (modifiés)
 - `tests/unit/services/production_author_service.spec.ts`, `tests/unit/services/production_service.spec.ts`, `tests/unit/validators/production_validator.spec.ts`, `tests/unit/lib/production_completion.spec.ts` (modifiés)
+- `inertia/components/admin/AuthorStatusBadges.tsx` (modifié en revue : `showConsent`)
+- `_bmad-output/implementation-artifacts/deferred-work.md` (modifié : recherche 9.7, reports de revue)
 - `_bmad-output/implementation-artifacts/9-7-selection-des-auteurs-d-une-production-depuis-le-referentiel.md` (story)
 
 ## Change Log
 
 - 2026-11-18 : création de la story (bmad-create-story), Status ready-for-dev.
 - 2026-11-18 : implémentation (bmad-dev-story) — recherche d'auteurs, `ProductionAuthorService.sync`, formulaire branché sur le pivot (combobox ARIA + liste ordonnée), FR21 sur le pivot, seeder `seed-demo:`, tests ; `npm run test:local` complet : 738 tests verts (695 avant) ; lint, typecheck, build verts. Porte manuelle T9 en attente d'Aurélien. Status → review.
+- 2026-11-18 : revue de code (bmad-code-review) — 12 correctifs (rattachement partiel protégé, ordre des verrous, `exclude` > 20, option périmée, publication verrouillée, `inspectAuthors`, erreurs `authorIds.N`, casse et taille des identifiants, accessibilité, longueur normalisée, badges, tests), 3 reports ; `npm run test:local` complet : 765 tests verts (738 avant) ; lint, typecheck, build verts. Status → done (porte manuelle T9 en attente d'Aurélien).

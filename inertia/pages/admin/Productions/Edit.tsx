@@ -27,6 +27,8 @@ type Props = {
   stats: ProductionStatsData
   /** Noms de la colonne dénormalisée d'une production non convertie (Story 9.7). */
   legacyAuthorNames: string[]
+  /** Valeur non textuelle dans la colonne dénormalisée (Story 9.7). */
+  legacyAuthorsNonText: boolean
 }
 
 export default function AdminProductionsEdit({
@@ -37,6 +39,7 @@ export default function AdminProductionsEdit({
   publishedBy,
   stats,
   legacyAuthorNames,
+  legacyAuthorsNonText,
 }: Props) {
   const { t, i18n } = useTranslation()
   const { id, status, ...formData } = production
@@ -84,6 +87,7 @@ export default function AdminProductionsEdit({
           links={links}
           suggestions={suggestions}
           legacyAuthorNames={legacyAuthorNames}
+          legacyAuthorsNonText={legacyAuthorsNonText}
         />
 
         <ProductionFormActions

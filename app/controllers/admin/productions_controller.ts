@@ -10,6 +10,7 @@ import AdminActivityLog from '#models/admin_activity_log'
 import ActivityLogService from '#services/activity_log_service'
 import db from '@adonisjs/lucid/services/db'
 import AuthorService from '#services/author_service'
+import AuthorConversionService from '#services/author_conversion_service'
 import ProductionAuthorService from '#services/production_author_service'
 import ProductionService from '#services/production_service'
 import StatsService from '#services/stats_service'
@@ -28,11 +29,13 @@ function parseWorkDate(value: string | undefined): DateTime | null {
   return dt.isValid ? dt : null
 }
 
-/** Noms textuels non vides dans la colonne dénormalisée (production non convertie). */
-function hasLegacyNames(value: unknown): boolean {
-  return (
-    Array.isArray(value) && value.some((name) => typeof name === 'string' && name.trim() !== '')
-  )
+/**
+ * Colonne dénormalisée non vide (noms textuels ou valeur non textuelle) : même règle que la
+ * conversion (`AuthorConversionService.inspectAuthors`).
+ */
+function hasLegacyAuthors(value: unknown): boolean {
+  const { names, nonText } = AuthorConversionService.inspectAuthors(value)
+  return names.length > 0 || nonText !== null
 }
 
 /** Query param texte → string non vide ou null. */
@@ -137,20 +140,21 @@ export default class ProductionsController {
       lastModifiedAt: production.updatedAt?.toISO() ?? null,
     }
 
-    // Auteurs relus depuis le pivot, dans l'ordre (Story 9.7). Production non convertie
-    // (noms dans la colonne, aucun lien) : noms actuels pour l'avertissement « à rattacher ».
+    // Auteurs relus depuis le pivot, dans l'ordre (Story 9.7). Noms de la colonne qu'aucune
+    // fiche liée ne porte (production non convertie ou partiellement rattachée) et valeurs
+    // non textuelles : avertissement « Auteurs à rattacher » (conservés tant que la sélection
+    // n'est pas modifiée, D-9.7-k).
     const authors = await AuthorService.toPickerAuthors(production.authors)
-    const legacyAuthorNames =
-      authors.length === 0
-        ? (Array.isArray(production.authorNames) ? production.authorNames : []).filter(
-            (name): name is string => typeof name === 'string' && name.trim() !== ''
-          )
-        : []
+    const legacy = ProductionAuthorService.legacyOf(
+      production.authorNames,
+      production.authors.map((author) => author.searchName)
+    )
 
     return inertia.render('admin/Productions/Edit', {
       publishedBy,
       stats,
-      legacyAuthorNames,
+      legacyAuthorNames: legacy.unlinkedNames,
+      legacyAuthorsNonText: legacy.nonText,
       production: {
         id: production.id,
         status: production.status,
@@ -236,7 +240,7 @@ export default class ProductionsController {
         let missing = ProductionService.getMissingForPublish(locked, hasFile, hasLink, authorsCount)
         // Production non convertie (noms conservés, aucun lien) : pas de dépublication pour
         // le seul critère « auteurs » — la conversion (9.6) la rattachera.
-        if (authorsCount === 0 && (sync?.protected ?? hasLegacyNames(locked.authorNames))) {
+        if (authorsCount === 0 && (sync?.protected ?? hasLegacyAuthors(locked.authorNames))) {
           missing = missing.filter((field) => field !== 'authors')
         }
         if (missing.length > 0) {
@@ -350,35 +354,46 @@ export default class ProductionsController {
   }
 
   async publish({ params, auth, response, session }: HttpContext) {
-    const production = await Production.findOrFail(params.id)
+    const existing = await Production.findOrFail(params.id)
 
-    await production.loadCount('files')
-    await production.loadCount('links')
-    const hasFile = Number(production.$extras.files_count) > 0
-    const hasLink = Number(production.$extras.links_count) > 0
+    // Contrôle et publication sur la ligne verrouillée : une édition concurrente (auteurs
+    // retirés, champ vidé) ne peut pas se glisser entre la vérification et la publication.
+    const published = await db.transaction(async (trx) => {
+      const production = await Production.query({ client: trx })
+        .where('id', existing.id)
+        .forUpdate()
+        .firstOrFail()
+      await production.loadCount('files')
+      await production.loadCount('links')
+      const hasFile = Number(production.$extras.files_count) > 0
+      const hasLink = Number(production.$extras.links_count) > 0
 
-    // Revalidation serveur (anti-contournement du bouton désactivé) — FR21.
-    // Le message d'erreur est flashé sur `error` → toast rouge persistant (AdminLayout).
-    // Le détail des champs manquants reste visible via le CompletionIndicator (orange).
-    const authorsCount = await ProductionAuthorService.count(production.id)
-    const missing = ProductionService.getMissingForPublish(
-      production,
-      hasFile,
-      hasLink,
-      authorsCount
-    )
-    if (missing.length > 0) {
+      // Revalidation serveur (anti-contournement du bouton désactivé) — FR21.
+      // Le message d'erreur est flashé sur `error` → toast rouge persistant (AdminLayout).
+      // Le détail des champs manquants reste visible via le CompletionIndicator (orange).
+      const authorsCount = await ProductionAuthorService.count(production.id, trx)
+      const missing = ProductionService.getMissingForPublish(
+        production,
+        hasFile,
+        hasLink,
+        authorsCount
+      )
+      if (missing.length > 0) return false
+
+      await ProductionService.publish(production)
+      return true
+    })
+
+    if (!published) {
       session.flash('error', 'productions.publish.incomplete')
       return response.redirect().back()
     }
-
-    await ProductionService.publish(production)
 
     await ActivityLogService.log({
       adminUserId: auth.user!.id,
       actionType: ActionType.PUBLISH,
       resourceType: 'production',
-      resourceId: production.id,
+      resourceId: existing.id,
     })
 
     session.flash('success', 'productions.published')

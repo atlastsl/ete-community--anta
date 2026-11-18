@@ -19,7 +19,7 @@ type Status = 'idle' | 'loading' | 'ready' | 'error'
 type Props = {
   /** Id of the input (target of the label and of the completion indicator). */
   id: string
-  /** Already selected authors: excluded from the results (`exclude[]`). */
+  /** Already selected authors: excluded from the results (`exclude[]`, then filtered here). */
   selectedIds: string[]
   onSelect: (author: PickerAuthor) => void
   onBlur?: () => void
@@ -31,8 +31,11 @@ type Props = {
 /**
  * Author search of the production form (Story 9.7, D18): ARIA 1.2 combobox + listbox written
  * by hand (no dependency). Server search from 2 characters, debounced 250 ms, the previous
- * request aborted; ↑ ↓ browse, Enter selects, Escape closes then clears; the input is
- * cleared after a selection. No free text (FR54): only cards of the referential.
+ * request aborted and its results cleared at once (no stale option can be selected); ↑ ↓
+ * browse, Enter selects, Escape closes then clears; the input is cleared after a selection.
+ * A status region, always mounted outside the popup, announces the number of results, no
+ * result or the error; after an error, focus, ↓ or Enter retry the search. No free text
+ * (FR54): only cards of the referential.
  */
 export default function AuthorCombobox({
   id,
@@ -50,26 +53,26 @@ export default function AuthorCombobox({
   const [status, setStatus] = useState<Status>('idle')
   const [open, setOpen] = useState(false)
   const [activeIndex, setActiveIndex] = useState(-1)
+  const [retry, setRetry] = useState(0)
 
-  const term = query.trim()
+  // NFC: a decomposed « é » counts as one character, as on the server (normalizeKey).
+  const term = query.normalize('NFC').trim()
   const excludeKey = selectedIds.join(',')
 
   useEffect(() => {
+    // A new term invalidates the current options immediately.
+    setResults([])
+    setActiveIndex(-1)
     if (term.length < AUTHOR_SEARCH_MIN_LENGTH) {
-      setResults([])
       setStatus('idle')
-      setActiveIndex(-1)
       return
     }
     setStatus('loading')
     const controller = new AbortController()
+    const excluded = excludeKey === '' ? [] : excludeKey.split(',')
     const timer = window.setTimeout(async () => {
       try {
-        const url = urlFor(
-          'admin.authors.search',
-          {},
-          { qs: { q: term, exclude: excludeKey === '' ? [] : excludeKey.split(',') } }
-        )
+        const url = urlFor('admin.authors.search', {}, { qs: { q: term, exclude: excluded } })
         const response = await fetch(url, {
           headers: { Accept: 'application/json' },
           credentials: 'same-origin',
@@ -77,8 +80,9 @@ export default function AuthorCombobox({
         })
         if (!response.ok) throw new Error(`search_failed_${response.status}`)
         const body = (await response.json()) as { authors: PickerAuthor[] }
-        setResults(body.authors)
-        setActiveIndex(body.authors.length > 0 ? 0 : -1)
+        const found = body.authors.filter((author) => !excluded.includes(author.id))
+        setResults(found)
+        setActiveIndex(found.length > 0 ? 0 : -1)
         setStatus('ready')
       } catch (error) {
         if ((error as Error).name === 'AbortError') return
@@ -91,12 +95,25 @@ export default function AuthorCombobox({
       window.clearTimeout(timer)
       controller.abort()
     }
-  }, [term, excludeKey])
+  }, [term, excludeKey, retry])
 
   const showList = open && term.length >= AUTHOR_SEARCH_MIN_LENGTH
   const optionId = (index: number) => `${listId}-option-${index}`
 
+  useEffect(() => {
+    if (activeIndex < 0) return
+    document
+      .getElementById(`${listId}-option-${activeIndex}`)
+      ?.scrollIntoView?.({ block: 'nearest' })
+  }, [activeIndex, listId])
+
+  function retryAfterError() {
+    if (status === 'error') setRetry((count) => count + 1)
+  }
+
   function select(author: PickerAuthor) {
+    // Never an option of a search still running (its results were cleared anyway).
+    if (status === 'loading') return
     onSelect(author)
     setQuery('')
     setResults([])
@@ -111,6 +128,7 @@ export default function AuthorCombobox({
       case 'ArrowUp': {
         event.preventDefault()
         setOpen(true)
+        if (event.key === 'ArrowDown') retryAfterError()
         if (results.length === 0) return
         const delta = event.key === 'ArrowDown' ? 1 : -1
         setActiveIndex((current) =>
@@ -125,7 +143,10 @@ export default function AuthorCombobox({
       case 'Enter':
         // Never submits the production form from the search input.
         event.preventDefault()
-        if (showList && activeIndex >= 0 && results[activeIndex]) select(results[activeIndex])
+        retryAfterError()
+        if (status !== 'loading' && showList && activeIndex >= 0 && results[activeIndex]) {
+          select(results[activeIndex])
+        }
         return
       case 'Escape':
         if (showList) {
@@ -147,6 +168,15 @@ export default function AuthorCombobox({
         : status === 'ready' && results.length === 0
           ? t('authors.picker.no_results')
           : null
+
+  const announcement =
+    status === 'error'
+      ? t('authors.picker.error')
+      : status === 'ready'
+        ? results.length === 0
+          ? t('authors.picker.no_results')
+          : t('authors.picker.results_count', { count: results.length })
+        : ''
 
   return (
     <div className="relative">
@@ -178,7 +208,10 @@ export default function AuthorCombobox({
             setQuery(event.target.value)
             setOpen(true)
           }}
-          onFocus={() => setOpen(true)}
+          onFocus={() => {
+            setOpen(true)
+            retryAfterError()
+          }}
           onBlur={() => {
             setOpen(false)
             onBlur?.()
@@ -194,7 +227,14 @@ export default function AuthorCombobox({
         )}
       </div>
 
+      {/* Always mounted (never inside the hidden popup): results announced politely. */}
+      <p role="status" className="sr-only">
+        {announcement}
+      </p>
+
       <div
+        // mousedown (scrollbar, gaps between options): keeps the focus in the input.
+        onMouseDown={(event) => event.preventDefault()}
         className={cn(
           'absolute z-20 mt-1 w-full overflow-hidden rounded-md border border-stone-200 bg-white shadow-md',
           !showList && 'hidden'
@@ -215,8 +255,6 @@ export default function AuthorCombobox({
                 id={optionId(index)}
                 role="option"
                 aria-selected={index === activeIndex}
-                // mousedown: keeps the focus in the input (no blur before the click).
-                onMouseDown={(event) => event.preventDefault()}
                 onClick={() => select(author)}
                 onMouseEnter={() => setActiveIndex(index)}
                 className={cn(
@@ -238,13 +276,17 @@ export default function AuthorCombobox({
                     {affiliation ?? t('authors.no_affiliation')}
                   </span>
                 </span>
-                <AuthorStatusBadges isPublic={author.isPublic} isIncomplete={author.isIncomplete} />
+                <AuthorStatusBadges
+                  isPublic={author.isPublic}
+                  isIncomplete={author.isIncomplete}
+                  showConsent={false}
+                />
               </li>
             )
           })}
         </ul>
         {message && (
-          <p role="status" className="px-3 py-2 text-sm text-stone-500">
+          <p aria-hidden="true" className="px-3 py-2 text-sm text-stone-500">
             {message}
           </p>
         )}

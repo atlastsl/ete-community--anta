@@ -58,6 +58,27 @@ test.group('ProductionValidator | draftProductionValidator', () => {
     )
   })
 
+  test('authorIds : minuscules avant distinct, 200 au plus (revue 9.7)', async ({ assert }) => {
+    const a = '1111aaaa-1111-4111-8111-111111111111'
+    const out = await draftProductionValidator.validate({
+      title: 'X',
+      authorIds: [a.toUpperCase()],
+    })
+    assert.deepEqual(out.authorIds, [a])
+    await expectRejected(
+      () => draftProductionValidator.validate({ title: 'X', authorIds: [a, a.toUpperCase()] }),
+      assert
+    )
+    const many = Array.from(
+      { length: 201 },
+      (_, i) => `00000000-0000-4000-8000-${String(i).padStart(12, '0')}`
+    )
+    await expectRejected(
+      () => draftProductionValidator.validate({ title: 'X', authorIds: many }),
+      assert
+    )
+  })
+
   test('licenseStatus valide accepté', async ({ assert }) => {
     const out = await draftProductionValidator.validate({
       title: 'X',

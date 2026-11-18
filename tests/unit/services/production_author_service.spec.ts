@@ -205,7 +205,8 @@ test.group('ProductionAuthorService | sync (Story 9.7)', (group) => {
 
   test('same order → no pivot rewrite, the jsonb is still resynchronized', async ({ assert }) => {
     const a = await Author.create({ firstNames: 'Aminata', lastNames: 'FICTIVA' })
-    const production = await createProduction(['Ancien Nom'])
+    // Nom rattaché (même matchKey) mais graphie différente : la colonne est réalignée.
+    const production = await createProduction(['FICTIVA  aminata'])
     await link(production, [a])
 
     const result = await db.transaction((trx) =>
@@ -292,3 +293,146 @@ test.group('ProductionAuthorService | sync (Story 9.7)', (group) => {
     assert.isAbove(write, lock)
   })
 })
+
+test.group('ProductionAuthorService | sync — rattachement partiel (revue 9.7)', (group) => {
+  group.each.setup(async () => {
+    await db.beginGlobalTransaction()
+    return () => db.rollbackGlobalTransaction()
+  })
+
+  test('sélection inchangée + nom libre non rattaché → rien n’est réécrit (protected)', async ({
+    assert,
+  }) => {
+    const a = await Author.create({ firstNames: 'Aminata', lastNames: 'FICTIVA' })
+    const production = await createProduction(['Aminata FICTIVA', 'Nom Libre'])
+    await link(production, [a])
+
+    const result = await db.transaction((trx) =>
+      ProductionAuthorService.sync(production.id, [a.id], trx)
+    )
+
+    assert.deepEqual(result, { protected: true, changed: false })
+    assert.deepEqual(await namesOf(production), ['Aminata FICTIVA', 'Nom Libre'])
+  })
+
+  test('sélection inchangée + valeur non textuelle → rien n’est réécrit', async ({ assert }) => {
+    const a = await Author.create({ firstNames: 'Aminata', lastNames: 'FICTIVA' })
+    const production = await createProduction([])
+    await db
+      .from('productions')
+      .where('id', production.id)
+      .update({
+        authors: db.raw(`'["Aminata FICTIVA", 42]'::jsonb`),
+      })
+    await link(production, [a])
+
+    const result = await db.transaction((trx) =>
+      ProductionAuthorService.sync(production.id, [a.id], trx)
+    )
+
+    assert.isTrue(result.protected)
+    assert.deepEqual(await namesOf(production), ['Aminata FICTIVA', 42] as any)
+  })
+
+  test('sélection modifiée → réécriture voulue depuis le pivot (D-9.7-k)', async ({ assert }) => {
+    const a = await Author.create({ firstNames: 'Aminata', lastNames: 'FICTIVA' })
+    const b = await Author.create({ firstNames: 'Zoé', lastNames: 'Imaginaire' })
+    const production = await createProduction(['Aminata FICTIVA', 'Nom Libre'])
+    await link(production, [a])
+
+    const result = await db.transaction((trx) =>
+      ProductionAuthorService.sync(production.id, [a.id, b.id], trx)
+    )
+
+    assert.deepEqual(result, { protected: false, changed: true })
+    assert.deepEqual(await namesOf(production), ['Aminata FICTIVA', 'Zoé Imaginaire'])
+  })
+
+  test('identifiants en majuscules : comparés sans tenir compte de la casse', async ({
+    assert,
+  }) => {
+    const a = await Author.create({ firstNames: 'Aminata', lastNames: 'FICTIVA' })
+    const production = await createProduction(['Aminata FICTIVA'])
+    await link(production, [a])
+
+    const result = await db.transaction((trx) =>
+      ProductionAuthorService.sync(production.id, [a.id.toUpperCase()], trx)
+    )
+
+    assert.isFalse(result.changed)
+    assert.deepEqual(await pivotOf(production), [[a.id, 1]])
+  })
+
+  test('legacyState : noms non rattachés et valeurs non textuelles', async ({ assert }) => {
+    const a = await Author.create({ firstNames: 'Aminata', lastNames: 'FICTIVA' })
+    const production = await createProduction(['aminata fictiva', 'Nom Libre', ' '])
+    await link(production, [a])
+
+    assert.deepEqual(await ProductionAuthorService.legacyState(production.id), {
+      unlinkedNames: ['Nom Libre'],
+      nonText: false,
+    })
+  })
+})
+
+test.group(
+  'ProductionAuthorService | ordre des verrous (revue 9.7, pas d’interblocage)',
+  (group) => {
+    let author: Author
+    let production: Production
+    group.each.setup(async () => {
+      // Données validées (hors transaction globale) : deux connexions doivent les voir.
+      author = await Author.create({ firstNames: 'Verrou', lastNames: 'FICTIF' })
+      production = await createProduction([])
+      return async () => {
+        await db.from('production_authors').where('production_id', production.id).delete()
+        await db.from('productions').where('id', production.id).delete()
+        await db.from('author_affiliations').where('author_id', author.id).delete()
+        await db.from('authors').where('id', author.id).delete()
+      }
+    })
+
+    test('sync n’attend pas le verrou FOR NO KEY UPDATE d’un renommage en cours', async ({
+      assert,
+    }) => {
+      const holder = await db.transaction()
+      try {
+        // Verrou pris par AuthorService.update sur la fiche avant de verrouiller ses productions.
+        await holder.rawQuery('SELECT id FROM authors WHERE id = ? FOR NO KEY UPDATE', [author.id])
+        const trx = await db.transaction()
+        try {
+          await trx.rawQuery(`SET LOCAL lock_timeout = '2s'`)
+          const result = await ProductionAuthorService.sync(production.id, [author.id], trx)
+          assert.isTrue(result.changed)
+        } finally {
+          await trx.rollback()
+        }
+      } finally {
+        await holder.rollback()
+      }
+    }).timeout(10_000)
+
+    test('AuthorService.update n’attend pas le verrou FOR KEY SHARE d’un sync en cours', async ({
+      assert,
+    }) => {
+      const { default: AuthorService } = await import('#services/author_service')
+      const holder = await db.transaction()
+      try {
+        // Verrou pris par sync (et par toute insertion de pivot, FK) sur la fiche.
+        await holder.rawQuery('SELECT id FROM authors WHERE id = ? FOR KEY SHARE', [author.id])
+        const outcome = await Promise.race([
+          AuthorService.update(author, {
+            lastNames: 'FICTIF',
+            firstNames: 'Verrou',
+            affiliations: [],
+            googleScholarUrl: 'https://scholar.google.com/citations?user=fictif',
+          }).then(() => 'done'),
+          new Promise((resolve) => setTimeout(() => resolve('blocked'), 3000)),
+        ])
+        assert.equal(outcome, 'done')
+      } finally {
+        await holder.rollback()
+      }
+    }).timeout(10_000)
+  }
+)

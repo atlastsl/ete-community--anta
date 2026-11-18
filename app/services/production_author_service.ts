@@ -13,9 +13,17 @@ export type AttachmentState = {
   fullyAttached: boolean
 }
 
+/** Names of `productions.authors` not backed by the pivot (unconverted or partial). */
+export type LegacyState = {
+  /** Textual names that no linked card matches (`matchKey`), first occurrences, trimmed. */
+  unlinkedNames: string[]
+  /** A non-array value or a non-string element (never rewritten implicitly). */
+  nonText: boolean
+}
+
 /** Outcome of `sync`. */
 export type SyncResult = {
-  /** Unconverted production (jsonb names, no link) saved without authors: nothing written. */
+  /** Selection unchanged and the jsonb holds legacy names or non-text values: nothing written. */
   protected: boolean
   /** Pivot rows rewritten (the selection or its order changed). */
   changed: boolean
@@ -148,20 +156,26 @@ export default class ProductionAuthorService {
    *
    * - The production row is locked first (`FOR UPDATE`) and every decision is taken on the
    *   locked row and the current links.
-   * - Unconverted production (non-empty jsonb, no link) saved with an empty selection:
-   *   nothing is written, so the legacy names are never erased by mistake.
-   * - The cards are read `FOR SHARE` (a concurrent delete waits); an unknown id raises a
-   *   validation error on `authorIds` (the caller's transaction is rolled back).
-   * - Same ids in the same order: the pivot is left as is; otherwise `DELETE` + `INSERT`
-   *   with positions 1..n (never an `UPDATE` of positions, P2.1).
-   * - The jsonb is always refreshed (`IS DISTINCT FROM`: no-op when already in sync).
+   * - Selection unchanged (same ids, same order, `[]` included) while the jsonb holds a name
+   *   that no linked card matches (`matchKey`) or a non-text value: nothing is written
+   *   (`protected`), so a legacy name is never erased by a save that did not touch the
+   *   authors (unconverted or partially converted production). A changed selection is an
+   *   explicit choice of the admin (warned by « Auteurs à rattacher »): the jsonb is
+   *   rewritten from the pivot (D-9.7-k).
+   * - The cards are read `FOR KEY SHARE`, the same lock as the pivot FK check: a concurrent
+   *   delete (`FOR UPDATE`) waits, while a rename (`FOR NO KEY UPDATE` on the card, then
+   *   `FOR UPDATE` on its productions) never conflicts with it — no lock-order inversion
+   *   with `AuthorService.update`. An unknown id raises a validation error on `authorIds`.
+   * - Ids are compared lowercased; same ids in the same order: the pivot is left as is;
+   *   otherwise `DELETE` + `INSERT` with positions 1..n (never an `UPDATE` of positions).
+   * - Otherwise the jsonb is refreshed (`IS DISTINCT FROM`: no-op when already in sync).
    */
   static async sync(
     productionId: string,
     authorIds: string[],
     trx: TransactionClientContract
   ): Promise<SyncResult> {
-    const ids = [...new Set(authorIds)]
+    const ids = [...new Set(authorIds.map((id) => id.toLowerCase()))]
     const locked = await trx.rawQuery(
       `SELECT id, authors FROM productions WHERE id = ? FOR UPDATE`,
       [productionId]
@@ -170,27 +184,37 @@ export default class ProductionAuthorService {
     if (!production) throw new Error(`Production ${productionId} not found`)
 
     const links = await trx.rawQuery(
-      `SELECT author_id FROM production_authors WHERE production_id = ? ORDER BY position`,
+      `SELECT pa.author_id, a.search_name
+         FROM production_authors pa
+         JOIN authors a ON a.id = pa.author_id
+        WHERE pa.production_id = ?
+        ORDER BY pa.position`,
       [productionId]
     )
-    const current = (links.rows as { author_id: string }[]).map((row) => row.author_id)
+    const linkRows = links.rows as { author_id: string; search_name: string }[]
+    const current = linkRows.map((row) => row.author_id)
 
-    if (ids.length === 0 && current.length === 0) {
-      const { names, nonText } = AuthorConversionService.inspectAuthors(production.authors)
-      if (names.length > 0 || nonText) return { protected: true, changed: false }
+    const changed = ids.length !== current.length || ids.some((id, index) => id !== current[index])
+    if (!changed) {
+      const legacy = this.legacyOf(
+        production.authors,
+        linkRows.map((row) => row.search_name)
+      )
+      if (legacy.unlinkedNames.length > 0 || legacy.nonText) {
+        return { protected: true, changed: false }
+      }
     }
 
     if (ids.length > 0) {
       const found = await trx.rawQuery(
         `SELECT id FROM authors
           WHERE id IN (SELECT (jsonb_array_elements_text(?::jsonb))::uuid)
-            FOR SHARE`,
+            FOR KEY SHARE`,
         [JSON.stringify(ids)]
       )
       if (found.rows.length !== ids.length) throw unknownAuthorError()
     }
 
-    const changed = ids.length !== current.length || ids.some((id, index) => id !== current[index])
     if (changed) {
       await trx.rawQuery(`DELETE FROM production_authors WHERE production_id = ?`, [productionId])
       if (ids.length > 0) {
@@ -204,6 +228,40 @@ export default class ProductionAuthorService {
     }
     await this.refreshDenormalizedNames([productionId], trx)
     return { protected: false, changed }
+  }
+
+  /**
+   * Legacy part of a jsonb value: textual names that no linked card matches (`matchKey`,
+   * first occurrences, blanks ignored) and whether a non-text value is present.
+   */
+  static legacyOf(authors: unknown, linkedSearchNames: string[]): LegacyState {
+    const keys = new Set(linkedSearchNames.map((name) => AuthorConversionService.matchKey(name)))
+    const { names, nonText } = AuthorConversionService.inspectAuthors(authors)
+    const unlinkedNames = [
+      ...new Set(names.filter((name) => !keys.has(AuthorConversionService.matchKey(name)))),
+    ]
+    return { unlinkedNames, nonText: nonText !== null }
+  }
+
+  /** `legacyOf` for a stored production (« Auteurs à rattacher » of the edit form). */
+  static async legacyState(
+    productionId: string,
+    client: QueryClientContract = db.connection()
+  ): Promise<LegacyState> {
+    const production = await client
+      .from('productions')
+      .where('id', productionId)
+      .select('authors')
+      .firstOrFail()
+    const links = await client
+      .from('production_authors')
+      .join('authors', 'authors.id', 'production_authors.author_id')
+      .where('production_authors.production_id', productionId)
+      .select('authors.search_name')
+    return this.legacyOf(
+      production.authors,
+      links.map((row: { search_name: string }) => row.search_name)
+    )
   }
 
   /** Pivot rows of a production (FR21: at least one author to publish). */

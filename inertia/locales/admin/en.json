@@ -330,7 +330,12 @@
       "moved": "{{name}} moved to position {{n}}.",
       "removed": "{{name}} removed.",
       "legacy_title": "Authors to link",
-      "legacy_description": "This production is not linked to the referential yet. Current names: {{names}}. Select the matching records; as long as no author is selected, these names are kept."
+      "legacy_description": "Names not linked to the referential: {{names}}. They are kept as long as the author selection is not changed; a changed selection replaces them on save.",
+      "results_count_one": "{{count}} author found.",
+      "results_count_other": "{{count}} authors found.",
+      "already_first": "Already in first position.",
+      "already_last": "Already in last position.",
+      "legacy_non_text": "The stored author list contains non-text values; it is kept as long as the author selection is not changed."
     }
   },
   "users": {

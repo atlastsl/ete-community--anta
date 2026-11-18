@@ -330,7 +330,12 @@
       "moved": "{{name}} déplacé en position {{n}}.",
       "removed": "{{name}} retiré.",
       "legacy_title": "Auteurs à rattacher",
-      "legacy_description": "Cette production n'est pas encore rattachée au référentiel. Noms actuels : {{names}}. Sélectionnez les fiches correspondantes ; tant qu'aucun auteur n'est sélectionné, ces noms sont conservés."
+      "legacy_description": "Noms non rattachés au référentiel : {{names}}. Ils sont conservés tant que la sélection d'auteurs n'est pas modifiée ; une sélection modifiée les remplace à l'enregistrement.",
+      "results_count_one": "{{count}} auteur trouvé.",
+      "results_count_other": "{{count}} auteurs trouvés.",
+      "already_first": "Déjà en première position.",
+      "already_last": "Déjà en dernière position.",
+      "legacy_non_text": "La liste d'auteurs enregistrée contient des valeurs non textuelles ; elle est conservée tant que la sélection d'auteurs n'est pas modifiée."
     }
   },
   "users": {

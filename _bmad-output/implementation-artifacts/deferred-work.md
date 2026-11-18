@@ -105,3 +105,10 @@
 
 - **Interblocage possible entre `authors:apply` et un renommage concurrent** — `apply` verrouille toutes les productions puis insère des liens (verrou `KEY SHARE` sur les fiches) ; un renommage verrouille la fiche puis ses productions. Postgres annule l'une des deux (l'`apply` renvoie « modification concurrente », rien d'écrit). Procédure : geler les modifications admin pendant `apply`, relancer `authors:verify` juste après.
 - **Renommage d'une fiche liée à une production partiellement rattachée** — la production garde l'ancien nom dans `productions.authors` jusqu'au prochain `propose` / `apply` (D-9.6-f). Question ouverte à Aurélien : acceptable jusqu'à la bascule 9.7 ?
+
+## Revue de code de la Story 9.7 (2026-11-18)
+
+- **Surlignage de la correspondance** dans les options d'`AuthorCombobox` (`<mark>`, `components.author-combobox.match-highlight` de DESIGN.md) : non livré (correspondance insensible aux accents à reporter sur le texte affiché).
+- **Auteur supprimé entre-temps** : l'erreur `productions.form.errors.author_unknown` ne nomme pas la fiche disparue ; l'admin doit retirer lui-même l'auteur concerné (la suppression est déjà refusée pour une fiche liée, cas limite d'une fiche ajoutée à la sélection non enregistrée).
+- **Index trigram de la recherche d'auteurs** : `LIKE '%t%' OR similarity` non indexé (voir plus haut), conservé pour `GET /admin/authors/search` (D-9.7-b).
+

@@ -105,12 +105,21 @@ export default class AuthorsController {
    */
   async search({ request, response }: HttpContext) {
     const rawQ = typeof request.input('q') === 'string' ? request.input('q').trim() : ''
-    if (rawQ.length < SEARCH_MIN_LENGTH) return response.json({ authors: [] })
     const q = rawQ.slice(0, MAX_Q_LENGTH).trim()
+    // Length of the normalized term (what `search_name` is matched with): « é- » is 1.
+    if (normalizeKey(q).length < SEARCH_MIN_LENGTH) return response.json({ authors: [] })
 
+    // The query string parser turns `exclude[]` into an object beyond 20 items (qs
+    // `arrayLimit`): its values are accepted as well.
     const rawExclude: unknown = request.input('exclude', [])
-    const exclude = (Array.isArray(rawExclude) ? rawExclude : [rawExclude])
+    const excludeValues = Array.isArray(rawExclude)
+      ? rawExclude
+      : rawExclude !== null && typeof rawExclude === 'object'
+        ? Object.values(rawExclude)
+        : [rawExclude]
+    const exclude = excludeValues
       .filter((id): id is string => typeof id === 'string' && UUID_RE.test(id))
+      .map((id) => id.toLowerCase())
       .slice(0, MAX_EXCLUDE)
 
     const query = Author.query().preload('affiliations')

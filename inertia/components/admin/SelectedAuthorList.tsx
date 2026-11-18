@@ -1,9 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ArrowDown, ArrowUp, X } from 'lucide-react'
 import { Button } from '~/components/ui/button'
 import Avatar from '~/components/shared/Avatar'
-import AuthorStatusBadges from '~/components/admin/AuthorStatusBadges'
 import { cn } from '~/lib/utils'
 import {
   type PickerAuthor,
@@ -19,18 +18,21 @@ type Props = {
   onChange: (authors: PickerAuthor[]) => void
   /** Focus target once the last author is removed (the search input). */
   onEmptied?: () => void
-  describedBy?: string
 }
 
 /**
- * Selected authors of a production, in publication order (Story 9.7, D18): ↑ ↓ move one
- * rank (unavailable at the ends), × removes; buttons named after the author; the focus
- * stays on the activated button; moves and removals announced politely. No drag and drop,
- * no link to the card (the form must not be left).
+ * Selected authors of a production, in publication order (Story 9.7, D18; mockup
+ * `admin-author-picker.html`: position, avatar, name, first affiliation): ↑ ↓ move one rank
+ * (unavailable at the ends, with the reason given to assistive technologies), × removes;
+ * buttons named after the author; the focus stays on the activated button (after a removal:
+ * the next ×, else the previous one, else the search input); moves and removals announced
+ * politely, a repeated message being spoken again. No drag and drop, no link to the card.
  */
-export default function SelectedAuthorList({ authors, onChange, onEmptied, describedBy }: Props) {
+export default function SelectedAuthorList({ authors, onChange, onEmptied }: Props) {
   const { t } = useTranslation()
-  const [announcement, setAnnouncement] = useState('')
+  const reasonId = useId()
+  // The counter re-mounts the message node: an identical announcement is spoken again.
+  const [announcement, setAnnouncement] = useState({ text: '', count: 0 })
   const buttons = useRef(new Map<string, HTMLButtonElement>())
   const pendingFocus = useRef<string | null>(null)
 
@@ -40,6 +42,9 @@ export default function SelectedAuthorList({ authors, onChange, onEmptied, descr
     pendingFocus.current = null
     buttons.current.get(key)?.focus()
   }, [authors])
+
+  const announce = (text: string) =>
+    setAnnouncement((previous) => ({ text, count: previous.count + 1 }))
 
   const buttonRef = (key: string) => (element: HTMLButtonElement | null) => {
     if (element) buttons.current.set(key, element)
@@ -52,9 +57,7 @@ export default function SelectedAuthorList({ authors, onChange, onEmptied, descr
     const author = authors[index]
     pendingFocus.current = `${author.id}:${delta === -1 ? 'up' : 'down'}`
     onChange(moveItem(authors, index, delta))
-    setAnnouncement(
-      t('authors.picker.moved', { name: pickerAuthorLabel(author), n: target + 1 })
-    )
+    announce(t('authors.picker.moved', { name: pickerAuthorLabel(author), n: target + 1 }))
   }
 
   function remove(index: number) {
@@ -63,7 +66,7 @@ export default function SelectedAuthorList({ authors, onChange, onEmptied, descr
     const neighbour = next[index] ?? next[index - 1]
     pendingFocus.current = neighbour ? `${neighbour.id}:remove` : null
     onChange(next)
-    setAnnouncement(t('authors.picker.removed', { name: pickerAuthorLabel(author) }))
+    announce(t('authors.picker.removed', { name: pickerAuthorLabel(author) }))
     if (!neighbour) onEmptied?.()
   }
 
@@ -88,6 +91,7 @@ export default function SelectedAuthorList({ authors, onChange, onEmptied, descr
         aria-label={label}
         title={label}
         aria-disabled={unavailable || undefined}
+        aria-describedby={unavailable ? `${reasonId}-${action}` : undefined}
         onClick={() => {
           if (unavailable) return
           if (action === 'remove') remove(index)
@@ -105,7 +109,6 @@ export default function SelectedAuthorList({ authors, onChange, onEmptied, descr
       {authors.length > 0 ? (
         <ol
           aria-label={t('authors.picker.selected_label')}
-          aria-describedby={describedBy}
           className="divide-y divide-stone-200 rounded-md border border-stone-200"
         >
           {authors.map((author, index) => {
@@ -129,7 +132,6 @@ export default function SelectedAuthorList({ authors, onChange, onEmptied, descr
                     {affiliation ?? t('authors.no_affiliation')}
                   </span>
                 </span>
-                <AuthorStatusBadges isPublic={author.isPublic} isIncomplete={author.isIncomplete} />
                 <span className="flex shrink-0 items-center">
                   {actionButton(author, index, 'up')}
                   {actionButton(author, index, 'down')}
@@ -144,8 +146,15 @@ export default function SelectedAuthorList({ authors, onChange, onEmptied, descr
           {t('authors.picker.empty')}
         </p>
       )}
+      {/* Reasons of the unavailable ↑ / ↓ (referenced by aria-describedby). */}
+      <span id={`${reasonId}-up`} className="sr-only">
+        {t('authors.picker.already_first')}
+      </span>
+      <span id={`${reasonId}-down`} className="sr-only">
+        {t('authors.picker.already_last')}
+      </span>
       <p aria-live="polite" className="sr-only">
-        {announcement}
+        <span key={announcement.count}>{announcement.text}</span>
       </p>
     </div>
   )

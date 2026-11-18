@@ -139,10 +139,12 @@ type Props = {
   /** Valeurs existantes pour l'auto-complétion (tags). */
   suggestions?: ProductionSuggestions
   /**
-   * Production non convertie (Story 9.7) : noms de la colonne dénormalisée sans lien au
-   * référentiel — avertissement « Auteurs à rattacher » tant qu'aucun auteur n'est choisi.
+   * Noms de la colonne dénormalisée qu'aucune fiche liée ne porte (production non convertie
+   * ou partiellement rattachée) : avertissement « Auteurs à rattacher » (Story 9.7, D-9.7-k).
    */
   legacyAuthorNames?: string[]
+  /** La colonne dénormalisée contient une valeur non textuelle (message générique). */
+  legacyAuthorsNonText?: boolean
 }
 
 const REQUIRED_KEYS = new Set([
@@ -171,6 +173,7 @@ export default function ProductionForm({
   onPendingLinksChange,
   suggestions = EMPTY_SUGGESTIONS,
   legacyAuthorNames = [],
+  legacyAuthorsNonText = false,
 }: Props) {
   const { t } = useTranslation()
   const [touched, setTouched] = useState<Record<string, boolean>>({})
@@ -192,8 +195,12 @@ export default function ProductionForm({
   /** Message d'erreur d'un champ : erreur serveur prioritaire, sinon hint "requis pour publier" au blur. */
   function fieldError(key: keyof ProductionFormData): string | null {
     if (errors[key]) return t(errors[key]!, { defaultValue: errors[key]! })
-    if (key === 'authors' && errors.authorIds) {
-      return t(errors.authorIds, { defaultValue: errors.authorIds })
+    if (key === 'authors') {
+      // `authorIds` or a per-element `authorIds.N` (uuid) error of the server.
+      const authorError = Object.entries(errors as Record<string, string | undefined>).find(
+        ([field, message]) => (field === 'authorIds' || field.startsWith('authorIds.')) && message
+      )?.[1]
+      if (authorError) return t(authorError, { defaultValue: authorError })
     }
     if (REQUIRED_KEYS.has(key) && touched[key] && !filledMap.get(key)) {
       return t('productions.form.errors.required_to_publish')
@@ -396,13 +403,14 @@ export default function ProductionForm({
    */
   function authorsField() {
     const error = fieldError('authors')
-    const showLegacy = legacyAuthorNames.length > 0 && data.authors.length === 0
+    const showLegacy = legacyAuthorNames.length > 0 || legacyAuthorsNonText
+    const selectedIds = data.authors.map((author) => author.id)
     return (
-      <div>
-        <p id="authors-heading" className="text-sm font-medium text-stone-700">
+      <fieldset aria-describedby="authors-hint">
+        <legend className="text-sm font-medium text-stone-700">
           {t('productions.form.fields.authors')}
           <span className="text-red-600"> *</span>
-        </p>
+        </legend>
         <p id="authors-hint" className="mt-1 text-xs text-stone-500">
           {t('productions.form.authors_hint')}
         </p>
@@ -414,16 +422,22 @@ export default function ProductionForm({
             <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
             <div>
               <p className="font-medium">{t('authors.picker.legacy_title')}</p>
-              <p className="mt-1">
-                {t('authors.picker.legacy_description', { names: legacyAuthorNames.join(', ') })}
-              </p>
+              {legacyAuthorNames.length > 0 && (
+                <p className="mt-1">
+                  {t('authors.picker.legacy_description', {
+                    names: legacyAuthorNames.join(', '),
+                  })}
+                </p>
+              )}
+              {legacyAuthorsNonText && (
+                <p className="mt-1">{t('authors.picker.legacy_non_text')}</p>
+              )}
             </div>
           </div>
         )}
         <div className="mt-2 space-y-3">
           <SelectedAuthorList
             authors={data.authors}
-            describedBy="authors-heading"
             onChange={(next) => {
               setData('authors', next)
               markTouched('authors')
@@ -433,8 +447,12 @@ export default function ProductionForm({
           <AuthorCombobox
             id="authors"
             inputRef={authorSearchRef}
-            selectedIds={data.authors.map((author) => author.id)}
-            onSelect={(author) => setData('authors', [...data.authors, author])}
+            selectedIds={selectedIds}
+            onSelect={(author) => {
+              // Already selected (stale result): no duplicate.
+              if (selectedIds.includes(author.id)) return
+              setData('authors', [...data.authors, author])
+            }}
             onBlur={() => markTouched('authors')}
             invalid={!!error}
             describedBy={error ? 'authors-error authors-hint' : 'authors-hint'}
@@ -445,7 +463,7 @@ export default function ProductionForm({
             {error}
           </p>
         )}
-      </div>
+      </fieldset>
     )
   }
 

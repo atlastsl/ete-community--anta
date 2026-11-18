@@ -38,7 +38,10 @@ test.group('AuthorCombobox | motif ARIA 1.2 combobox + listbox', () => {
   })
 
   test('URL par Tuyau (urlFor), auteurs sélectionnés exclus', ({ assert }) => {
-    assert.include(combobox, "urlFor(\n          'admin.authors.search'")
+    assert.include(
+      combobox,
+      "urlFor('admin.authors.search', {}, { qs: { q: term, exclude: excluded } })"
+    )
     assert.include(combobox, 'exclude:')
     assert.notMatch(combobox, /['"`]\/admin\/authors\/search/)
   })
@@ -60,7 +63,8 @@ test.group('AuthorCombobox | motif ARIA 1.2 combobox + listbox', () => {
     assert.include(combobox, 'role="status"')
     assert.include(combobox, '<Avatar')
     assert.include(combobox, 'pickerAffiliationLabel(author)')
-    assert.include(combobox, '<AuthorStatusBadges')
+    // Maquette : seul « À compléter » dans les options.
+    assert.include(combobox, 'showConsent={false}')
   })
 })
 
@@ -114,7 +118,6 @@ test.group('ProductionForm | fieldset Auteurs (Story 9.7)', () => {
   })
 
   test('avertissement « Auteurs à rattacher » pour une production non convertie', ({ assert }) => {
-    assert.include(form, 'legacyAuthorNames.length > 0 && data.authors.length === 0')
     assert.include(form, "t('authors.picker.legacy_title')")
     assert.equal(adminFr.authors.picker.legacy_title, 'Auteurs à rattacher')
     assert.include(editPage, 'legacyAuthorNames={legacyAuthorNames}')
@@ -124,7 +127,6 @@ test.group('ProductionForm | fieldset Auteurs (Story 9.7)', () => {
     assert.include(submitLib, 'authorIds: authors.map((author) => author.id)')
     assert.include(createPage, 'form.transform(toProductionPayload)')
     assert.include(editPage, 'transform(toProductionPayload)')
-    assert.include(form, 'errors.authorIds')
   })
 })
 
@@ -143,5 +145,96 @@ test.group('Sélecteur d’auteurs | libellés et dépendances', () => {
     for (const name of ['cmdk', '@radix-ui/react-popover', 'cn', 'downshift']) {
       assert.notProperty(deps, name)
     }
+  })
+})
+
+test.group('Sélecteur d’auteurs | revue de code 9.7', () => {
+  test('nouvelle saisie : options effacées, aucune sélection pendant le chargement', ({
+    assert,
+  }) => {
+    const effect = combobox.slice(combobox.indexOf('useEffect(() => {'))
+    assert.match(
+      effect,
+      /^useEffect\(\(\) => \{\s*\/\/[^\n]*\n\s*setResults\(\[\]\)\s*setActiveIndex\(-1\)/
+    )
+    assert.include(combobox, "if (status === 'loading') return")
+    assert.include(combobox, "status !== 'loading' && showList && activeIndex >= 0")
+  })
+
+  test('résultats déjà sélectionnés filtrés côté client ; sélection en double ignorée', ({
+    assert,
+  }) => {
+    assert.include(combobox, 'body.authors.filter((author) => !excluded.includes(author.id))')
+    assert.include(form, 'if (selectedIds.includes(author.id)) return')
+  })
+
+  test('région d’état toujours montée hors du popup : nombre de résultats annoncé', ({
+    assert,
+  }) => {
+    const statusIndex = combobox.indexOf('<p role="status" className="sr-only">')
+    assert.isAtLeast(statusIndex, 0)
+    assert.isBelow(statusIndex, combobox.indexOf("!showList && 'hidden'"))
+    assert.include(combobox, "t('authors.picker.results_count', { count: results.length })")
+    assert.equal(adminFr.authors.picker.results_count_other, '{{count}} auteurs trouvés.')
+    assert.equal(adminEn.authors.picker.results_count_one, '{{count}} author found.')
+  })
+
+  test('option active visible, clic dans la liste sans perte de focus, nouvel essai après erreur', ({
+    assert,
+  }) => {
+    assert.include(combobox, "scrollIntoView?.({ block: 'nearest' })")
+    assert.match(
+      combobox,
+      /<div\s*\/\/[^\n]*\n\s*onMouseDown=\{\(event\) => event\.preventDefault\(\)\}/
+    )
+    assert.include(combobox, 'setRetry((count) => count + 1)')
+    assert.include(combobox, '[term, excludeKey, retry]')
+    assert.match(combobox, /onFocus=\{\(\) => \{\s*setOpen\(true\)\s*retryAfterError\(\)/)
+  })
+
+  test('longueur minimale mesurée en NFC', ({ assert }) => {
+    assert.include(combobox, "query.normalize('NFC').trim()")
+  })
+
+  test('retrait : focus sur le × suivant, sinon le précédent, sinon la recherche ; annonce', ({
+    assert,
+  }) => {
+    assert.include(list, 'const neighbour = next[index] ?? next[index - 1]')
+    assert.include(list, 'pendingFocus.current = neighbour ? `${neighbour.id}:remove` : null')
+    assert.include(list, 'if (!neighbour) onEmptied?.()')
+    assert.include(form, 'onEmptied={() => authorSearchRef.current?.focus()}')
+    assert.include(
+      list,
+      "announce(t('authors.picker.removed', { name: pickerAuthorLabel(author) }))"
+    )
+    assert.equal(adminFr.authors.picker.removed, '{{name}} retiré.')
+    assert.equal(adminFr.authors.picker.move_up, 'Monter {{name}}')
+    assert.equal(adminFr.authors.picker.remove, 'Retirer {{name}}')
+  })
+
+  test('annonce répétée reprononcée ; raison des ↑ ↓ indisponibles pour les lecteurs d’écran', ({
+    assert,
+  }) => {
+    assert.include(list, '<span key={announcement.count}>{announcement.text}</span>')
+    assert.include(list, 'aria-describedby={unavailable ? `${reasonId}-${action}` : undefined}')
+    assert.include(list, "t('authors.picker.already_first')")
+    assert.include(list, "t('authors.picker.already_last')")
+    assert.equal(adminFr.authors.picker.already_first, 'Déjà en première position.')
+  })
+
+  test('liste sélectionnée sans badges de consentement (maquette) ; groupe fieldset + legend', ({
+    assert,
+  }) => {
+    assert.notInclude(list, 'AuthorStatusBadges')
+    assert.match(form, /<fieldset aria-describedby="authors-hint">\s*<legend/)
+  })
+
+  test('erreurs serveur authorIds et authorIds.N affichées ; valeur non textuelle signalée', ({
+    assert,
+  }) => {
+    assert.include(form, "field === 'authorIds' || field.startsWith('authorIds.')")
+    assert.include(form, "t('authors.picker.legacy_non_text')")
+    assert.include(form, 'legacyAuthorNames.length > 0 || legacyAuthorsNonText')
+    assert.include(editPage, 'legacyAuthorsNonText={legacyAuthorsNonText}')
   })
 })

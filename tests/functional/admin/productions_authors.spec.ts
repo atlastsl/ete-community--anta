@@ -355,7 +355,9 @@ test.group('Admin productions | auteurs du référentiel (Story 9.7)', (group) =
     const b = await createAuthor('Jean-Paul', 'Exemplaire', [], {
       consentConfirmedAt: DateTime.now(),
     })
-    const converted = await createProduction({ authorNames: ['x'] })
+    const converted = await createProduction({
+      authorNames: ['Jean-Paul Exemplaire', 'Aminata Fictiva'],
+    })
     await link(converted, [b, a])
 
     const response = await client.get(`/admin/productions/${converted.id}/edit`).loginAs(admin)
@@ -532,5 +534,211 @@ test.group('Admin authors | search (Story 9.7)', (group) => {
     const response = await client.get('/admin/authors/search').qs({ q: 'fictiva' }).redirects(0)
     response.assertStatus(302)
     assert.match(response.header('location') ?? '', /^\/admin\/login(\?|$)/)
+  })
+})
+
+test.group('Admin productions | revue de code 9.7', (group) => {
+  group.each.setup(async () => {
+    await db.beginGlobalTransaction()
+    return () => db.rollbackGlobalTransaction()
+  })
+
+  test('rattachement partiel : un enregistrement sans changer les auteurs garde le nom libre', async ({
+    client,
+    assert,
+  }) => {
+    const admin = await createAdminUser()
+    const a = await createAuthor('Aminata', 'Fictiva')
+    const production = await createProduction({ authorNames: ['Aminata Fictiva', 'Nom Libre'] })
+    await link(production, [a])
+
+    const editResponse = await client.get(`/admin/productions/${production.id}/edit`).loginAs(admin)
+    const edit = extractProps(editResponse.text())
+    assert.deepEqual(edit.legacyAuthorNames, ['Nom Libre'])
+    assert.isFalse(edit.legacyAuthorsNonText)
+
+    await client
+      .put(`/admin/productions/${production.id}`)
+      .json(formBody({ title: 'Titre seul modifié', authorIds: [a.id] }))
+      .loginAs(admin)
+      .withCsrfToken()
+      .redirects(0)
+
+    await production.refresh()
+    assert.equal(production.title, 'Titre seul modifié')
+    assert.deepEqual(production.authorNames, ['Aminata Fictiva', 'Nom Libre'])
+  })
+
+  test('valeur non textuelle : signalée dans le formulaire, jamais effacée implicitement', async ({
+    client,
+    assert,
+  }) => {
+    const admin = await createAdminUser()
+    const production = await createProduction()
+    await db
+      .from('productions')
+      .where('id', production.id)
+      .update({ authors: db.raw(`'[42]'::jsonb`) })
+
+    const editResponse = await client.get(`/admin/productions/${production.id}/edit`).loginAs(admin)
+    const edit = extractProps(editResponse.text())
+    assert.isTrue(edit.legacyAuthorsNonText)
+
+    await client
+      .put(`/admin/productions/${production.id}`)
+      .json(formBody({ authorIds: [] }))
+      .loginAs(admin)
+      .withCsrfToken()
+      .redirects(0)
+    assert.deepEqual(await namesOf(production.id), [42] as any)
+  })
+
+  test('identifiant mal formé : erreur par élément remontée (authors_invalid)', async ({
+    client,
+    assert,
+  }) => {
+    const admin = await createAdminUser()
+    const production = await createProduction()
+    const response = await client
+      .put(`/admin/productions/${production.id}`)
+      .json(formBody({ authorIds: ['pas-un-uuid'] }))
+      .loginAs(admin)
+      .withCsrfToken()
+      .redirects(0)
+    const flashed = JSON.stringify(response.flashMessages())
+    assert.include(flashed, 'authorIds.0')
+    assert.include(flashed, 'productions.form.errors.authors_invalid')
+  })
+
+  test('uuid en majuscules accepté et normalisé ; plus de 200 identifiants refusés', async ({
+    client,
+    assert,
+  }) => {
+    const admin = await createAdminUser()
+    const a = await createAuthor('Aminata', 'Fictiva')
+    const production = await createProduction()
+
+    await client
+      .put(`/admin/productions/${production.id}`)
+      .json(formBody({ authorIds: [a.id.toUpperCase()] }))
+      .loginAs(admin)
+      .withCsrfToken()
+      .redirects(0)
+    assert.deepEqual(await pivotOf(production.id), [[a.id, 1]])
+
+    const tooMany = Array.from(
+      { length: 201 },
+      (_, i) => `00000000-0000-4000-8000-${String(i).padStart(12, '0')}`
+    )
+    const response = await client
+      .put(`/admin/productions/${production.id}`)
+      .json(formBody({ title: 'Refusé', authorIds: tooMany }))
+      .loginAs(admin)
+      .withCsrfToken()
+      .redirects(0)
+    assert.include(JSON.stringify(response.flashMessages()), 'authors_invalid')
+    await production.refresh()
+    assert.notEqual(production.title, 'Refusé')
+  })
+
+  test('AC9 : non convertie publiée à qui il manque un autre critère → dépubliée', async ({
+    client,
+    assert,
+  }) => {
+    const admin = await createAdminUser()
+    const production = await createProduction({
+      authorNames: ['Nom Libre'],
+      status: 'published',
+      antaPublishedAt: DateTime.now(),
+    })
+
+    await client
+      .put(`/admin/productions/${production.id}`)
+      .json(formBody({ summary: '', authorIds: [] }))
+      .loginAs(admin)
+      .withCsrfToken()
+      .redirects(0)
+
+    await production.refresh()
+    assert.equal(production.status, 'draft')
+    assert.deepEqual(production.authorNames, ['Nom Libre'])
+  })
+
+  test('AC9 : non convertie publiée, authorIds absent → reste publiée', async ({
+    client,
+    assert,
+  }) => {
+    const admin = await createAdminUser()
+    const production = await createProduction({
+      authorNames: ['Nom Libre'],
+      status: 'published',
+      antaPublishedAt: DateTime.now(),
+    })
+
+    await client
+      .put(`/admin/productions/${production.id}`)
+      .json(formBody())
+      .loginAs(admin)
+      .withCsrfToken()
+      .redirects(0)
+
+    await production.refresh()
+    assert.equal(production.status, 'published')
+    assert.deepEqual(production.authorNames, ['Nom Libre'])
+  })
+
+  test('AC11 : la page publique de la production affiche l’auteur sélectionné', async ({
+    client,
+    assert,
+  }) => {
+    const admin = await createAdminUser()
+    const a = await createAuthor('Zébulon', 'Imaginarius')
+    const production = await createProduction({
+      status: 'published',
+      antaPublishedAt: DateTime.now(),
+    })
+
+    await client
+      .put(`/admin/productions/${production.id}`)
+      .json(formBody({ authorIds: [a.id] }))
+      .loginAs(admin)
+      .withCsrfToken()
+      .redirects(0)
+    await production.refresh()
+    assert.equal(production.status, 'published')
+
+    const page = await client.get(`/productions/${production.slug}`)
+    page.assertStatus(200)
+    assert.deepEqual(extractProps(page.text()).production.authors, ['Zébulon Imaginarius'])
+  })
+})
+
+test.group('Admin authors | search — revue de code 9.7', (group) => {
+  group.each.setup(async () => {
+    await db.beginGlobalTransaction()
+    return () => db.rollbackGlobalTransaction()
+  })
+
+  test('plus de 20 exclude[] (objet qs) : toujours écartés', async ({ client, assert }) => {
+    const admin = await createAdminUser()
+    const excluded: Author[] = []
+    for (let i = 0; i < 22; i++) {
+      excluded.push(await createAuthor(`Prénom${String.fromCharCode(97 + i)}`, 'Fictiva'))
+    }
+    const kept = await createAuthor('Zoé', 'Fictiva')
+    const qs = excluded.map((author) => `exclude[]=${author.id}`).join('&')
+
+    const response = await client.get(`/admin/authors/search?q=fictiva&${qs}`).loginAs(admin)
+    assert.deepEqual(
+      response.body().authors.map((x: { id: string }) => x.id),
+      [kept.id]
+    )
+  })
+
+  test('longueur minimale mesurée sur le terme normalisé', async ({ client, assert }) => {
+    const admin = await createAdminUser()
+    await createAuthor('Éa', 'Fictiva')
+    const response = await client.get('/admin/authors/search').qs({ q: 'é-' }).loginAs(admin)
+    assert.deepEqual(response.body(), { authors: [] })
   })
 })
