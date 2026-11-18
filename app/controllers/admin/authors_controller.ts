@@ -145,17 +145,18 @@ export default class AuthorsController {
   }
 
   /**
-   * Deletes a card linked to no production (FR55). Always back to the list: from the
-   * edit page, `back()` would land on a 404.
+   * Deletes a card linked to no production (FR55). Back to the list, with its filters and
+   * page when the request came from it (from the edit page, `back()` would land on a 404).
    */
-  async destroy({ params, auth, response, session }: HttpContext) {
+  async destroy({ params, auth, request, response, session }: HttpContext) {
     const author = await this.findOrFail(params.id)
     const name = AuthorService.displayName(author)
+    const listUrl = this.listUrlFrom(request.header('referer'))
 
     const result = await AuthorService.delete(author)
     if (!result.deleted) {
       session.flash('error', 'authors.delete.refused')
-      return response.redirect('/admin/authors')
+      return response.redirect(listUrl)
     }
 
     // After the commit: ActivityLogService is outside the transaction and never throws.
@@ -168,7 +169,18 @@ export default class AuthorsController {
     })
 
     session.flash('success', 'authors.flash.deleted')
-    return response.redirect('/admin/authors')
+    return response.redirect(listUrl)
+  }
+
+  /** The list URL with its query string when the referer is the list; never another host. */
+  private listUrlFrom(referer: string | undefined): string {
+    if (!referer) return '/admin/authors'
+    try {
+      const url = new URL(referer)
+      return url.pathname === '/admin/authors' ? `${url.pathname}${url.search}` : '/admin/authors'
+    } catch {
+      return '/admin/authors'
+    }
   }
 
   /** 404 for a malformed or unknown id (never a Postgres error). */

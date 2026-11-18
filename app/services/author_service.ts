@@ -39,8 +39,10 @@ const SIMILARITY_THRESHOLD = 0.3
 /** Escapes the LIKE wildcards of a normalized term (`\` is the default escape character). */
 const escapeLike = (term: string): string => term.replace(/[\\%_]/g, (c) => `\\${c}`)
 
-function isForeignKeyViolation(error: unknown): boolean {
-  return (error as { code?: string })?.code === '23503'
+/** Only the pivot RESTRICT means "linked to a production"; other FKs (9.3+) must surface. */
+function isProductionLinkViolation(error: unknown): boolean {
+  const e = error as { code?: string; constraint?: string }
+  return e?.code === '23503' && e.constraint === 'production_authors_author_id_foreign'
 }
 
 /** Attempts when two concurrent creates pick the same free slug (check-then-insert). */
@@ -184,7 +186,7 @@ export default class AuthorService {
         return { deleted: true }
       })
     } catch (error) {
-      if (!isForeignKeyViolation(error)) throw error
+      if (!isProductionLinkViolation(error)) throw error
       return { deleted: false, productionsCount: await this.productionsCount(author.id) }
     }
   }
@@ -198,7 +200,10 @@ export default class AuthorService {
     filters: AuthorListFilters
   ): ModelQueryBuilderContract<typeof Author> {
     const q = filters.q ? normalizeKey(filters.q) : ''
-    if (q !== '') {
+    if (filters.q?.trim() && q === '') {
+      // A term made only of stripped characters (`-`, `'`) matches nothing, not everything.
+      query.whereRaw('false')
+    } else if (q !== '') {
       const term = escapeLike(q)
       query.where((sub) => {
         sub
@@ -269,6 +274,7 @@ export default class AuthorService {
     const result = await db.rawQuery(
       `SELECT institution_key AS value, mode() WITHIN GROUP (ORDER BY institution) AS label
        FROM author_affiliations
+       WHERE institution_key <> ''
        GROUP BY institution_key
        ORDER BY label, value`
     )

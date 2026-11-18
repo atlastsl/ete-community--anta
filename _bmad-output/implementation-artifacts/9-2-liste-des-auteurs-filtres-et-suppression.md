@@ -4,7 +4,7 @@ baseline_commit: 7e2442487d517eef7bc41446157d13759a2c98ed
 
 # Story 9.2 : Liste des auteurs, filtres et suppression
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -133,6 +133,24 @@ afin de **tenir le référentiel propre** (FR52, FR55, D19, D32).
     - `GET edit` → `author.productionsCount`.
   - [x] 9.5 Unit composants par **lecture de source** (jamais d'import, TS6305) : `tests/unit/components/authors_index_page.spec.ts` — `aria-pressed`, `role="group"`, `aria-disabled`, `aria-describedby={\`author-delete-hint-`, absence de `disabled={` sur le bouton refusé, `TooltipContent`, `role="alertdialog"`, `urlFor('admin.authors.destroy'`, `queryParams={activeQuery}`, aucune URL `/admin/authors` en dur ; `Edit.tsx` — `id="author-delete-hint"` + `aria-describedby="author-delete-hint"` ; `AuthorStatusBadges.tsx` — trois clés `authors.badges.*` ; toutes les clés `t('authors.…')` utilisées existent en FR et EN.
   - [x] 9.6 Mettre à jour le test « non authentifié » de `authors_crud.spec.ts` s'il énumère les routes (ajouter `DELETE`), ou couvrir dans `authors_list.spec.ts`. `tests/unit/i18n/translations.spec.ts` vert ; `npm run typecheck`, `npm run lint` et `node ace build` verts ; suite complète `npm run test:local` verte.
+
+### Review Findings
+
+Revue adversariale du 2026-11-18 (Blind Hunter, Edge Case Hunter, Acceptance Auditor), constats vérifiés avant correction.
+
+- [x] [Review][Patch] `onQuery` (tri par position) appliqué aussi aux sous-requêtes Lucid → `withCount`/`has` sur `Production.authors` ou `Author.affiliations` produit un `ORDER BY` refusé par Postgres [app/models/production.ts, app/models/author.ts] — garde `!query.isRelatedSubQuery` ; test unitaire.
+- [x] [Review][Patch] Terme de recherche vidé par la normalisation (`?q=-`) → tous les auteurs listés [app/services/author_service.ts] — aucun résultat ; test.
+- [x] [Review][Patch] Suppression depuis une liste filtrée/paginée → retour à la liste nue [app/controllers/admin/authors_controller.ts] — retour au référent s'il est la liste (chemin + query seulement, jamais un autre hôte) ; test fonctionnel.
+- [x] [Review][Patch] Toute violation de FK (`23503`) traduite en « liée à une production » [app/services/author_service.ts] — limitée à la contrainte `production_authors_author_id_foreign`.
+- [x] [Review][Patch] Page au-delà de la dernière → tableau vide sans message [inertia/pages/admin/Authors/Index.tsx] — message « aucun résultat » dès que la page est vide.
+- [x] [Review][Patch] Valeur sentinelle `all` du filtre institution en collision avec une institution « All » ; clé d'URL absente des options → sélecteur vide [inertia/pages/admin/Authors/Index.tsx] — `__all__`, repli sur « Toutes ».
+- [x] [Review][Patch] `institution_key` vide (institution faite de diacritiques combinants) → `SelectItem value=""` fait planter la page [app/services/author_service.ts] — exclue des options ; test.
+- [x] [Review][Patch] Champ de recherche non resynchronisé (précédent/suivant, `preserveState`) [inertia/pages/admin/Authors/Index.tsx].
+- [x] [Review][Patch] Double clic sur « Supprimer » → second DELETE (404) [inertia/components/admin/DeleteAuthorDialog.tsx] — garde par `useRef`.
+- [x] [Review][Defer] `role="alertdialog"` sur un `Dialog` Radix (fermeture au clic extérieur, focus initial) [inertia/components/admin/DeleteAuthorDialog.tsx] — deferred : pas de primitive `AlertDialog` dans `components/ui` ; même patron que les dialogs Users/Productions.
+- [x] [Review][Defer] Recherche `LIKE '%…%' OR similarity()` non servie par l'index trigram ; compteurs et options recalculés à chaque page [app/services/author_service.ts] — deferred : volume actuel faible ; à revoir pour l'autocomplétion 9.7.
+
+Écartés : ordre des migrations (faux positif : `1775918747000` > `1775918745000` de `authors`), annonce doublée de l'infobulle (l'`aria-describedby` explicite prime sur celui de Radix), « production(s) » imposé par le libellé de l'AC, dérive jsonb/pivot et suppression possible tant que le pivot est vide (prévu jusqu'à 9.6/9.7), `filters.q` renvoyé tel que saisi (meilleure UX, la normalisation reste côté requête).
 
 ## Dev Notes
 
@@ -333,3 +351,4 @@ Claude Opus 5.5 (claude-opus-5-5), workflow `bmad-dev-story`, exécution autonom
 | Date | Version | Description |
 |---|---|---|
 | 2026-11-18 | 1.0 | Story 9.2 implémentée : pivot `production_authors`, renommage `authorNames`, liste filtrée des auteurs (recherche, institution, filtres rapides avec compteurs), suppression avec refus FR55, tooltip shadcn, badges de statut, 33 tests ajoutés (535 verts). Statut → review. |
+- 2026-11-18 : code review — 9 correctifs, 2 reports ; 539 tests verts, lint, typecheck et build verts.

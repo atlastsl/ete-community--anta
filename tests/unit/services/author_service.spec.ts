@@ -161,6 +161,25 @@ test.group('AuthorService | list helpers (Story 9.2)', (group) => {
     ])
   })
 
+  test('institutionOptions: an empty key (combining marks only) is not an option', async ({
+    assert,
+  }) => {
+    await createAuthor('Éloïse', 'Fictive', ['\u0301'])
+    assert.deepEqual(await AuthorService.institutionOptions(), [])
+  })
+
+  test('applyListFilters: a term emptied by normalization matches nothing', async ({ assert }) => {
+    await createAuthor('Éloïse', 'Fictive', ['Université Exemple'])
+    const query = Author.query()
+    AuthorService.applyListFilters(query, {
+      q: '-',
+      institution: null,
+      consent: null,
+      incomplete: false,
+    })
+    assert.lengthOf(await query, 0)
+  })
+
   test('applyListFilters + applyListOrder: word prefix ranked first', async ({ assert }) => {
     // Sans q, « Bexel » passerait avant « Zulu » (tri par nom).
     await createAuthor('Exelle', 'Zulu', ['Université Exemple'])

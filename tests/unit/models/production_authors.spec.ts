@@ -90,6 +90,28 @@ test.group('Production ↔ Author pivot (Story 9.2)', (group) => {
       await author.delete()
     })
     assert.equal(error?.code, '23503')
+    assert.equal(error?.constraint, 'production_authors_author_id_foreign')
+  })
+
+  test('withCount / has on the ordered relations: no ORDER BY in the sub-query', async ({
+    assert,
+  }) => {
+    const author = await Author.create({ firstNames: 'Éloïse', lastNames: 'Fictive' })
+    await author.related('affiliations').create({ position: 1, institution: 'Université Exemple' })
+    const production = await createProduction()
+    await production.related('authors').attach({ [author.id]: { position: 1 } })
+
+    const productions = await Production.query()
+      .where('id', production.id)
+      .withCount('authors')
+      .has('authors')
+    assert.equal(productions[0].$extras.authors_count, 1)
+
+    const authors = await Author.query()
+      .where('id', author.id)
+      .withCount('affiliations')
+      .has('affiliations')
+    assert.equal(authors[0].$extras.affiliations_count, 1)
   })
 
   test('duplicate position in one production → UNIQUE (production_id, position)', async ({

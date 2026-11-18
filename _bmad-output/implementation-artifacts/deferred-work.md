@@ -79,3 +79,8 @@
 - **Bouton dans un lien** : `<Link><Button/></Link>` produit `<a><button>` (HTML invalide, deux arrêts de tabulation). Patron de toutes les pages admin. Action : `Button asChild` autour du `Link`.
 - **Normalisation des clés** : `normalizeKey` (NFD) n'unifie pas `'`/`’`/`ʼ`, trait d'union/espace, ni `ł`, `ø`, `æ`, `đ`. Conforme à P2.1 ; à reconsidérer avant le dédoublonnage des auteurs/institutions (9.5/9.6).
 
+## Deferred from: code review of 9-2-liste-des-auteurs-filtres-et-suppression (2026-11-18)
+
+- **Dialogs de confirmation** : `role="alertdialog"` posé sur un `Dialog` Radix (fermeture au clic extérieur et Échap, focus initial sur le premier bouton). Même patron dans Users/Productions. Action : ajouter la primitive shadcn `alert-dialog` et migrer les dialogs de suppression.
+- **Performance de la recherche d'auteurs** : `search_name LIKE '%t%' OR similarity(...) > 0.3` n'utilise pas l'index GIN trigram (seuls les opérateurs `%`/`LIKE` seuls le peuvent) ; `quickFilterCounts` et `institutionOptions` balaient les tables à chaque page. Action pour 9.7 (autocomplétion) : `LIKE` seul ou opérateur `%` avec `pg_trgm.similarity_threshold`, cache léger des compteurs.
+

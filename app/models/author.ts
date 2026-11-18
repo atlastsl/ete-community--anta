@@ -61,7 +61,10 @@ export default class Author extends BaseModel {
   declare updatedAt: DateTime | null
 
   @hasMany(() => AuthorAffiliation, {
-    onQuery: (query) => query.orderBy('position', 'asc'),
+    // Not on sub-queries (`withCount`, `has`): an ORDER BY there breaks the aggregate.
+    onQuery: (query) => {
+      if (!query.isRelatedSubQuery) query.orderBy('position', 'asc')
+    },
   })
   declare affiliations: HasMany<typeof AuthorAffiliation>
 

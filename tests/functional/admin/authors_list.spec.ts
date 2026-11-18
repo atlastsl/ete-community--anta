@@ -280,6 +280,32 @@ test.group('Admin authors | suppression', (group) => {
     assert.deepEqual(log.metadata, { name: 'Éloïse Fictive' })
   })
 
+  test('suppression depuis une liste filtrée → retour à la même liste ; référent externe ignoré', async ({
+    client,
+    assert,
+  }) => {
+    const admin = await createAdminUser()
+    const a1 = await createAuthor('Éloïse', 'Fictive')
+    const a2 = await createAuthor('Jean Marc', 'Exemple')
+
+    const fromList = await client
+      .delete(`/admin/authors/${a1.id}`)
+      .header('referer', 'http://localhost:3333/admin/authors?consent=pending&page=2')
+      .loginAs(admin)
+      .withCsrfToken()
+      .redirects(0)
+    fromList.assertHeader('location', '/admin/authors?consent=pending&page=2')
+
+    const external = await client
+      .delete(`/admin/authors/${a2.id}`)
+      .header('referer', 'https://example.org/admin/authors/x/edit')
+      .loginAs(admin)
+      .withCsrfToken()
+      .redirects(0)
+    external.assertHeader('location', '/admin/authors')
+    assert.isNull(await Author.find(a2.id))
+  })
+
   test('fiche liée à un brouillon → refus, fiche intacte, aucun journal', async ({
     client,
     assert,

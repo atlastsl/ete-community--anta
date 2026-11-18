@@ -1,4 +1,4 @@
-import { ReactElement, useState } from 'react'
+import { ReactElement, useEffect, useState } from 'react'
 import { Link } from '@adonisjs/inertia/react'
 import { router } from '@inertiajs/react'
 import { useTranslation } from 'react-i18next'
@@ -49,7 +49,8 @@ type Props = {
 }
 
 /** Radix `Select` refuses `value=""`: sentinel for "all institutions". */
-const ALL_VALUE = 'all'
+// Not a plausible `institution_key` (`all` is: an institution named « All »).
+const ALL_VALUE = '__all__'
 
 export default function AdminAuthorsIndex({
   authors,
@@ -60,6 +61,8 @@ export default function AdminAuthorsIndex({
 }: Props) {
   const { t, i18n } = useTranslation()
   const [searchText, setSearchText] = useState(filters.q ?? '')
+  // preserveState keeps the input across visits: follow the server value (back/forward, clear).
+  useEffect(() => setSearchText(filters.q ?? ''), [filters.q])
   const [deleteTarget, setDeleteTarget] = useState<DeleteAuthorTarget | null>(null)
 
   // Active filters, kept by the pagination links.
@@ -160,7 +163,11 @@ export default function AdminAuthorsIndex({
               </form>
 
               <Select
-                value={filters.institution ?? ALL_VALUE}
+                value={
+                  institutionOptions.some((o) => o.value === filters.institution)
+                    ? filters.institution!
+                    : ALL_VALUE
+                }
                 onValueChange={(v) => applyFilters({ institution: v === ALL_VALUE ? undefined : v })}
               >
                 <SelectTrigger aria-label={t('authors.list.institution_label')} className="w-56">
@@ -214,7 +221,7 @@ export default function AdminAuthorsIndex({
               )}
             </div>
 
-            {pagination.total === 0 ? (
+            {authors.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <p className="text-lg font-medium text-stone-700">{t('authors.list.no_results')}</p>
                 <Button variant="outline" className="mt-6" onClick={clearFilters}>

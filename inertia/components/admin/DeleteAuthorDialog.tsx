@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { router } from '@inertiajs/react'
 import { useTranslation } from 'react-i18next'
 import { Loader2 } from 'lucide-react'
@@ -30,13 +30,18 @@ type Props = {
 export default function DeleteAuthorDialog({ target, onClose }: Props) {
   const { t } = useTranslation()
   const [isProcessing, setIsProcessing] = useState(false)
+  // A second click before the re-render would send a second DELETE (404 modal).
+  const submitting = useRef(false)
 
   function handleConfirm() {
-    if (!target) return
+    if (!target || submitting.current) return
+    submitting.current = true
+    setIsProcessing(true)
     router.delete(urlFor('admin.authors.destroy', { id: target.id }), {
       preserveScroll: true,
       onStart: () => setIsProcessing(true),
       onFinish: () => {
+        submitting.current = false
         setIsProcessing(false)
         onClose()
       },

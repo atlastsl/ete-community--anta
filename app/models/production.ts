@@ -55,7 +55,10 @@ export default class Production extends BaseModel {
   @manyToMany(() => Author, {
     pivotTable: 'production_authors',
     pivotColumns: ['position'],
-    onQuery: (query) => query.orderBy('production_authors.position', 'asc'),
+    // Not on sub-queries (`withCount`, `has`): an ORDER BY there breaks the aggregate.
+    onQuery: (query) => {
+      if (!query.isRelatedSubQuery) query.orderBy('production_authors.position', 'asc')
+    },
   })
   declare authors: ManyToMany<typeof Author>
 
