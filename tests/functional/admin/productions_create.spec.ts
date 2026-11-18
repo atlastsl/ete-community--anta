@@ -96,7 +96,8 @@ test.group('Admin productions create | store brouillon', (group) => {
     assert.isNotNull(created)
     assert.equal(created!.status, 'draft')
     assert.equal(created!.licenseStatus, 'free_license')
-    assert.deepEqual(created!.authorNames, ['Kofi A.', 'Amara B.'])
+    // Story 9.7 : l'ancien champ `authors` est ignoré (colonne écrite depuis le pivot seulement).
+    assert.deepEqual(created!.authorNames, [])
     assert.deepEqual(created!.tags, ['maths', 'topologie'])
     assert.equal(created!.category, 'article')
     assert.isNotNull(created!.workPublishedAt)

@@ -82,7 +82,8 @@ test.group('Admin productions edit | page + update', (group) => {
     await production.refresh()
     assert.equal(production.title, 'Nouveau titre')
     assert.equal(production.category, 'book')
-    assert.deepEqual(production.authorNames, ['B'])
+    // Story 9.7 : `authors` reçu ignoré, `authorIds` absent → auteurs inchangés.
+    assert.deepEqual(production.authorNames, ['A'])
     // updated_at maintenu par Lucid (autoUpdate) lors du save (FR35)
     assert.isNotNull(production.updatedAt)
 

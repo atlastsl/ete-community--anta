@@ -97,7 +97,9 @@
         "required_to_publish": "Requis pour publier.",
         "category_invalid": "Catégorie invalide.",
         "domain_invalid": "Domaine invalide.",
-        "subdomain_invalid": "Sous-domaine invalide pour ce domaine."
+        "subdomain_invalid": "Sous-domaine invalide pour ce domaine.",
+        "author_unknown": "Un auteur sélectionné n'existe plus. Retirez-le puis réessayez.",
+        "authors_invalid": "Sélection d'auteurs invalide."
       },
       "select_placeholder": "Sélectionnez…",
       "files_placeholder": "L'ajout de fichiers et de liens sera disponible après l'enregistrement du brouillon.",
@@ -108,7 +110,11 @@
       "country_group_other": "Autres pays",
       "save_draft": "Enregistrer brouillon",
       "save": "Enregistrer",
-      "publish": "Publier"
+      "publish": "Publier",
+      "completion": {
+        "authors": "Au moins un auteur"
+      },
+      "authors_hint": "Sélectionnez les auteurs dans l'ordre de la publication. Au moins un auteur est requis pour publier."
     },
     "completion": {
       "summary": "{{filled}}/{{total}} champs — {{missing}} requis pour publier",
@@ -309,6 +315,22 @@
         "already_public": "Le profil était déjà public.",
         "already_private": "Le profil n'était déjà plus public."
       }
+    },
+    "picker": {
+      "label": "Ajouter un auteur",
+      "placeholder": "Nom ou prénom…",
+      "loading": "Recherche…",
+      "no_results": "Aucun auteur trouvé.",
+      "error": "Recherche indisponible, réessayez.",
+      "selected_label": "Auteurs sélectionnés",
+      "empty": "Aucun auteur sélectionné.",
+      "move_up": "Monter {{name}}",
+      "move_down": "Descendre {{name}}",
+      "remove": "Retirer {{name}}",
+      "moved": "{{name}} déplacé en position {{n}}.",
+      "removed": "{{name}} retiré.",
+      "legacy_title": "Auteurs à rattacher",
+      "legacy_description": "Cette production n'est pas encore rattachée au référentiel. Noms actuels : {{names}}. Sélectionnez les fiches correspondantes ; tant qu'aucun auteur n'est sélectionné, ces noms sont conservés."
     }
   },
   "users": {

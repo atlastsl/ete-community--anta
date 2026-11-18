@@ -13,6 +13,7 @@ import ProductionStats, { type ProductionStatsData } from '~/components/admin/Pr
 import { type ProductionFileRow } from '~/components/admin/FileUploader'
 import { type ProductionLinkRow } from '~/components/admin/LinkManager'
 import { isAttachmentSatisfied } from '~/lib/production_completion'
+import { toProductionPayload } from '~/lib/production_submit'
 
 type Props = {
   production: ProductionFormData & {
@@ -24,6 +25,8 @@ type Props = {
   suggestions: ProductionSuggestions
   publishedBy: { email: string | null; at: string } | null
   stats: ProductionStatsData
+  /** Noms de la colonne dénormalisée d'une production non convertie (Story 9.7). */
+  legacyAuthorNames: string[]
 }
 
 export default function AdminProductionsEdit({
@@ -33,10 +36,14 @@ export default function AdminProductionsEdit({
   suggestions,
   publishedBy,
   stats,
+  legacyAuthorNames,
 }: Props) {
   const { t, i18n } = useTranslation()
   const { id, status, ...formData } = production
-  const { data, setData, put, processing, errors } = useForm<ProductionFormData>(formData)
+  const { data, setData, put, processing, errors, transform } =
+    useForm<ProductionFormData>(formData)
+  // Les auteurs sélectionnés partent en `authorIds` ordonnés (Story 9.7).
+  transform(toProductionPayload)
 
   const isComplete =
     getRequiredFieldStatuses(data).every((f) => f.filled) &&
@@ -76,6 +83,7 @@ export default function AdminProductionsEdit({
           files={files}
           links={links}
           suggestions={suggestions}
+          legacyAuthorNames={legacyAuthorNames}
         />
 
         <ProductionFormActions

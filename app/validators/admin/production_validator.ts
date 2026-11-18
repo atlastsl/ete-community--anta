@@ -11,7 +11,10 @@ import {
 export type DraftProductionPayload = {
   title: string
   summary?: string
+  /** Legacy free-text names: still accepted, ignored since Story 9.7 (contract later). */
   authors?: string[]
+  /** Ordered author card ids (Story 9.7); existence checked by `ProductionAuthorService.sync`. */
+  authorIds?: string[]
   tags?: string[]
   category?: string
   domain?: string
@@ -71,7 +74,11 @@ export const draftProductionValidator = vine.compile(
   vine.object({
     title: vine.string().trim().minLength(1).maxLength(255),
     summary: vine.string().trim().optional(),
+    // Ancienne saisie libre : acceptée mais ignorée depuis la Story 9.7 (seul
+    // ProductionAuthorService écrit `productions.authors`) ; retrait au « contract ».
     authors: vine.array(vine.string().trim()).optional(),
+    // Auteurs du référentiel, ordonnés (Story 9.7, P2.6) ; existence vérifiée par `sync`.
+    authorIds: vine.array(vine.string().uuid()).distinct().optional(),
     tags: vine.array(vine.string().trim()).optional(),
     category: vine.enum([...PRODUCTION_CATEGORIES]).optional(),
     domain: vine.enum([...PRODUCTION_DOMAINS]).optional(),
@@ -97,6 +104,10 @@ draftProductionValidator.messagesProvider = new SimpleMessagesProvider({
   'title.required': 'productions.form.errors.title_required',
   'title.minLength': 'productions.form.errors.title_required',
   'title.maxLength': 'productions.form.errors.title_too_long',
+  'authorIds.array': 'productions.form.errors.authors_invalid',
+  'authorIds.distinct': 'productions.form.errors.authors_invalid',
+  'authorIds.*.uuid': 'productions.form.errors.authors_invalid',
+  'authorIds.*.string': 'productions.form.errors.authors_invalid',
 })
 
 /**

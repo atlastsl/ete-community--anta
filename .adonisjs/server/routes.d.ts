@@ -34,6 +34,7 @@ export type ScannedRoutes = {
     'admin.productions.links.store': { paramsTuple: [ParamValue]; params: {'productionId': ParamValue} }
     'admin.productions.links.destroy': { paramsTuple: [ParamValue,ParamValue]; params: {'productionId': ParamValue,'linkId': ParamValue} }
     'admin.authors.create': { paramsTuple?: []; params?: {} }
+    'admin.authors.search': { paramsTuple?: []; params?: {} }
     'admin.authors.edit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'admin.authors': { paramsTuple?: []; params?: {} }
     'admin.authors.store': { paramsTuple?: []; params?: {} }
@@ -65,6 +66,7 @@ export type ScannedRoutes = {
     'admin.productions.edit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'admin.productions': { paramsTuple?: []; params?: {} }
     'admin.authors.create': { paramsTuple?: []; params?: {} }
+    'admin.authors.search': { paramsTuple?: []; params?: {} }
     'admin.authors.edit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'admin.authors': { paramsTuple?: []; params?: {} }
     'admin.stats': { paramsTuple?: []; params?: {} }
@@ -87,6 +89,7 @@ export type ScannedRoutes = {
     'admin.productions.edit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'admin.productions': { paramsTuple?: []; params?: {} }
     'admin.authors.create': { paramsTuple?: []; params?: {} }
+    'admin.authors.search': { paramsTuple?: []; params?: {} }
     'admin.authors.edit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'admin.authors': { paramsTuple?: []; params?: {} }
     'admin.stats': { paramsTuple?: []; params?: {} }

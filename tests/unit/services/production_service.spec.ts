@@ -39,7 +39,7 @@ function makeComplete(license: 'member' | 'free_license' | 'external_link' = 'me
 
 test.group('ProductionService | getMissingForPublish', () => {
   test('production vide → tous les champs requis manquants + attachement', ({ assert }) => {
-    const missing = ProductionService.getMissingForPublish(makeProduction(), false, false)
+    const missing = ProductionService.getMissingForPublish(makeProduction(), false, false, 0)
     for (const key of [
       'title',
       'category',
@@ -58,12 +58,12 @@ test.group('ProductionService | getMissingForPublish', () => {
   })
 
   test('production complète + fichier → aucun manquant', ({ assert }) => {
-    const missing = ProductionService.getMissingForPublish(makeComplete(), true, false)
+    const missing = ProductionService.getMissingForPublish(makeComplete(), true, false, 1)
     assert.lengthOf(missing, 0)
   })
 
   test('production complète + lien → aucun manquant', ({ assert }) => {
-    const missing = ProductionService.getMissingForPublish(makeComplete(), false, true)
+    const missing = ProductionService.getMissingForPublish(makeComplete(), false, true, 1)
     assert.lengthOf(missing, 0)
   })
 
@@ -71,7 +71,8 @@ test.group('ProductionService | getMissingForPublish', () => {
     const missing = ProductionService.getMissingForPublish(
       makeComplete('external_link'),
       true,
-      false
+      false,
+      1
     )
     assert.deepEqual(missing, ['attachment'])
   })
@@ -80,9 +81,22 @@ test.group('ProductionService | getMissingForPublish', () => {
     const missing = ProductionService.getMissingForPublish(
       makeComplete('external_link'),
       false,
-      true
+      true,
+      1
     )
     assert.lengthOf(missing, 0)
+  })
+
+  test('auteurs comptés sur le pivot (Story 9.7) : noms jsonb sans lien → auteurs manquants', ({
+    assert,
+  }) => {
+    // makeComplete() a des noms dans la colonne dénormalisée, mais 0 ligne pivot.
+    assert.deepEqual(ProductionService.getMissingForPublish(makeComplete(), true, false, 0), [
+      'authors',
+    ])
+    const noNames = makeComplete()
+    noNames.authorNames = []
+    assert.lengthOf(ProductionService.getMissingForPublish(noNames, true, false, 2), 0)
   })
 })
 

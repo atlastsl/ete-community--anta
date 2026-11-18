@@ -1,6 +1,5 @@
 import { unlink } from 'node:fs/promises'
 import type { HttpContext } from '@adonisjs/core/http'
-import logger from '@adonisjs/core/services/logger'
 import { errors as lucidErrors } from '@adonisjs/lucid'
 import { errors as vineErrors } from '@vinejs/vine'
 import type { MultipartFile } from '@adonisjs/core/bodyparser'
@@ -8,12 +7,17 @@ import Author from '#models/author'
 import ActionType from '#enums/action_type'
 import ActivityLogService from '#services/activity_log_service'
 import AuthorService, { type AuthorListFilters, type AuthorPayload } from '#services/author_service'
-import FileStorageService from '#services/file_storage_service'
 import ImageService, { ImageValidationError, type ImageVariant } from '#services/image_service'
 import { normalizeKey } from '#helpers/normalize'
 import { authorValidator, assertAffiliationRule } from '#validators/admin/author_validator'
 
 const PER_PAGE = 20
+/** Results of the production form picker (Story 9.7). */
+const SEARCH_LIMIT = 10
+/** Shortest search term of the picker (shorter → empty result, no query). */
+const SEARCH_MIN_LENGTH = 2
+/** Most `exclude[]` ids kept (the selected authors of one production). */
+const MAX_EXCLUDE = 200
 /** Longest search term kept (longer input is truncated). */
 const MAX_Q_LENGTH = 100
 /** UUID guard: a non-UUID id passed to `where` would make Postgres throw (500). */
@@ -27,7 +31,8 @@ function strInput(value: unknown): string | null {
  * Authors referential in the admin panel (Stories 9.1 to 9.4, FR52, FR53, FR55) - admin and
  * super admin (`middleware.admin()` group, P2-15): list with search, filters and counters,
  * create, edit and delete (refused while the card is linked to a production), photo, and
- * consent confirmation / withdrawal (journaled `consent_confirm` / `consent_withdraw`).
+ * consent confirmation / withdrawal (journaled `consent_confirm` / `consent_withdraw`), and
+ * the JSON search of the production form picker (Story 9.7).
  */
 export default class AuthorsController {
   async index({ request, inertia }: HttpContext) {
@@ -91,6 +96,35 @@ export default class AuthorsController {
       counts,
       institutionOptions,
     })
+  }
+
+  /**
+   * Author picker of the production form (Story 9.7, P2.6): JSON `{ authors }`, at most 10
+   * cards matching `q` (≥ 2 characters; case and accent insensitive, list filters and order
+   * of Story 9.2), the ids of `exclude[]` (already selected) left out.
+   */
+  async search({ request, response }: HttpContext) {
+    const rawQ = typeof request.input('q') === 'string' ? request.input('q').trim() : ''
+    if (rawQ.length < SEARCH_MIN_LENGTH) return response.json({ authors: [] })
+    const q = rawQ.slice(0, MAX_Q_LENGTH).trim()
+
+    const rawExclude: unknown = request.input('exclude', [])
+    const exclude = (Array.isArray(rawExclude) ? rawExclude : [rawExclude])
+      .filter((id): id is string => typeof id === 'string' && UUID_RE.test(id))
+      .slice(0, MAX_EXCLUDE)
+
+    const query = Author.query().preload('affiliations')
+    AuthorService.applyListFilters(query, {
+      q,
+      institution: null,
+      consent: null,
+      incomplete: false,
+    })
+    if (exclude.length > 0) query.whereNotIn('authors.id', exclude)
+    AuthorService.applyListOrder(query, q)
+    const authors = await query.limit(SEARCH_LIMIT)
+
+    return response.json({ authors: await AuthorService.toPickerAuthors(authors) })
   }
 
   async create({ inertia }: HttpContext) {
@@ -338,14 +372,7 @@ export default class AuthorsController {
 
   /** Signed preview URL of a photo variant (never public); `null` if signing fails. */
   private async photoUrl(photoKey: string | null, variant: string): Promise<string | null> {
-    if (!photoKey) return null
-    const key = `${photoKey}/${variant}`
-    try {
-      return await FileStorageService.signedUrl(key)
-    } catch (error) {
-      logger.error({ err: error, key }, 'Failed to sign author photo URL')
-      return null
-    }
+    return AuthorService.signedPhotoUrl(photoKey, variant)
   }
 
   /** The list URL with its query string when the referer is the list; never another host. */

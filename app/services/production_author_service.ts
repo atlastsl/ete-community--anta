@@ -1,4 +1,5 @@
 import db from '@adonisjs/lucid/services/db'
+import { errors as vineErrors } from '@vinejs/vine'
 import type { QueryClientContract, TransactionClientContract } from '@adonisjs/lucid/types/database'
 import AuthorConversionService from '#services/author_conversion_service'
 
@@ -12,12 +13,28 @@ export type AttachmentState = {
   fullyAttached: boolean
 }
 
+/** Outcome of `sync`. */
+export type SyncResult = {
+  /** Unconverted production (jsonb names, no link) saved without authors: nothing written. */
+  protected: boolean
+  /** Pivot rows rewritten (the selection or its order changed). */
+  changed: boolean
+}
+
+/** Error of an unknown author id, reported on the `authorIds` field of the production form. */
+export function unknownAuthorError() {
+  return new vineErrors.E_VALIDATION_ERROR([
+    { field: 'authorIds', message: 'productions.form.errors.author_unknown', rule: 'exists' },
+  ])
+}
+
 /**
  * Ordered authors of a production (pivot `production_authors`, P2.1) and the derived
- * `productions.authors` jsonb (`Production.authorNames`, P2-02).
+ * `productions.authors` jsonb (`Production.authorNames`, P2-02): the only writer of that
+ * column.
  *
- * Story 9.6: `refreshDenormalizedNames` (conversion and author renaming). `sync`
- * (production form) belongs to Story 9.7.
+ * Story 9.6: `refreshDenormalizedNames` (conversion and author renaming). Story 9.7: `sync`
+ * (production form) and `count` (FR21).
  */
 export default class ProductionAuthorService {
   /**
@@ -123,5 +140,82 @@ export default class ProductionAuthorService {
     const ids = (result.rows as { id: string }[]).map((row) => row.id)
     const states = await this.attachmentStates(ids, trx)
     return states.filter((state) => state.fullyAttached).map((state) => state.productionId)
+  }
+
+  /**
+   * Replaces the ordered authors of a production (production form, Story 9.7) inside the
+   * caller's transaction, then refreshes `productions.authors`.
+   *
+   * - The production row is locked first (`FOR UPDATE`) and every decision is taken on the
+   *   locked row and the current links.
+   * - Unconverted production (non-empty jsonb, no link) saved with an empty selection:
+   *   nothing is written, so the legacy names are never erased by mistake.
+   * - The cards are read `FOR SHARE` (a concurrent delete waits); an unknown id raises a
+   *   validation error on `authorIds` (the caller's transaction is rolled back).
+   * - Same ids in the same order: the pivot is left as is; otherwise `DELETE` + `INSERT`
+   *   with positions 1..n (never an `UPDATE` of positions, P2.1).
+   * - The jsonb is always refreshed (`IS DISTINCT FROM`: no-op when already in sync).
+   */
+  static async sync(
+    productionId: string,
+    authorIds: string[],
+    trx: TransactionClientContract
+  ): Promise<SyncResult> {
+    const ids = [...new Set(authorIds)]
+    const locked = await trx.rawQuery(
+      `SELECT id, authors FROM productions WHERE id = ? FOR UPDATE`,
+      [productionId]
+    )
+    const production = locked.rows[0] as { id: string; authors: unknown } | undefined
+    if (!production) throw new Error(`Production ${productionId} not found`)
+
+    const links = await trx.rawQuery(
+      `SELECT author_id FROM production_authors WHERE production_id = ? ORDER BY position`,
+      [productionId]
+    )
+    const current = (links.rows as { author_id: string }[]).map((row) => row.author_id)
+
+    if (ids.length === 0 && current.length === 0) {
+      const { names, nonText } = AuthorConversionService.inspectAuthors(production.authors)
+      if (names.length > 0 || nonText) return { protected: true, changed: false }
+    }
+
+    if (ids.length > 0) {
+      const found = await trx.rawQuery(
+        `SELECT id FROM authors
+          WHERE id IN (SELECT (jsonb_array_elements_text(?::jsonb))::uuid)
+            FOR SHARE`,
+        [JSON.stringify(ids)]
+      )
+      if (found.rows.length !== ids.length) throw unknownAuthorError()
+    }
+
+    const changed = ids.length !== current.length || ids.some((id, index) => id !== current[index])
+    if (changed) {
+      await trx.rawQuery(`DELETE FROM production_authors WHERE production_id = ?`, [productionId])
+      if (ids.length > 0) {
+        await trx.rawQuery(
+          `INSERT INTO production_authors (production_id, author_id, position)
+           SELECT ?, (e.value)::uuid, e.ordinality
+             FROM jsonb_array_elements_text(?::jsonb) WITH ORDINALITY AS e(value, ordinality)`,
+          [productionId, JSON.stringify(ids)]
+        )
+      }
+    }
+    await this.refreshDenormalizedNames([productionId], trx)
+    return { protected: false, changed }
+  }
+
+  /** Pivot rows of a production (FR21: at least one author to publish). */
+  static async count(
+    productionId: string,
+    client: QueryClientContract = db.connection()
+  ): Promise<number> {
+    const row = await client
+      .from('production_authors')
+      .where('production_id', productionId)
+      .count('* as total')
+      .first()
+    return Number(row?.total ?? 0)
   }
 }

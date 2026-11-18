@@ -52,6 +52,26 @@ export type AuthorListFilters = {
   incomplete: boolean
 }
 
+/**
+ * An author as offered by the production form picker (Story 9.7): search results of
+ * `GET /admin/authors/search` and the selected authors reloaded from the pivot.
+ */
+export type PickerAuthor = {
+  id: string
+  /** "first names last names" with the typed case (displayed "Prénom NOM" by the client, D13). */
+  name: string
+  firstNames: string
+  lastNames: string
+  primaryInstitution: string | null
+  primaryDepartment: string | null
+  /** No affiliation ("À compléter", derived, P2-03). */
+  isIncomplete: boolean
+  /** Consent confirmed (D19). */
+  isPublic: boolean
+  /** Signed URL of the `w128.webp` variant, `null` → initials. */
+  photoUrl: string | null
+}
+
 export type AuthorDeleteResult = { deleted: true } | { deleted: false; productionsCount: number }
 
 /** Trigram similarity threshold, explicit rather than the `%` operator (GUC-dependent). */
@@ -493,5 +513,38 @@ export default class AuthorService {
       value: r.value,
       label: r.label,
     }))
+  }
+
+  /** Signed preview URL of a photo variant (never public); `null` without photo or on failure. */
+  static async signedPhotoUrl(photoKey: string | null, variant: string): Promise<string | null> {
+    if (!photoKey) return null
+    const key = `${photoKey}/${variant}`
+    try {
+      return await FileStorageService.signedUrl(key)
+    } catch (error) {
+      logger.error({ err: error, key }, 'Failed to sign author photo URL')
+      return null
+    }
+  }
+
+  /** Picker shape of cards whose `affiliations` are preloaded (position order). */
+  static async toPickerAuthors(authors: Author[]): Promise<PickerAuthor[]> {
+    const photoUrls = await Promise.all(
+      authors.map((author) => this.signedPhotoUrl(author.photoKey, 'w128.webp'))
+    )
+    return authors.map((author, index) => {
+      const primary = author.affiliations[0]
+      return {
+        id: author.id,
+        name: this.displayName(author).trim(),
+        firstNames: author.firstNames,
+        lastNames: author.lastNames,
+        primaryInstitution: primary?.institution ?? null,
+        primaryDepartment: primary?.department ?? null,
+        isIncomplete: author.affiliations.length === 0,
+        isPublic: author.consentConfirmedAt !== null,
+        photoUrl: photoUrls[index],
+      }
+    })
   }
 }

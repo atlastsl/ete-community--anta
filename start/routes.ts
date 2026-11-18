@@ -106,6 +106,9 @@ router
         router
           .get('authors/create', [controllers.admin.Authors, 'create'])
           .as('admin.authors.create')
+        router
+          .get('authors/search', [controllers.admin.Authors, 'search'])
+          .as('admin.authors.search')
         router.get('authors/:id/edit', [controllers.admin.Authors, 'edit']).as('admin.authors.edit')
         router.get('authors', [controllers.admin.Authors, 'index']).as('admin.authors')
         router.post('authors', [controllers.admin.Authors, 'store']).as('admin.authors.store')

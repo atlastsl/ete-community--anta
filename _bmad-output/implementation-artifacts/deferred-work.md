@@ -82,7 +82,7 @@
 ## Deferred from: code review of 9-2-liste-des-auteurs-filtres-et-suppression (2026-11-18)
 
 - **Dialogs de confirmation** : `role="alertdialog"` posé sur un `Dialog` Radix (fermeture au clic extérieur et Échap, focus initial sur le premier bouton). Même patron dans Users/Productions. Action : ajouter la primitive shadcn `alert-dialog` et migrer les dialogs de suppression.
-- **Performance de la recherche d'auteurs** : `search_name LIKE '%t%' OR similarity(...) > 0.3` n'utilise pas l'index GIN trigram (seuls les opérateurs `%`/`LIKE` seuls le peuvent) ; `quickFilterCounts` et `institutionOptions` balaient les tables à chaque page. Action pour 9.7 (autocomplétion) : `LIKE` seul ou opérateur `%` avec `pg_trgm.similarity_threshold`, cache léger des compteurs.
+- **Performance de la recherche d'auteurs** : `search_name LIKE '%t%' OR similarity(...) > 0.3` n'utilise pas l'index GIN trigram (seuls les opérateurs `%`/`LIKE` seuls le peuvent) ; `quickFilterCounts` et `institutionOptions` balaient les tables à chaque page. Action pour 9.7 (autocomplétion) : `LIKE` seul ou opérateur `%` avec `pg_trgm.similarity_threshold`, cache léger des compteurs. *9.7 (2026-11-18)* : `GET /admin/authors/search` réutilise la même logique avec `limit(10)` (quelques centaines de fiches) ; report maintenu jusqu'à un volume qui le justifie (D-9.7-b).
 
 ## Deferred from: code review of 9-3-photo-d-un-auteur (2026-11-18)
 

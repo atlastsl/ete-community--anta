@@ -8,6 +8,9 @@ import LicenseStatus from '#enums/license_status'
 import ActionType from '#enums/action_type'
 import AdminActivityLog from '#models/admin_activity_log'
 import ActivityLogService from '#services/activity_log_service'
+import db from '@adonisjs/lucid/services/db'
+import AuthorService from '#services/author_service'
+import ProductionAuthorService from '#services/production_author_service'
 import ProductionService from '#services/production_service'
 import StatsService from '#services/stats_service'
 import {
@@ -23,6 +26,13 @@ function parseWorkDate(value: string | undefined): DateTime | null {
   if (!value) return null
   const dt = DateTime.fromISO(value)
   return dt.isValid ? dt : null
+}
+
+/** Noms textuels non vides dans la colonne dénormalisée (production non convertie). */
+function hasLegacyNames(value: unknown): boolean {
+  return (
+    Array.isArray(value) && value.some((name) => typeof name === 'string' && name.trim() !== '')
+  )
 }
 
 /** Query param texte → string non vide ou null. */
@@ -104,6 +114,7 @@ export default class ProductionsController {
       .where('id', params.id)
       .preload('files')
       .preload('links')
+      .preload('authors', (query) => query.preload('affiliations'))
       .firstOrFail()
 
     // Dernier admin ayant publié + date/heure — dérivé des logs d'activité (pas de colonne dédiée).
@@ -126,15 +137,26 @@ export default class ProductionsController {
       lastModifiedAt: production.updatedAt?.toISO() ?? null,
     }
 
+    // Auteurs relus depuis le pivot, dans l'ordre (Story 9.7). Production non convertie
+    // (noms dans la colonne, aucun lien) : noms actuels pour l'avertissement « à rattacher ».
+    const authors = await AuthorService.toPickerAuthors(production.authors)
+    const legacyAuthorNames =
+      authors.length === 0
+        ? (Array.isArray(production.authorNames) ? production.authorNames : []).filter(
+            (name): name is string => typeof name === 'string' && name.trim() !== ''
+          )
+        : []
+
     return inertia.render('admin/Productions/Edit', {
       publishedBy,
       stats,
+      legacyAuthorNames,
       production: {
         id: production.id,
         status: production.status,
         title: production.title,
         summary: production.summary ?? '',
-        authors: production.authorNames ?? [],
+        authors,
         tags: production.tags ?? [],
         category: production.category ?? '',
         domain: production.domain ?? '',
@@ -165,43 +187,67 @@ export default class ProductionsController {
   }
 
   async update({ params, request, auth, response, session }: HttpContext) {
-    const production = await Production.findOrFail(params.id)
+    const existing = await Production.findOrFail(params.id)
     const data = await request.validateUsing(draftProductionValidator)
     assertProductionTaxonomy(data)
 
-    // `status` n'est JAMAIS modifié ici (FR22 — pas de republication automatique).
-    production.title = data.title
-    production.summary = data.summary ?? null
-    production.authorNames = data.authors ?? []
-    production.tags = data.tags ?? []
-    production.category = data.category ?? null
-    production.domain = data.domain ?? null
-    production.subdomain = data.subdomain ?? []
-    production.language = data.language ?? null
-    production.publicationCountry = data.publicationCountry ?? null
-    production.journal = data.journal ?? null
-    production.publisher = data.publisher ?? null
-    production.isbnDoiIssn = data.isbnDoiIssn ?? null
-    production.institution = data.institution ?? null
-    production.licenseStatus = data.licenseStatus ?? production.licenseStatus
-    production.workPublishedAt = parseWorkDate(data.workPublishedAt)
+    // Une seule transaction : métadonnées, auteurs (pivot + colonne dénormalisée) et
+    // dépublication automatique ; un auteur inconnu annule tout (erreur de validation).
+    const { production, autoUnpublished } = await db.transaction(async (trx) => {
+      const locked = await Production.query({ client: trx })
+        .where('id', existing.id)
+        .forUpdate()
+        .firstOrFail()
 
-    // Intégrité du catalogue public : si une production PUBLIÉE devient incomplète
-    // suite à l'édition, on la dépublie automatiquement (sinon le site public — Epic 5 —
-    // exposerait un item publié cassé). `status` n'est sinon jamais modifié ici (FR22).
-    let autoUnpublished = false
-    if (production.status === ProductionStatus.PUBLISHED) {
-      await production.loadCount('files')
-      await production.loadCount('links')
-      const hasFile = Number(production.$extras.files_count) > 0
-      const hasLink = Number(production.$extras.links_count) > 0
-      if (ProductionService.getMissingForPublish(production, hasFile, hasLink).length > 0) {
-        production.status = ProductionStatus.DRAFT
-        autoUnpublished = true
+      // `status` n'est JAMAIS modifié ici (FR22 — pas de republication automatique).
+      // `authorNames` n'est jamais écrit depuis la requête (Story 9.7) : `data.authors` est
+      // ignoré, seul ProductionAuthorService écrit la colonne dénormalisée.
+      locked.title = data.title
+      locked.summary = data.summary ?? null
+      locked.tags = data.tags ?? []
+      locked.category = data.category ?? null
+      locked.domain = data.domain ?? null
+      locked.subdomain = data.subdomain ?? []
+      locked.language = data.language ?? null
+      locked.publicationCountry = data.publicationCountry ?? null
+      locked.journal = data.journal ?? null
+      locked.publisher = data.publisher ?? null
+      locked.isbnDoiIssn = data.isbnDoiIssn ?? null
+      locked.institution = data.institution ?? null
+      locked.licenseStatus = data.licenseStatus ?? locked.licenseStatus
+      locked.workPublishedAt = parseWorkDate(data.workPublishedAt)
+
+      // `authorIds` absent (ancien client, PUT partiel) → auteurs inchangés.
+      const sync =
+        data.authorIds === undefined
+          ? null
+          : await ProductionAuthorService.sync(locked.id, data.authorIds, trx)
+
+      // Intégrité du catalogue public : si une production PUBLIÉE devient incomplète
+      // suite à l'édition, on la dépublie automatiquement (sinon le site public — Epic 5 —
+      // exposerait un item publié cassé). `status` n'est sinon jamais modifié ici (FR22).
+      let unpublished = false
+      if (locked.status === ProductionStatus.PUBLISHED) {
+        await locked.loadCount('files')
+        await locked.loadCount('links')
+        const hasFile = Number(locked.$extras.files_count) > 0
+        const hasLink = Number(locked.$extras.links_count) > 0
+        const authorsCount = await ProductionAuthorService.count(locked.id, trx)
+        let missing = ProductionService.getMissingForPublish(locked, hasFile, hasLink, authorsCount)
+        // Production non convertie (noms conservés, aucun lien) : pas de dépublication pour
+        // le seul critère « auteurs » — la conversion (9.6) la rattachera.
+        if (authorsCount === 0 && (sync?.protected ?? hasLegacyNames(locked.authorNames))) {
+          missing = missing.filter((field) => field !== 'authors')
+        }
+        if (missing.length > 0) {
+          locked.status = ProductionStatus.DRAFT
+          unpublished = true
+        }
       }
-    }
 
-    await production.save()
+      await locked.save()
+      return { production: locked, autoUnpublished: unpublished }
+    })
 
     await ActivityLogService.log({
       adminUserId: auth.user!.id,
@@ -262,24 +308,34 @@ export default class ProductionsController {
     const data = await request.validateUsing(draftProductionValidator)
     assertProductionTaxonomy(data)
 
-    const production = await Production.create({
-      title: data.title,
-      summary: data.summary ?? null,
-      authorNames: data.authors ?? [],
-      tags: data.tags ?? [],
-      category: data.category ?? null,
-      domain: data.domain ?? null,
-      subdomain: data.subdomain ?? [],
-      language: data.language ?? null,
-      publicationCountry: data.publicationCountry ?? null,
-      journal: data.journal ?? null,
-      publisher: data.publisher ?? null,
-      isbnDoiIssn: data.isbnDoiIssn ?? null,
-      institution: data.institution ?? null,
-      licenseStatus: data.licenseStatus ?? LicenseStatus.MEMBER,
-      status: ProductionStatus.DRAFT,
-      workPublishedAt: parseWorkDate(data.workPublishedAt),
-      createdById: auth.user!.id,
+    // Création et auteurs dans une transaction : un auteur inconnu annule la création.
+    // `data.authors` (ancienne saisie libre) est ignoré : la colonne dénormalisée est écrite
+    // par ProductionAuthorService.sync depuis le pivot (Story 9.7).
+    const production = await db.transaction(async (trx) => {
+      const created = await Production.create(
+        {
+          title: data.title,
+          summary: data.summary ?? null,
+          authorNames: [],
+          tags: data.tags ?? [],
+          category: data.category ?? null,
+          domain: data.domain ?? null,
+          subdomain: data.subdomain ?? [],
+          language: data.language ?? null,
+          publicationCountry: data.publicationCountry ?? null,
+          journal: data.journal ?? null,
+          publisher: data.publisher ?? null,
+          isbnDoiIssn: data.isbnDoiIssn ?? null,
+          institution: data.institution ?? null,
+          licenseStatus: data.licenseStatus ?? LicenseStatus.MEMBER,
+          status: ProductionStatus.DRAFT,
+          workPublishedAt: parseWorkDate(data.workPublishedAt),
+          createdById: auth.user!.id,
+        },
+        { client: trx }
+      )
+      await ProductionAuthorService.sync(created.id, data.authorIds ?? [], trx)
+      return created
     })
 
     await ActivityLogService.log({
@@ -304,7 +360,13 @@ export default class ProductionsController {
     // Revalidation serveur (anti-contournement du bouton désactivé) — FR21.
     // Le message d'erreur est flashé sur `error` → toast rouge persistant (AdminLayout).
     // Le détail des champs manquants reste visible via le CompletionIndicator (orange).
-    const missing = ProductionService.getMissingForPublish(production, hasFile, hasLink)
+    const authorsCount = await ProductionAuthorService.count(production.id)
+    const missing = ProductionService.getMissingForPublish(
+      production,
+      hasFile,
+      hasLink,
+      authorsCount
+    )
     if (missing.length > 0) {
       session.flash('error', 'productions.publish.incomplete')
       return response.redirect().back()

@@ -167,3 +167,128 @@ test.group('ProductionAuthorService | fullyAttachedProductionIds (Story 9.6)', (
     assert.isBelow(lock, read)
   })
 })
+
+async function pivotOf(production: Production): Promise<[string, number][]> {
+  const rows = await db
+    .from('production_authors')
+    .where('production_id', production.id)
+    .orderBy('position', 'asc')
+    .select('author_id', 'position')
+  return rows.map((row: { author_id: string; position: number }) => [row.author_id, row.position])
+}
+
+test.group('ProductionAuthorService | sync (Story 9.7)', (group) => {
+  group.each.setup(async () => {
+    await db.beginGlobalTransaction()
+    return () => db.rollbackGlobalTransaction()
+  })
+
+  test('replaces the pivot (positions 1..n) and refreshes the jsonb', async ({ assert }) => {
+    const a = await Author.create({ firstNames: 'Aminata', lastNames: 'FICTIVA' })
+    const b = await Author.create({ firstNames: 'Jean-Paul', lastNames: 'Exemplaire' })
+    const c = await Author.create({ firstNames: 'Zoé', lastNames: 'Imaginaire' })
+    const production = await createProduction([])
+    await link(production, [a, b])
+
+    const result = await db.transaction((trx) =>
+      ProductionAuthorService.sync(production.id, [c.id, a.id], trx)
+    )
+
+    assert.deepEqual(result, { protected: false, changed: true })
+    assert.deepEqual(await pivotOf(production), [
+      [c.id, 1],
+      [a.id, 2],
+    ])
+    assert.deepEqual(await namesOf(production), ['Zoé Imaginaire', 'Aminata FICTIVA'])
+    assert.equal(await ProductionAuthorService.count(production.id), 2)
+  })
+
+  test('same order → no pivot rewrite, the jsonb is still resynchronized', async ({ assert }) => {
+    const a = await Author.create({ firstNames: 'Aminata', lastNames: 'FICTIVA' })
+    const production = await createProduction(['Ancien Nom'])
+    await link(production, [a])
+
+    const result = await db.transaction((trx) =>
+      ProductionAuthorService.sync(production.id, [a.id], trx)
+    )
+
+    assert.deepEqual(result, { protected: false, changed: false })
+    assert.deepEqual(await namesOf(production), ['Aminata FICTIVA'])
+  })
+
+  test('unconverted production (names, no link) + empty selection → nothing written', async ({
+    assert,
+  }) => {
+    const production = await createProduction(['Nom Libre', 'Autre Nom'])
+
+    const result = await db.transaction((trx) =>
+      ProductionAuthorService.sync(production.id, [], trx)
+    )
+
+    assert.deepEqual(result, { protected: true, changed: false })
+    assert.deepEqual(await namesOf(production), ['Nom Libre', 'Autre Nom'])
+    assert.equal(await ProductionAuthorService.count(production.id), 0)
+  })
+
+  test('converted production emptied → pivot deleted, jsonb []', async ({ assert }) => {
+    const a = await Author.create({ firstNames: 'Aminata', lastNames: 'FICTIVA' })
+    const production = await createProduction(['Aminata FICTIVA'])
+    await link(production, [a])
+
+    const result = await db.transaction((trx) =>
+      ProductionAuthorService.sync(production.id, [], trx)
+    )
+
+    assert.deepEqual(result, { protected: false, changed: true })
+    assert.deepEqual(await pivotOf(production), [])
+    assert.deepEqual(await namesOf(production), [])
+  })
+
+  test('unknown author id → validation error on authorIds, nothing written', async ({ assert }) => {
+    const a = await Author.create({ firstNames: 'Aminata', lastNames: 'FICTIVA' })
+    const production = await createProduction(['Aminata FICTIVA'])
+    await link(production, [a])
+
+    let error: any = null
+    try {
+      await db.transaction((trx) =>
+        ProductionAuthorService.sync(
+          production.id,
+          [a.id, '00000000-0000-4000-8000-000000000000'],
+          trx
+        )
+      )
+    } catch (e) {
+      error = e
+    }
+
+    assert.equal(error?.code, 'E_VALIDATION_ERROR')
+    assert.equal(error.messages[0].field, 'authorIds')
+    assert.deepEqual(await pivotOf(production), [[a.id, 1]])
+  })
+
+  test('production row locked (FOR UPDATE) before the decision', async ({ assert }) => {
+    const a = await Author.create({ firstNames: 'Aminata', lastNames: 'FICTIVA' })
+    const production = await createProduction([])
+    const sql: string[] = []
+    await db.transaction(async (trx) => {
+      const spy = new Proxy(trx, {
+        get(target, property) {
+          if (property === 'rawQuery') {
+            return (query: string, bindings?: any) => {
+              sql.push(query)
+              return target.rawQuery(query, bindings)
+            }
+          }
+          const value = Reflect.get(target, property, target)
+          return typeof value === 'function' ? value.bind(target) : value
+        },
+      }) as TransactionClientContract
+      await ProductionAuthorService.sync(production.id, [a.id], spy)
+    })
+    const lock = sql.findIndex((query) => /FROM productions[\s\S]*FOR UPDATE/.test(query))
+    const write = sql.findIndex((query) => /INSERT INTO production_authors/.test(query))
+    assert.isAtLeast(lock, 0)
+    assert.isAbove(write, lock)
+  })
+})

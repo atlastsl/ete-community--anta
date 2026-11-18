@@ -18,3 +18,12 @@ export function isAttachmentSatisfied(
   if (licenseStatus === 'external_link') return hasLink
   return hasFile || hasLink
 }
+
+/**
+ * Au moins un auteur sélectionné dans le référentiel pour publier (FR21, Story 9.7).
+ * Alignée sur `ProductionService.getMissingForPublish`, qui compte les lignes du pivot
+ * `production_authors` (les noms de la colonne dénormalisée ne suffisent pas).
+ */
+export function hasRequiredAuthors(authors: readonly unknown[]): boolean {
+  return authors.length > 0
+}

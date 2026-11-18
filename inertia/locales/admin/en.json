@@ -97,7 +97,9 @@
         "required_to_publish": "Required to publish.",
         "category_invalid": "Invalid category.",
         "domain_invalid": "Invalid domain.",
-        "subdomain_invalid": "Invalid subdomain for this domain."
+        "subdomain_invalid": "Invalid subdomain for this domain.",
+        "author_unknown": "A selected author no longer exists. Remove it and try again.",
+        "authors_invalid": "Invalid author selection."
       },
       "select_placeholder": "Select…",
       "files_placeholder": "Adding files and links will be available after saving the draft.",
@@ -108,7 +110,11 @@
       "country_group_other": "Other countries",
       "save_draft": "Save draft",
       "save": "Save",
-      "publish": "Publish"
+      "publish": "Publish",
+      "completion": {
+        "authors": "At least one author"
+      },
+      "authors_hint": "Select the authors in publication order. At least one author is required to publish."
     },
     "completion": {
       "summary": "{{filled}}/{{total}} fields — {{missing}} required to publish",
@@ -309,6 +315,22 @@
         "already_public": "The profile was already public.",
         "already_private": "The profile was already not public."
       }
+    },
+    "picker": {
+      "label": "Add an author",
+      "placeholder": "Last or first name…",
+      "loading": "Searching…",
+      "no_results": "No author found.",
+      "error": "Search unavailable, please try again.",
+      "selected_label": "Selected authors",
+      "empty": "No author selected.",
+      "move_up": "Move {{name}} up",
+      "move_down": "Move {{name}} down",
+      "remove": "Remove {{name}}",
+      "moved": "{{name}} moved to position {{n}}.",
+      "removed": "{{name}} removed.",
+      "legacy_title": "Authors to link",
+      "legacy_description": "This production is not linked to the referential yet. Current names: {{names}}. Select the matching records; as long as no author is selected, these names are kept."
     }
   },
   "users": {

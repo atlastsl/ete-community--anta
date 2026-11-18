@@ -367,6 +367,18 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/authors_controller').default['create']>>>
     }
   }
+  'admin.authors.search': {
+    methods: ["GET","HEAD"]
+    pattern: '/admin/authors/search'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/authors_controller').default['search']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/authors_controller').default['search']>>>
+    }
+  }
   'admin.authors.edit': {
     methods: ["GET","HEAD"]
     pattern: '/admin/authors/:id/edit'

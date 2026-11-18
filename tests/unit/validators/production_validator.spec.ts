@@ -37,6 +37,27 @@ test.group('ProductionValidator | draftProductionValidator', () => {
     assert.deepEqual(out.tags, ['m'])
   })
 
+  test('authorIds (Story 9.7) : uuid distincts acceptés, ordre conservé', async ({ assert }) => {
+    const a = '11111111-1111-4111-8111-111111111111'
+    const b = '22222222-2222-4222-8222-222222222222'
+    const out = await draftProductionValidator.validate({ title: 'X', authorIds: [b, a] })
+    assert.deepEqual(out.authorIds, [b, a])
+    const empty = await draftProductionValidator.validate({ title: 'X', authorIds: [] })
+    assert.deepEqual(empty.authorIds, [])
+  })
+
+  test('authorIds non uuid ou en double → rejette', async ({ assert }) => {
+    const a = '11111111-1111-4111-8111-111111111111'
+    await expectRejected(
+      () => draftProductionValidator.validate({ title: 'X', authorIds: ['abc'] }),
+      assert
+    )
+    await expectRejected(
+      () => draftProductionValidator.validate({ title: 'X', authorIds: [a, a] }),
+      assert
+    )
+  })
+
   test('licenseStatus valide accepté', async ({ assert }) => {
     const out = await draftProductionValidator.validate({
       title: 'X',
