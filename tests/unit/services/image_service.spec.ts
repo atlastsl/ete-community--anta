@@ -110,6 +110,24 @@ test.group('ImageService | photo d’auteur', () => {
     await expectCode(svg, 'photo_type', assert)
   })
 
+  test('TIFF (signature refusée avant tout décodage) → photo_type', async ({ assert }) => {
+    await expectCode(await blank(20, 20).tiff().toBuffer(), 'photo_type', assert)
+  })
+
+  test('PNG transparent → og.jpg sur fond blanc (pas le noir par défaut)', async ({ assert }) => {
+    const png = await sharp({
+      create: { width: 40, height: 40, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } },
+    })
+      .png()
+      .toBuffer()
+    const variants = await ImageService.authorPhotoVariants(png)
+    const og = variants.find((v) => v.name === 'og.jpg')!
+    const { data } = await sharp(og.body).raw().toBuffer({ resolveWithObject: true })
+    assert.isAbove(data[0], 245)
+    assert.isAbove(data[1], 245)
+    assert.isAbove(data[2], 245)
+  })
+
   test('tampon > 5 Mo → photo_size', async ({ assert }) => {
     await expectCode(Buffer.alloc(IMAGE_MAX_BYTES + 1), 'photo_size', assert)
   })

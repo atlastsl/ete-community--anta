@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { cn } from '~/lib/utils'
 import { authorInitials } from '~/lib/author_form'
 
@@ -27,12 +27,9 @@ type Props = {
  * assistive technologies since the name is always displayed next to it.
  */
 export default function Avatar({ src, firstNames, lastNames, size, alt = '', className }: Props) {
-  const [failed, setFailed] = useState(false)
-
-  // A new source gets a new chance to load.
-  useEffect(() => {
-    setFailed(false)
-  }, [src])
+  // The source that failed, not a flag: a new source is tried at once (no initials flash).
+  const [failedSrc, setFailedSrc] = useState<string | null>(null)
+  const failed = !!src && failedSrc === src
 
   const { box, text } = SIZES[size]
 
@@ -41,7 +38,7 @@ export default function Avatar({ src, firstNames, lastNames, size, alt = '', cla
       <img
         src={src}
         alt={alt}
-        onError={() => setFailed(true)}
+        onError={() => setFailedSrc(src)}
         className={cn(
           'shrink-0 rounded-full border border-stone-200 object-cover',
           box,

@@ -267,6 +267,7 @@ test.group('Admin authors | modification', (group) => {
       isMigrated: false,
       productionsCount: 0,
       photoUrl: null,
+      hasPhoto: false,
     })
   })
 

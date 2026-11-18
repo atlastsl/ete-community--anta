@@ -19,12 +19,13 @@ type Props = {
     productionsCount: number
     /** Signed URL of the saved photo (`w384`), never public (Story 9.3). */
     photoUrl: string | null
+    hasPhoto: boolean
   }
 }
 
 export default function AdminAuthorsEdit({ author }: Props) {
   const { t } = useTranslation()
-  const { id, isMigrated, productionsCount, photoUrl, ...formData } = author
+  const { id, isMigrated, productionsCount, photoUrl, hasPhoto, ...formData } = author
   const [deleteTarget, setDeleteTarget] = useState<DeleteAuthorTarget | null>(null)
   const form = useForm<AuthorFormData>({ ...formData, photo: null, removePhoto: false })
   const { data, setData, put, processing, errors, progress } = form
@@ -57,6 +58,7 @@ export default function AdminAuthorsEdit({ author }: Props) {
           errors={errors as Record<string, string | undefined>}
           requireAffiliation={requireAffiliation}
           photoUrl={photoUrl}
+          hasPhoto={hasPhoto}
           uploadPercent={processing && data.photo ? (progress?.percentage ?? null) : null}
         />
 

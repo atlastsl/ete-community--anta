@@ -84,3 +84,11 @@
 - **Dialogs de confirmation** : `role="alertdialog"` posé sur un `Dialog` Radix (fermeture au clic extérieur et Échap, focus initial sur le premier bouton). Même patron dans Users/Productions. Action : ajouter la primitive shadcn `alert-dialog` et migrer les dialogs de suppression.
 - **Performance de la recherche d'auteurs** : `search_name LIKE '%t%' OR similarity(...) > 0.3` n'utilise pas l'index GIN trigram (seuls les opérateurs `%`/`LIKE` seuls le peuvent) ; `quickFilterCounts` et `institutionOptions` balaient les tables à chaque page. Action pour 9.7 (autocomplétion) : `LIKE` seul ou opérateur `%` avec `pg_trgm.similarity_threshold`, cache léger des compteurs.
 
+## Deferred from: code review of 9-3-photo-d-un-auteur (2026-11-18)
+
+- **Objets R2 orphelins** : variantes envoyées avant le commit ; un arrêt du processus entre les deux, ou l'échec de la suppression best-effort de l'ancien préfixe, laisse des objets sous `authors/<id>/<token>/` sans référence. Action : commande planifiée qui liste `authors/` et supprime les préfixes absents de `authors.photo_key` et âgés de plus d'une heure.
+- **Limites d'envoi** : limite multipart globale 110 Mo (pour les PDF) ; une photo au-delà donne un 413 (modal Inertia) au lieu de `photo_size`, et le fichier est écrit sur disque avant le refus. Action : limite multipart par route pour `/admin/authors`.
+- **Envoi R2 sans délai d'expiration** : un `putObject` bloqué fige la requête. Action : `AbortSignal.timeout` ou course avec délai.
+- **URLs signées des avatars** : nouvelles à chaque rendu, donc jamais en cache navigateur ; pas de `loading="lazy"` dans la liste. Action : durée de signature arrondie ou diffusion publique (Epic 10, `/media`).
+- **Constantes dupliquées** : 5 Mo et 40 Mpx répétés dans `image_service`, le validateur, `author_form.ts` et les libellés FR/EN.
+

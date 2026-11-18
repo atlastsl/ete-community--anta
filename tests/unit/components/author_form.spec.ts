@@ -33,6 +33,10 @@ test.group('AuthorForm | champs et affiliations', () => {
     assert,
   }) => {
     assert.include(form, 'aria-live="polite"')
+    assert.include(form, 'Math.floor(uploadPercent / 25) * 25', 'progression annoncée par quarts')
+    assert.include(form, 'hasSavedPhoto={hasPhoto}', '« Retirer la photo » d’après photo_key')
+    assert.include(form, 'photoInput.current.focus()', 'focus gardé après Annuler')
+    assert.include(form, "setData('removePhoto', removeBeforeChoice.current)")
     assert.include(form, "t('authors.form.moved', { n: target + 1 })")
     assert.include(form, 'target?.focus()')
     assert.notInclude(form, 'draggable')
@@ -150,10 +154,23 @@ test.group('AuthorForm | photo (Story 9.3)', () => {
   test('Edit : photoUrl hors état du formulaire, reset après succès, pas de _method', ({
     assert,
   }) => {
-    assert.include(editPage, 'const { id, isMigrated, productionsCount, photoUrl, ...formData }')
+    assert.include(
+      editPage,
+      'const { id, isMigrated, productionsCount, photoUrl, hasPhoto, ...formData }'
+    )
     assert.include(editPage, "form.reset('photo', 'removePhoto')")
     assert.include(editPage, 'photoUrl={photoUrl}')
     assert.notInclude(editPage, '_method')
     assert.include(createPage, 'uploadPercent=')
+  })
+})
+
+test.group('Authors controller | upload hygiene (source)', () => {
+  test('fichier temporaire supprimé après chaque requête ; JSON sans affiliations refusé', ({
+    assert,
+  }) => {
+    const controller = read('app/controllers/admin/authors_controller.ts')
+    assert.include(controller, 'await this.discardUpload(ctx.request)')
+    assert.include(controller, "if (request.is(['multipart'])) return []")
   })
 })

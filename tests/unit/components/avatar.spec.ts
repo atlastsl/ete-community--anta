@@ -26,9 +26,9 @@ test.group('Avatar', () => {
   test('repli sur les initiales si l’image ne charge pas, réinitialisé au changement de src', ({
     assert,
   }) => {
-    assert.include(avatar, 'onError={() => setFailed(true)}')
+    assert.include(avatar, 'onError={() => setFailedSrc(src)}')
     assert.include(avatar, 'src && !failed')
-    assert.match(avatar, /useEffect\(\(\) => \{\s*setFailed\(false\)\s*\}, \[src\]\)/)
+    assert.include(avatar, 'const failed = !!src && failedSrc === src', 'pas de flash d’initiales')
   })
 
   test('tailles 32 / 56 / 96 px', ({ assert }) => {
@@ -37,9 +37,11 @@ test.group('Avatar', () => {
     assert.include(avatar, "lg: { box: 'size-24'")
   })
 
-  test('authorInitials : 1er mot de chaque champ, hors BMP, capitales fr-FR', ({ assert }) => {
+  test('authorInitials : 1re lettre (NFC, ponctuation ignorée, hors BMP), capitales fr-FR', ({
+    assert,
+  }) => {
     assert.include(lib, 'export function authorInitials(firstNames: string, lastNames: string)')
-    assert.include(lib, 'Array.from(word)[0]')
+    assert.include(lib, "value.normalize('NFC').match(/\\p{L}|\\p{N}/u)")
     assert.include(lib, "toLocaleUpperCase('fr-FR')")
   })
 })

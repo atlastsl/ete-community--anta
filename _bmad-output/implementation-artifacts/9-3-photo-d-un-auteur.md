@@ -4,7 +4,7 @@ baseline_commit: fafdea7
 
 # Story 9.3 : Photo d'un auteur
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -108,6 +108,26 @@ afin d'**illustrer sa fiche, sans exposer de métadonnées personnelles du fichi
   - [x] 9.5 `tests/unit/components/author_form.spec.ts` (lecture de source) : `type="file"`, `accept={PHOTO_ACCEPT}`, `URL.revokeObjectURL`, clés `authors.form.photo.*`, `removePhoto` ; nouveau `tests/unit/components/avatar.spec.ts` : `aria-hidden` sur les initiales, `alt` par défaut `""`, `onError`, classes `bg-green-100 text-green-800`, `object-cover`. `authors_index_page.spec.ts` : `<Avatar` dans la colonne Auteur.
   - [x] 9.6 `tests/unit/infrastructure/deployment.spec.ts` : nouveau test « sharp : dépendance de production et binaires linux-x64 glibc dans le lockfile » (`package.json.dependencies.sharp` défini, `lock.packages['node_modules/@img/sharp-linux-x64']` et `['node_modules/@img/sharp-libvips-linux-x64']` définis).
   - [x] 9.7 Suite complète + `npm run typecheck` + `npm run lint` + `node ace build` verts ; régénérer `.adonisjs/*` s'ils changent (`node ace serve` ~45 s sur la base locale) et les committer avec le reste.
+
+### Review Findings
+
+Revue adversariale du 2026-11-18 (Blind Hunter, Edge Case Hunter, Acceptance Auditor), constats vérifiés avant correction (fond noir constaté avec sharp, absence de nettoyage constatée dans `@adonisjs/bodyparser`).
+
+- [x] [Review][Patch] Source décodée jusqu'à 4 fois dont 3 en parallèle (≈ 160 Mo par décodage à 40 Mpx) [app/services/image_service.ts] — un seul décodage vers la plus grande variante (pixels bruts), puis encodages successifs.
+- [x] [Review][Patch] `og.jpg` sur fond noir pour une image transparente [app/services/image_service.ts] — `flatten` sur blanc ; test unitaire.
+- [x] [Review][Patch] Tous les décodeurs libvips (SVG, HEIF, TIFF…) exposés avant le contrôle de format [app/services/image_service.ts] — signature JPEG/PNG/WebP vérifiée avant sharp ; test TIFF.
+- [x] [Review][Patch] Toute erreur sharp affichée « type invalide » sans trace [app/services/image_service.ts] — `logger.warn` avant la traduction.
+- [x] [Review][Patch] Fichiers temporaires multipart jamais supprimés (même refusés) [app/controllers/admin/authors_controller.ts] — suppression après chaque `store` / `update`.
+- [x] [Review][Patch] JSON sans `affiliations` → liste vide → affiliations d'une fiche migrée effacées [app/controllers/admin/authors_controller.ts] — `[]` seulement en multipart, sinon `affiliation_required` ; test.
+- [x] [Review][Patch] « Retirer la photo » masqué si la signature d'URL échoue (AC4) [authors_controller.ts, AuthorForm.tsx, Edit.tsx] — prop `hasPhoto` d'après `photo_key`.
+- [x] [Review][Patch] Type MIME vide (certains OS) → photo valide refusée côté client [inertia/lib/author_form.ts] — repli sur l'extension.
+- [x] [Review][Patch] Focus perdu après « Annuler » ; intention « Retirer la photo » perdue après choix puis annulation ; région `aria-live` montée avec son texte et annonce à chaque pourcent [AuthorForm.tsx] — focus sur le sélecteur, état restauré, région permanente annoncée par quarts.
+- [x] [Review][Patch] Avatar : flash d'initiales au changement de source ; initiales sur forme décomposée ou ponctuation [Avatar.tsx, author_form.ts] — source en échec mémorisée ; NFC + 1re lettre.
+- [x] [Review][Patch] Tests : `removePhoto=1` multipart sur une fiche avec photo, « photo + removePhoto » depuis une fiche avec photo (ancien préfixe supprimé).
+- [x] [Review][Defer] Objets R2 orphelins si le processus meurt entre l'envoi et le commit, ou si la suppression best-effort échoue — deferred : tâche de réconciliation (lister `authors/`, supprimer les préfixes non référencés de plus d'une heure).
+- [x] [Review][Defer] Limite multipart globale 110 Mo (au-delà : 413 au lieu de l'erreur en ligne), pas de délai d'expiration sur l'envoi R2, URLs signées non mises en cache, constantes « 5 Mo / 40 Mpx » dupliquées dans les libellés — deferred.
+
+Écartés : seuil de 40 Mpx (fixé par l'AC1), APNG (la règle d'extension suffit), commit ambigu après perte de connexion (improbable), taille lg 112 px ≥ sm (écart DESIGN.md / story, à trancher en recette visuelle).
 
 ## Dev Notes
 
@@ -289,3 +309,4 @@ Claude Opus 5.5 (claude-opus-5-5), skill `bmad-dev-story`.
 |---|---|---|
 | 2026-11-18 | 0.1 | Story créée (bmad-create-story), statut ready-for-dev. |
 | 2026-11-18 | 1.0 | Implémentation (bmad-dev-story) : sharp + `ImageService`, photo d'auteur sur R2 (envoi, remplacement, retrait, suppression avec compensation), aperçu signé + `Avatar`, i18n, 44 tests ajoutés (583 verts). Statut review. |
+- 2026-11-18 : code review — 11 correctifs, 2 reports ; 588 tests verts, lint, typecheck et build verts.

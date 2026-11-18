@@ -24,6 +24,8 @@ type Props = {
   requireAffiliation: boolean
   /** Signed URL of the saved photo (`w384`); absent on creation. */
   photoUrl?: string | null
+  /** A photo is saved (from `photo_key`: true even when its URL could not be signed). */
+  hasPhoto?: boolean
   /** Upload progress (0-100) while a photo is being sent. */
   uploadPercent?: number | null
 }
@@ -42,6 +44,7 @@ export default function AuthorForm({
   errors,
   requireAffiliation,
   photoUrl = null,
+  hasPhoto = !!photoUrl,
   uploadPercent = null,
 }: Props) {
   const { t } = useTranslation()
@@ -59,6 +62,8 @@ export default function AuthorForm({
 
   const photoInput = useRef<HTMLInputElement>(null)
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
+  // « Remove the photo » as it was before a file was chosen, restored on cancel.
+  const removeBeforeChoice = useRef(false)
 
   // Object URL of the chosen file, released when the file changes or the form unmounts.
   useEffect(() => {
@@ -77,13 +82,19 @@ export default function AuthorForm({
   }, [data.photo])
 
   function choosePhoto(file: File | null) {
+    if (file && !data.photo) removeBeforeChoice.current = data.removePhoto
     setData('photo', file)
     if (file) setData('removePhoto', false)
   }
 
   function cancelPhoto() {
     setData('photo', null)
-    if (photoInput.current) photoInput.current.value = ''
+    setData('removePhoto', removeBeforeChoice.current)
+    if (photoInput.current) {
+      photoInput.current.value = ''
+      // The Cancel button unmounts: keep the keyboard focus on the picker.
+      photoInput.current.focus()
+    }
   }
 
   const affiliations = data.affiliations
@@ -190,7 +201,7 @@ export default function AuthorForm({
           lastNames={data.lastNames}
           file={data.photo}
           preview={photoPreview ?? (data.removePhoto ? null : photoUrl)}
-          hasSavedPhoto={!!photoUrl}
+          hasSavedPhoto={hasPhoto}
           removePhoto={data.removePhoto}
           inputRef={photoInput}
           error={message('photo')}
@@ -400,10 +411,15 @@ function PhotoField({
         )}
 
         {uploadPercent !== null && (
-          <p className="mt-2 text-sm text-stone-600" aria-live="polite">
+          <p className="mt-2 text-sm text-stone-600" aria-hidden="true">
             {t('authors.form.photo.uploading', { percent: uploadPercent })}
           </p>
         )}
+        {/* Always mounted (first message read), announced by quarters, not every percent. */}
+        <p className="sr-only" aria-live="polite">
+          {uploadPercent !== null &&
+            t('authors.form.photo.uploading', { percent: Math.floor(uploadPercent / 25) * 25 })}
+        </p>
 
         {error && (
           <p id="photo-error" className="mt-1 text-sm text-red-600">

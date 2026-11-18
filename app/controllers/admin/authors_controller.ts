@@ -1,3 +1,4 @@
+import { unlink } from 'node:fs/promises'
 import type { HttpContext } from '@adonisjs/core/http'
 import logger from '@adonisjs/core/services/logger'
 import { errors as lucidErrors } from '@adonisjs/lucid'
@@ -6,7 +7,7 @@ import type { MultipartFile } from '@adonisjs/core/bodyparser'
 import Author from '#models/author'
 import ActionType from '#enums/action_type'
 import ActivityLogService from '#services/activity_log_service'
-import AuthorService, { type AuthorListFilters } from '#services/author_service'
+import AuthorService, { type AuthorListFilters, type AuthorPayload } from '#services/author_service'
 import FileStorageService from '#services/file_storage_service'
 import ImageService, { ImageValidationError, type ImageVariant } from '#services/image_service'
 import { normalizeKey } from '#helpers/normalize'
@@ -95,9 +96,17 @@ export default class AuthorsController {
     return inertia.render('admin/Authors/Create', {})
   }
 
-  async store({ request, auth, response, session }: HttpContext) {
+  async store(ctx: HttpContext) {
+    try {
+      return await this.storeAuthor(ctx)
+    } finally {
+      await this.discardUpload(ctx.request)
+    }
+  }
+
+  private async storeAuthor({ request, auth, response, session }: HttpContext) {
     const validated = await request.validateUsing(authorValidator)
-    const data = { ...validated, affiliations: validated.affiliations ?? [] }
+    const data = { ...validated, affiliations: this.affiliationsOf(validated, request) }
     assertAffiliationRule(data, { isMigrated: false })
     // Image processing comes before any write (card or R2 object).
     const photo = await this.photoVariants(validated.photo)
@@ -134,14 +143,24 @@ export default class AuthorsController {
         isMigrated: author.migrationKey !== null,
         productionsCount: await AuthorService.productionsCount(author.id),
         photoUrl: await this.photoUrl(author.photoKey, 'w384.webp'),
+        // From the key, not the URL: "Remove the photo" stays offered if signing fails.
+        hasPhoto: author.photoKey !== null,
       },
     })
   }
 
-  async update({ params, request, auth, response, session }: HttpContext) {
+  async update(ctx: HttpContext) {
+    try {
+      return await this.updateAuthor(ctx)
+    } finally {
+      await this.discardUpload(ctx.request)
+    }
+  }
+
+  private async updateAuthor({ params, request, auth, response, session }: HttpContext) {
     const author = await this.findOrFail(params.id)
     const validated = await request.validateUsing(authorValidator)
-    const data = { ...validated, affiliations: validated.affiliations ?? [] }
+    const data = { ...validated, affiliations: this.affiliationsOf(validated, request) }
     assertAffiliationRule(data, { isMigrated: author.migrationKey !== null })
     const photo = await this.photoVariants(validated.photo)
 
@@ -190,6 +209,31 @@ export default class AuthorsController {
 
     session.flash('success', 'authors.flash.deleted')
     return response.redirect(listUrl)
+  }
+
+  /**
+   * Multipart bodies drop an empty array, so a missing list means "no affiliation" there
+   * only; a JSON body without the field is malformed (never a silent wipe).
+   */
+  private affiliationsOf(
+    validated: { affiliations?: AuthorPayload['affiliations'] },
+    request: HttpContext['request']
+  ): AuthorPayload['affiliations'] {
+    if (validated.affiliations) return validated.affiliations
+    if (request.is(['multipart'])) return []
+    throw new vineErrors.E_VALIDATION_ERROR([
+      {
+        field: 'affiliations',
+        message: 'authors.form.errors.affiliation_required',
+        rule: 'required',
+      },
+    ])
+  }
+
+  /** The bodyparser never removes its temporary upload files: done after every request. */
+  private async discardUpload(request: HttpContext['request']): Promise<void> {
+    const tmpPath = request.file('photo')?.tmpPath
+    if (tmpPath) await unlink(tmpPath).catch(() => {})
   }
 
   /**

@@ -254,10 +254,74 @@ test.group('Admin authors | photo', (group) => {
     assert.isNull(author.photoKey)
   })
 
+  test('removePhoto=1 en multipart sur une fiche avec photo → photo retirée', async ({
+    client,
+    assert,
+  }) => {
+    const fakeDisk = drive.fake('r2')
+    const admin = await createAdminUser()
+    const created = await AuthorService.create(
+      { lastNames: 'Fictif', firstNames: 'Jean', affiliations: [{ institution: 'U' }] },
+      null,
+      await ImageService.authorPhotoVariants(await makeJpeg('remove-multipart.jpg'))
+    )
+    const prefix = created.photoKey!
+
+    const response = await client
+      .put(`/admin/authors/${created.id}`)
+      .field('lastNames', 'Fictif')
+      .field('firstNames', 'Jean')
+      .field('affiliations[0][institution]', 'U')
+      .field('removePhoto', '1')
+      .loginAs(admin)
+      .withCsrfToken()
+      .redirects(0)
+
+    response.assertStatus(302)
+    const saved = await Author.findOrFail(created.id)
+    assert.isNull(saved.photoKey)
+    fakeDisk.assertMissing(AuthorService.photoKeys(prefix))
+  })
+
+  test('JSON sans affiliations sur une fiche migrée → refus, affiliations conservées', async ({
+    client,
+    assert,
+  }) => {
+    drive.fake('r2')
+    const admin = await createAdminUser()
+    const author = await createAuthor()
+    author.migrationKey = 'test-migration-key'
+    await author.save()
+
+    const response = await client
+      .put(`/admin/authors/${author.id}`)
+      .json({ lastNames: 'Fictif', firstNames: 'Jean' })
+      .loginAs(admin)
+      .withCsrfToken()
+      .redirects(0)
+
+    response.assertStatus(302)
+    assert.equal(
+      flashedErrors(response.flashMessages()).affiliations,
+      'authors.form.errors.affiliation_required'
+    )
+    await author.load('affiliations')
+    assert.lengthOf(author.affiliations, 1)
+  })
+
   test('photo + removePhoto ensemble → la nouvelle photo l’emporte', async ({ client, assert }) => {
     const fakeDisk = drive.fake('r2')
     const admin = await createAdminUser()
-    const author = await createAuthor()
+    const author = await AuthorService.create(
+      {
+        lastNames: 'Fictif',
+        firstNames: 'Jean',
+        affiliations: [{ institution: 'Université Exemple' }],
+      },
+      null,
+      await ImageService.authorPhotoVariants(await makeJpeg('both-old.jpg'))
+    )
+    const oldPrefix = author.photoKey!
 
     const response = await client
       .put(`/admin/authors/${author.id}`)
@@ -273,7 +337,9 @@ test.group('Admin authors | photo', (group) => {
     response.assertStatus(302)
     await author.refresh()
     assert.match(author.photoKey!, ID_PREFIX(author.id))
+    assert.notEqual(author.photoKey, oldPrefix)
     fakeDisk.assertExists(AuthorService.photoKeys(author.photoKey!))
+    fakeDisk.assertMissing(AuthorService.photoKeys(oldPrefix))
   })
 
   test('texte renommé .jpg → erreur photo_type, aucune fiche, aucun objet', async ({
@@ -476,6 +542,7 @@ test.group('Admin authors | photo', (group) => {
     const edit = extractProps(editResponse.text())
     assert.isString(edit.author.photoUrl)
     assert.include(edit.author.photoUrl, `${withPhoto.photoKey}/w384.webp`)
+    assert.isTrue(edit.author.hasPhoto)
     const withoutResponse = await client.get(`/admin/authors/${without.id}/edit`).loginAs(admin)
     const editWithout = extractProps(withoutResponse.text())
     assert.isNull(editWithout.author.photoUrl)

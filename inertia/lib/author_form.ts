@@ -45,10 +45,8 @@ export function formatAuthorName(firstNames: string, lastNames: string): string 
 
 /** Initials of the avatar (D13): first letter of the first word of each field, capitals. */
 export function authorInitials(firstNames: string, lastNames: string): string {
-  const initial = (value: string) => {
-    const word = value.trim().split(/\s+/)[0] ?? ''
-    return Array.from(word)[0] ?? ''
-  }
+  // NFC: a decomposed « É » stays one character; leading punctuation (« (Jean) ») is skipped.
+  const initial = (value: string) => value.normalize('NFC').match(/\p{L}|\p{N}/u)?.[0] ?? ''
   return `${initial(firstNames)}${initial(lastNames)}`.toLocaleUpperCase('fr-FR')
 }
 
@@ -102,7 +100,11 @@ export function validateAuthorForm(
   }
 
   if (data.photo) {
-    if (!PHOTO_MIME_TYPES.includes(data.photo.type)) {
+    // Some systems report no MIME type: fall back on the extension (the server decodes).
+    const typeOk = data.photo.type
+      ? PHOTO_MIME_TYPES.includes(data.photo.type)
+      : /\.(jpe?g|png|webp)$/i.test(data.photo.name)
+    if (!typeOk) {
       errors.photo = 'authors.form.errors.photo_type'
     } else if (data.photo.size > PHOTO_MAX_BYTES) {
       errors.photo = 'authors.form.errors.photo_size'

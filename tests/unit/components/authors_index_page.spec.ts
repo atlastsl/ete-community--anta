@@ -93,7 +93,7 @@ test.group('Authors Index | suppression', () => {
     assert.notInclude(editPage, 'Tooltip')
     assert.include(
       editPage,
-      'const { id, isMigrated, productionsCount, photoUrl, ...formData } = author'
+      'const { id, isMigrated, productionsCount, photoUrl, hasPhoto, ...formData } = author'
     )
   })
 
