@@ -199,11 +199,14 @@
       "author": "Author",
       "primary_affiliation": "Primary affiliation",
       "updated_at": "Updated",
-      "actions": "Actions"
+      "actions": "Actions",
+      "productions": "Productions",
+      "status": "Status"
     },
     "no_affiliation": "No affiliation",
     "actions": {
-      "edit": "Edit"
+      "edit": "Edit",
+      "delete": "Delete"
     },
     "empty_title": "No authors",
     "empty_description": "Create the first author record to link it to productions.",
@@ -246,7 +249,30 @@
     },
     "flash": {
       "created": "Author created.",
-      "saved": "Author saved."
+      "saved": "Author saved.",
+      "deleted": "Author deleted."
+    },
+    "list": {
+      "search_label": "Search for an author",
+      "institution_label": "Institution",
+      "institution_all": "All institutions",
+      "quick_filters": "Quick filters",
+      "consent_pending": "Consent pending",
+      "incomplete": "Incomplete",
+      "clear_filters": "Clear filters",
+      "no_results": "No author matches these filters."
+    },
+    "badges": {
+      "public": "Public",
+      "not_public": "Not public",
+      "incomplete": "Incomplete"
+    },
+    "delete": {
+      "title": "Delete this author record?",
+      "description": "The record of {{name}} and its affiliations will be permanently deleted.",
+      "confirm": "Delete",
+      "blocked": "Cannot delete: this record is linked to {{count}} production(s), drafts included.",
+      "refused": "Cannot delete: this record is linked to at least one production, drafts included."
     }
   },
   "users": {

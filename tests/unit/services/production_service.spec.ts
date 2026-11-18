@@ -8,7 +8,7 @@ function makeProduction(overrides: Partial<Production> = {}): Production {
   const p = new Production()
   p.title = ''
   p.summary = null
-  p.authors = []
+  p.authorNames = []
   p.tags = []
   p.category = null
   p.domain = null
@@ -25,7 +25,7 @@ function makeComplete(license: 'member' | 'free_license' | 'external_link' = 'me
   return makeProduction({
     title: 'T',
     summary: 'S',
-    authors: ['A'],
+    authorNames: ['A'],
     tags: ['x'],
     category: 'article',
     domain: 'Maths',
@@ -115,7 +115,7 @@ test.group('ProductionService | generateUniqueSlug', (group) => {
   test('collision → suffixe incrémenté', async ({ assert }) => {
     await Production.create({
       title: 'Titre En Double XYZ',
-      authors: [],
+      authorNames: [],
       tags: [],
       subdomain: [],
       licenseStatus: 'member',

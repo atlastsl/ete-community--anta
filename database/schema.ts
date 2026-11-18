@@ -103,6 +103,17 @@ export class AuthorSchema extends BaseModel {
   declare updatedAt: DateTime | null
 }
 
+export class ProductionAuthorSchema extends BaseModel {
+  static $columns = ['authorId', 'position', 'productionId'] as const
+  $columns = ProductionAuthorSchema.$columns
+  @column()
+  declare authorId: string
+  @column()
+  declare position: number
+  @column({ isPrimary: true })
+  declare productionId: string
+}
+
 export class ProductionFileSchema extends BaseModel {
   static $columns = ['createdAt', 'fileKey', 'id', 'mimeType', 'originalName', 'productionId', 'sizeBytes', 'storageProvider', 'updatedAt'] as const
   $columns = ProductionFileSchema.$columns

@@ -38,7 +38,7 @@ async function createProduction(overrides: ProdOverrides = {}): Promise<Producti
   return Production.create({
     title: overrides.title ?? `Oeuvre ${Math.floor(Math.random() * 1_000_000)}`,
     summary: 'Résumé de test complet.',
-    authors: ['Auteur Test'],
+    authorNames: ['Auteur Test'],
     tags: ['tag-test'],
     category: 'Livre',
     domain: 'Informatique',

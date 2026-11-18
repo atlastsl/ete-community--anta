@@ -19,7 +19,7 @@ function serialize(p: Production) {
     id: p.id,
     slug: p.slug,
     title: p.title,
-    authors: p.authors ?? [],
+    authors: p.authorNames ?? [],
     category: p.category,
     domain: p.domain,
     summary: p.summary,
@@ -36,7 +36,7 @@ function serializeDetail(p: Production) {
     slug: p.slug,
     title: p.title,
     summary: p.summary,
-    authors: p.authors ?? [],
+    authors: p.authorNames ?? [],
     tags: p.tags ?? [],
     category: p.category,
     domain: p.domain,
@@ -187,7 +187,16 @@ export default class ProductionsController {
 
     return inertia.render('production', {
       production: { ...serializeDetail(production), files },
-      meta: SeoService.forProduction(locale, production, env.get('APP_URL')),
+      meta: SeoService.forProduction(
+        locale,
+        {
+          title: production.title,
+          summary: production.summary,
+          slug: production.slug,
+          authors: production.authorNames,
+        },
+        env.get('APP_URL')
+      ),
     })
   }
 

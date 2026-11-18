@@ -23,7 +23,7 @@ async function createProduction(overrides: Partial<Production> = {}): Promise<Pr
   return Production.create({
     title: `Prod ${Math.floor(Math.random() * 1_000_000)}`,
     summary: 'Résumé',
-    authors: ['A'],
+    authorNames: ['A'],
     tags: ['t'],
     category: 'article',
     domain: 'mathematics',
@@ -82,7 +82,7 @@ test.group('Admin productions edit | page + update', (group) => {
     await production.refresh()
     assert.equal(production.title, 'Nouveau titre')
     assert.equal(production.category, 'book')
-    assert.deepEqual(production.authors, ['B'])
+    assert.deepEqual(production.authorNames, ['B'])
     // updated_at maintenu par Lucid (autoUpdate) lors du save (FR35)
     assert.isNotNull(production.updatedAt)
 

@@ -110,6 +110,9 @@ router
         router.get('authors', [controllers.admin.Authors, 'index']).as('admin.authors')
         router.post('authors', [controllers.admin.Authors, 'store']).as('admin.authors.store')
         router.put('authors/:id', [controllers.admin.Authors, 'update']).as('admin.authors.update')
+        router
+          .delete('authors/:id', [controllers.admin.Authors, 'destroy'])
+          .as('admin.authors.destroy')
         router.get('stats', [controllers.admin.Dashboard, 'stats']).as('admin.stats')
 
         // Sous-groupe super_admin uniquement

@@ -76,6 +76,7 @@ test.group('Admin authors | accès', (group) => {
       client.get(`/admin/authors/${author.id}/edit`),
       client.post('/admin/authors').json(VALID_PAYLOAD).withCsrfToken(),
       client.put(`/admin/authors/${author.id}`).json(VALID_PAYLOAD).withCsrfToken(),
+      client.delete(`/admin/authors/${author.id}`).withCsrfToken(),
     ]
     for (const call of calls) {
       const response = await call.redirects(0)
@@ -264,6 +265,7 @@ test.group('Admin authors | modification', (group) => {
         { institution: 'Université B', department: '' },
       ],
       isMigrated: false,
+      productionsCount: 0,
     })
   })
 

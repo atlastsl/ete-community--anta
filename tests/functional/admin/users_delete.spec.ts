@@ -77,7 +77,7 @@ test.group('Admin users delete | suppression', (group) => {
     const production = await Production.create({
       title: 'Production de test',
       status: 'draft',
-      authors: [],
+      authorNames: [],
       tags: [],
       licenseStatus: 'member',
       createdById: admin.id,

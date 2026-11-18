@@ -1,8 +1,10 @@
 import db from '@adonisjs/lucid/services/db'
 import { DateTime } from 'luxon'
-import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
+import type { QueryClientContract, TransactionClientContract } from '@adonisjs/lucid/types/database'
+import type { ModelQueryBuilderContract } from '@adonisjs/lucid/types/model'
 import Author from '#models/author'
 import AuthorAffiliation from '#models/author_affiliation'
+import { normalizeKey } from '#helpers/normalize'
 
 export type AffiliationInput = { institution: string; department?: string | null }
 
@@ -16,6 +18,30 @@ export type AuthorPayload = {
 
 /** Fields compared to build the `fields` list of the `update` activity entry. */
 export type AuthorField = 'lastNames' | 'firstNames' | 'googleScholarUrl' | 'affiliations'
+
+/** Filters of the admin authors list (Story 9.2), already sanitized by the controller. */
+export type AuthorListFilters = {
+  /** Free search on `search_name` (normalized here). */
+  q: string | null
+  /** `institution_key` matched on any affiliation of the card. */
+  institution: string | null
+  /** `pending` = cards not public yet (`consent_confirmed_at IS NULL`). */
+  consent: 'pending' | null
+  /** Cards without any affiliation ("À compléter", derived, P2-03). */
+  incomplete: boolean
+}
+
+export type AuthorDeleteResult = { deleted: true } | { deleted: false; productionsCount: number }
+
+/** Trigram similarity threshold, explicit rather than the `%` operator (GUC-dependent). */
+const SIMILARITY_THRESHOLD = 0.3
+
+/** Escapes the LIKE wildcards of a normalized term (`\` is the default escape character). */
+const escapeLike = (term: string): string => term.replace(/[\\%_]/g, (c) => `\\${c}`)
+
+function isForeignKeyViolation(error: unknown): boolean {
+  return (error as { code?: string })?.code === '23503'
+}
 
 /** Attempts when two concurrent creates pick the same free slug (check-then-insert). */
 const SLUG_ATTEMPTS = 3
@@ -129,5 +155,126 @@ export default class AuthorService {
     if (rows.length > 0) {
       await AuthorAffiliation.createMany(rows, { client: trx })
     }
+  }
+
+  /** Pivot rows of the card, every production status included (FR55). */
+  static async productionsCount(authorId: string, client?: QueryClientContract): Promise<number> {
+    const row = await (client ?? db)
+      .from('production_authors')
+      .where('author_id', authorId)
+      .count('* as total')
+      .first()
+    return Number(row?.total ?? 0)
+  }
+
+  /**
+   * Deletes a card linked to no production (affiliations go by CASCADE). The row lock
+   * makes a concurrent pivot INSERT (FOR KEY SHARE on the author) wait for the decision;
+   * the FK RESTRICT stays the last guard and is translated into the same refusal.
+   * Story 9.3 will also remove the photo here.
+   */
+  static async delete(author: Author): Promise<AuthorDeleteResult> {
+    try {
+      return await db.transaction(async (trx): Promise<AuthorDeleteResult> => {
+        await Author.query({ client: trx }).where('id', author.id).forUpdate().firstOrFail()
+        const productionsCount = await this.productionsCount(author.id, trx)
+        if (productionsCount > 0) return { deleted: false, productionsCount }
+        author.useTransaction(trx)
+        await author.delete()
+        return { deleted: true }
+      })
+    } catch (error) {
+      if (!isForeignKeyViolation(error)) throw error
+      return { deleted: false, productionsCount: await this.productionsCount(author.id) }
+    }
+  }
+
+  /**
+   * Server-side filters of the authors list (Story 9.2), combined with AND. Reusable by the
+   * author search of the production form (Story 9.7, `limit(10)`).
+   */
+  static applyListFilters(
+    query: ModelQueryBuilderContract<typeof Author>,
+    filters: AuthorListFilters
+  ): ModelQueryBuilderContract<typeof Author> {
+    const q = filters.q ? normalizeKey(filters.q) : ''
+    if (q !== '') {
+      const term = escapeLike(q)
+      query.where((sub) => {
+        sub
+          .whereRaw('authors.search_name LIKE ?', [`%${term}%`])
+          .orWhereRaw('similarity(authors.search_name, ?) > ?', [q, SIMILARITY_THRESHOLD])
+      })
+    }
+    const institution = filters.institution ? normalizeKey(filters.institution) : ''
+    if (institution !== '') {
+      query.whereExists((sub) =>
+        sub
+          .from('author_affiliations')
+          .whereColumn('author_affiliations.author_id', 'authors.id')
+          .where('author_affiliations.institution_key', institution)
+      )
+    }
+    if (filters.consent === 'pending') {
+      query.whereNull('authors.consent_confirmed_at')
+    }
+    if (filters.incomplete) {
+      query.whereNotExists((sub) =>
+        sub.from('author_affiliations').whereColumn('author_affiliations.author_id', 'authors.id')
+      )
+    }
+    return query
+  }
+
+  /**
+   * List order: with a search term, a word starting with the term first, then similarity;
+   * always ends with last names, first names, id (stable pagination).
+   */
+  static applyListOrder(
+    query: ModelQueryBuilderContract<typeof Author>,
+    rawQ: string | null
+  ): ModelQueryBuilderContract<typeof Author> {
+    const q = rawQ ? normalizeKey(rawQ) : ''
+    if (q !== '') {
+      const term = escapeLike(q)
+      query
+        .orderByRaw('(authors.search_name LIKE ? OR authors.search_name LIKE ?) DESC', [
+          `${term}%`,
+          `% ${term}%`,
+        ])
+        .orderByRaw('similarity(authors.search_name, ?) DESC', [q])
+    }
+    return query.orderBy('last_names', 'asc').orderBy('first_names', 'asc').orderBy('id', 'asc')
+  }
+
+  /** Global counters of the quick filters (remaining work, independent of the other filters). */
+  static async quickFilterCounts(): Promise<{ consentPending: number; incomplete: number }> {
+    const result = await db.rawQuery(
+      `SELECT
+         count(*) FILTER (WHERE consent_confirmed_at IS NULL) AS consent_pending,
+         count(*) FILTER (
+           WHERE NOT EXISTS (SELECT 1 FROM author_affiliations aa WHERE aa.author_id = authors.id)
+         ) AS incomplete
+       FROM authors`
+    )
+    const row = result.rows[0] ?? {}
+    return {
+      consentPending: Number(row.consent_pending ?? 0),
+      incomplete: Number(row.incomplete ?? 0),
+    }
+  }
+
+  /** Institution filter options: one per key, labelled with the most frequent spelling (D14). */
+  static async institutionOptions(): Promise<{ value: string; label: string }[]> {
+    const result = await db.rawQuery(
+      `SELECT institution_key AS value, mode() WITHIN GROUP (ORDER BY institution) AS label
+       FROM author_affiliations
+       GROUP BY institution_key
+       ORDER BY label, value`
+    )
+    return (result.rows as { value: string; label: string }[]).map((r) => ({
+      value: r.value,
+      label: r.label,
+    }))
   }
 }

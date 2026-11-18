@@ -38,6 +38,7 @@ export type ScannedRoutes = {
     'admin.authors': { paramsTuple?: []; params?: {} }
     'admin.authors.store': { paramsTuple?: []; params?: {} }
     'admin.authors.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'admin.authors.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'admin.stats': { paramsTuple?: []; params?: {} }
     'admin.users.create': { paramsTuple?: []; params?: {} }
     'admin.users': { paramsTuple?: []; params?: {} }
@@ -116,6 +117,7 @@ export type ScannedRoutes = {
     'admin.productions.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'admin.productions.files.destroy': { paramsTuple: [ParamValue,ParamValue]; params: {'productionId': ParamValue,'fileId': ParamValue} }
     'admin.productions.links.destroy': { paramsTuple: [ParamValue,ParamValue]; params: {'productionId': ParamValue,'linkId': ParamValue} }
+    'admin.authors.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'admin.users.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
   }
   PATCH: {

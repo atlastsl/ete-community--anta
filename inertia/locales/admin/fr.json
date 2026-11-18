@@ -199,11 +199,14 @@
       "author": "Auteur",
       "primary_affiliation": "Affiliation principale",
       "updated_at": "Mise à jour",
-      "actions": "Actions"
+      "actions": "Actions",
+      "productions": "Productions",
+      "status": "Statut"
     },
     "no_affiliation": "Aucune affiliation",
     "actions": {
-      "edit": "Modifier"
+      "edit": "Modifier",
+      "delete": "Supprimer"
     },
     "empty_title": "Aucun auteur",
     "empty_description": "Créez la première fiche auteur pour l'associer à des productions.",
@@ -246,7 +249,30 @@
     },
     "flash": {
       "created": "Auteur créé.",
-      "saved": "Auteur enregistré."
+      "saved": "Auteur enregistré.",
+      "deleted": "Auteur supprimé."
+    },
+    "list": {
+      "search_label": "Rechercher un auteur",
+      "institution_label": "Institution",
+      "institution_all": "Toutes les institutions",
+      "quick_filters": "Filtres rapides",
+      "consent_pending": "Consentement en attente",
+      "incomplete": "À compléter",
+      "clear_filters": "Effacer les filtres",
+      "no_results": "Aucun auteur ne correspond à ces filtres."
+    },
+    "badges": {
+      "public": "Public",
+      "not_public": "Non public",
+      "incomplete": "À compléter"
+    },
+    "delete": {
+      "title": "Supprimer cette fiche auteur ?",
+      "description": "La fiche de {{name}} et ses affiliations seront définitivement supprimées.",
+      "confirm": "Supprimer",
+      "blocked": "Suppression impossible : fiche liée à {{count}} production(s) (brouillons compris).",
+      "refused": "Suppression impossible : cette fiche est liée à au moins une production (brouillons compris)."
     }
   },
   "users": {

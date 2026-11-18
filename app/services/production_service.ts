@@ -110,7 +110,7 @@ export default class ProductionService {
       if (!value || value.trim() === '') missing.push(field)
     }
 
-    if (!production.authors || production.authors.length === 0) missing.push('authors')
+    if (!production.authorNames || production.authorNames.length === 0) missing.push('authors')
     if (!production.subdomain || production.subdomain.length === 0) missing.push('subdomain')
     if (!production.tags || production.tags.length === 0) missing.push('tags')
     if (!production.workPublishedAt) missing.push('workPublishedAt')

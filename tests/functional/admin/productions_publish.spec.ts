@@ -24,7 +24,7 @@ async function createCompleteProduction(
   return Production.create({
     title: 'Topologie',
     summary: 'Résumé complet.',
-    authors: ['Kofi A.'],
+    authorNames: ['Kofi A.'],
     tags: ['maths'],
     category: 'article',
     domain: 'mathematics',
@@ -129,7 +129,7 @@ test.group('Admin productions publish', (group) => {
     const production = await Production.create({
       title: 'Incomplète',
       status: 'draft',
-      authors: [],
+      authorNames: [],
       tags: [],
       licenseStatus: 'member',
       createdById: null,

@@ -1,7 +1,15 @@
-import { BaseModel, column, hasMany, beforeSave, beforeCreate } from '@adonisjs/lucid/orm'
-import type { HasMany } from '@adonisjs/lucid/types/relations'
+import {
+  BaseModel,
+  column,
+  hasMany,
+  manyToMany,
+  beforeSave,
+  beforeCreate,
+} from '@adonisjs/lucid/orm'
+import type { HasMany, ManyToMany } from '@adonisjs/lucid/types/relations'
 import { DateTime } from 'luxon'
 import AuthorAffiliation from '#models/author_affiliation'
+import Production from '#models/production'
 import { normalizeKey } from '#helpers/normalize'
 import { slugify } from '#helpers/slug'
 
@@ -56,6 +64,10 @@ export default class Author extends BaseModel {
     onQuery: (query) => query.orderBy('position', 'asc'),
   })
   declare affiliations: HasMany<typeof AuthorAffiliation>
+
+  /** Productions linked through the pivot `production_authors` (Story 9.2, `withCount`). */
+  @manyToMany(() => Production, { pivotTable: 'production_authors' })
+  declare productions: ManyToMany<typeof Production>
 
   @beforeSave()
   static normalizeSearchName(author: Author) {

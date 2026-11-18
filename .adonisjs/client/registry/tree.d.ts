@@ -54,6 +54,7 @@ export interface ApiDefinition {
       edit: typeof routes['admin.authors.edit']
       store: typeof routes['admin.authors.store']
       update: typeof routes['admin.authors.update']
+      destroy: typeof routes['admin.authors.destroy']
     }
     stats: typeof routes['admin.stats']
     users: typeof routes['admin.users'] & {

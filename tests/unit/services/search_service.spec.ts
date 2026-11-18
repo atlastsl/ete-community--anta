@@ -30,7 +30,7 @@ async function createProduction(opts: ProductionFixture = {}): Promise<Productio
   return Production.create({
     title: opts.title ?? `Production ${Math.floor(Math.random() * 1_000_000)}`,
     summary: opts.summary ?? null,
-    authors: opts.authors ?? [],
+    authorNames: opts.authors ?? [],
     tags: [],
     status: opts.status ?? 'published',
     category: opts.category ?? null,

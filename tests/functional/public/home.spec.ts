@@ -16,7 +16,7 @@ async function createProduction(opts: ProductionFixture = {}): Promise<Productio
   return Production.create({
     title: opts.title ?? `Production ${Math.floor(Math.random() * 1_000_000)}`,
     status: opts.status ?? 'draft',
-    authors: [],
+    authorNames: [],
     tags: [],
     category: opts.category ?? null,
     licenseStatus: 'member',

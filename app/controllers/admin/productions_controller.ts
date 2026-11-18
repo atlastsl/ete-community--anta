@@ -69,7 +69,7 @@ export default class ProductionsController {
       productions: paginator.all().map((p) => ({
         id: p.id,
         title: p.title,
-        authors: p.authors ?? [],
+        authors: p.authorNames ?? [],
         category: p.category,
         status: p.status,
         updatedAt: p.updatedAt?.toISO() ?? null,
@@ -134,7 +134,7 @@ export default class ProductionsController {
         status: production.status,
         title: production.title,
         summary: production.summary ?? '',
-        authors: production.authors ?? [],
+        authors: production.authorNames ?? [],
         tags: production.tags ?? [],
         category: production.category ?? '',
         domain: production.domain ?? '',
@@ -172,7 +172,7 @@ export default class ProductionsController {
     // `status` n'est JAMAIS modifié ici (FR22 — pas de republication automatique).
     production.title = data.title
     production.summary = data.summary ?? null
-    production.authors = data.authors ?? []
+    production.authorNames = data.authors ?? []
     production.tags = data.tags ?? []
     production.category = data.category ?? null
     production.domain = data.domain ?? null
@@ -265,7 +265,7 @@ export default class ProductionsController {
     const production = await Production.create({
       title: data.title,
       summary: data.summary ?? null,
-      authors: data.authors ?? [],
+      authorNames: data.authors ?? [],
       tags: data.tags ?? [],
       category: data.category ?? null,
       domain: data.domain ?? null,

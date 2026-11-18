@@ -415,6 +415,18 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/authors_controller').default['update']>>> | { status: 422; response: { errors: SimpleError[] } }
     }
   }
+  'admin.authors.destroy': {
+    methods: ["DELETE"]
+    pattern: '/admin/authors/:id'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/authors_controller').default['destroy']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/authors_controller').default['destroy']>>>
+    }
+  }
   'admin.stats': {
     methods: ["GET","HEAD"]
     pattern: '/admin/stats'

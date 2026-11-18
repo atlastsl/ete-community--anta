@@ -1,4 +1,4 @@
-import { ReactElement } from 'react'
+import { ReactElement, useState } from 'react'
 import { useForm } from '@inertiajs/react'
 import { Link } from '@adonisjs/inertia/react'
 import { useTranslation } from 'react-i18next'
@@ -6,6 +6,7 @@ import { Loader2 } from 'lucide-react'
 import AdminLayout from '~/layouts/AdminLayout'
 import { Button } from '~/components/ui/button'
 import AuthorForm from '~/components/admin/AuthorForm'
+import DeleteAuthorDialog, { type DeleteAuthorTarget } from '~/components/admin/DeleteAuthorDialog'
 import { toAuthorPayload, validateAuthorForm, type AuthorFormData } from '~/lib/author_form'
 import { urlFor } from '~/client'
 
@@ -14,12 +15,15 @@ type Props = {
     id: string
     /** Migrated card (FR56): may stay without affiliation until completed (FR52). */
     isMigrated: boolean
+    /** Pivot rows, every production status included: > 0 blocks the deletion (FR55). */
+    productionsCount: number
   }
 }
 
 export default function AdminAuthorsEdit({ author }: Props) {
   const { t } = useTranslation()
-  const { id, isMigrated, ...formData } = author
+  const { id, isMigrated, productionsCount, ...formData } = author
+  const [deleteTarget, setDeleteTarget] = useState<DeleteAuthorTarget | null>(null)
   const form = useForm<AuthorFormData>(formData)
   const { data, setData, put, processing, errors } = form
   const requireAffiliation = !isMigrated
@@ -48,7 +52,7 @@ export default function AdminAuthorsEdit({ author }: Props) {
           requireAffiliation={requireAffiliation}
         />
 
-        <div className="mt-6 flex gap-3">
+        <div className="mt-6 flex flex-wrap items-start gap-3">
           <Button
             type="submit"
             disabled={processing}
@@ -62,8 +66,45 @@ export default function AdminAuthorsEdit({ author }: Props) {
               {t('actions.cancel')}
             </Button>
           </Link>
+          <div className="ml-auto">
+            {productionsCount === 0 ? (
+              <Button
+                type="button"
+                variant="ghost"
+                className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                onClick={() =>
+                  setDeleteTarget({
+                    id,
+                    firstNames: author.firstNames,
+                    lastNames: author.lastNames,
+                  })
+                }
+              >
+                {t('authors.actions.delete')}
+              </Button>
+            ) : (
+              <>
+                {/* aria-disabled (not disabled): stays focusable; visible explanation (D32). */}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  aria-disabled="true"
+                  aria-describedby="author-delete-hint"
+                  className="cursor-not-allowed text-red-600 opacity-50 hover:bg-transparent hover:text-red-600"
+                  onClick={(e) => e.preventDefault()}
+                >
+                  {t('authors.actions.delete')}
+                </Button>
+                <p id="author-delete-hint" className="mt-2 text-sm text-stone-600">
+                  {t('authors.delete.blocked', { count: productionsCount })}
+                </p>
+              </>
+            )}
+          </div>
         </div>
       </form>
+
+      <DeleteAuthorDialog target={deleteTarget} onClose={() => setDeleteTarget(null)} />
     </div>
   )
 }

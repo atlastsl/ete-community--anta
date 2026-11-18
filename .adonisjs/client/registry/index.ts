@@ -210,6 +210,12 @@ const routes = {
     tokens: [{"old":"/admin/authors/:id","type":0,"val":"admin","end":""},{"old":"/admin/authors/:id","type":0,"val":"authors","end":""},{"old":"/admin/authors/:id","type":1,"val":"id","end":""}],
     types: placeholder as Registry['admin.authors.update']['types'],
   },
+  'admin.authors.destroy': {
+    methods: ["DELETE"],
+    pattern: '/admin/authors/:id',
+    tokens: [{"old":"/admin/authors/:id","type":0,"val":"admin","end":""},{"old":"/admin/authors/:id","type":0,"val":"authors","end":""},{"old":"/admin/authors/:id","type":1,"val":"id","end":""}],
+    types: placeholder as Registry['admin.authors.destroy']['types'],
+  },
   'admin.stats': {
     methods: ["GET","HEAD"],
     pattern: '/admin/stats',
