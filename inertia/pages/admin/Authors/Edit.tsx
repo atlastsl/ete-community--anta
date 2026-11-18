@@ -11,21 +11,23 @@ import { toAuthorPayload, validateAuthorForm, type AuthorFormData } from '~/lib/
 import { urlFor } from '~/client'
 
 type Props = {
-  author: AuthorFormData & {
+  author: Omit<AuthorFormData, 'photo' | 'removePhoto'> & {
     id: string
     /** Migrated card (FR56): may stay without affiliation until completed (FR52). */
     isMigrated: boolean
     /** Pivot rows, every production status included: > 0 blocks the deletion (FR55). */
     productionsCount: number
+    /** Signed URL of the saved photo (`w384`), never public (Story 9.3). */
+    photoUrl: string | null
   }
 }
 
 export default function AdminAuthorsEdit({ author }: Props) {
   const { t } = useTranslation()
-  const { id, isMigrated, productionsCount, ...formData } = author
+  const { id, isMigrated, productionsCount, photoUrl, ...formData } = author
   const [deleteTarget, setDeleteTarget] = useState<DeleteAuthorTarget | null>(null)
-  const form = useForm<AuthorFormData>(formData)
-  const { data, setData, put, processing, errors } = form
+  const form = useForm<AuthorFormData>({ ...formData, photo: null, removePhoto: false })
+  const { data, setData, put, processing, errors, progress } = form
   const requireAffiliation = !isMigrated
 
   function handleSubmit(e: React.FormEvent) {
@@ -37,7 +39,11 @@ export default function AdminAuthorsEdit({ author }: Props) {
       return
     }
     form.transform(toAuthorPayload)
-    put(urlFor('admin.authors.update', { id }), { preserveScroll: true })
+    // A chosen file switches Inertia to multipart on its own (PUT, no method spoofing).
+    put(urlFor('admin.authors.update', { id }), {
+      preserveScroll: true,
+      onSuccess: () => form.reset('photo', 'removePhoto'),
+    })
   }
 
   return (
@@ -50,6 +56,8 @@ export default function AdminAuthorsEdit({ author }: Props) {
           setData={setData}
           errors={errors as Record<string, string | undefined>}
           requireAffiliation={requireAffiliation}
+          photoUrl={photoUrl}
+          uploadPercent={processing && data.photo ? (progress?.percentage ?? null) : null}
         />
 
         <div className="mt-6 flex flex-wrap items-start gap-3">

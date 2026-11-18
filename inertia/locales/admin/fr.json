@@ -213,8 +213,18 @@
     "form": {
       "sections": {
         "identity": "Identité",
+        "photo": "Photo",
         "affiliations": "Affiliations",
         "links": "Liens"
+      },
+      "photo": {
+        "choose": "Choisir une photo",
+        "replace": "Remplacer la photo",
+        "cancel": "Annuler",
+        "remove": "Retirer la photo",
+        "help": "Facultatif. JPEG, PNG ou WebP · 5 Mo max · recadrage carré automatique",
+        "selected": "Fichier choisi : {{name}}",
+        "uploading": "Envoi de la photo… {{percent}} %"
       },
       "fields": {
         "last_names": "Nom(s)",
@@ -244,7 +254,10 @@
         "institution_required": "L'institution est obligatoire.",
         "institution_too_long": "L'institution ne doit pas dépasser 255 caractères.",
         "department_too_long": "Le département ne doit pas dépasser 255 caractères.",
-        "scholar_url_invalid": "Saisissez une adresse web valide commençant par http:// ou https:// (500 caractères au maximum)."
+        "scholar_url_invalid": "Saisissez une adresse web valide commençant par http:// ou https:// (500 caractères au maximum).",
+        "photo_type": "Choisissez une image JPEG, PNG ou WebP valide.",
+        "photo_size": "La photo ne doit pas dépasser 5 Mo.",
+        "photo_dimensions": "La photo est trop grande (40 mégapixels au maximum)."
       }
     },
     "flash": {

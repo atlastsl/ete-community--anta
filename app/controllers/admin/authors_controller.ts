@@ -1,9 +1,14 @@
 import type { HttpContext } from '@adonisjs/core/http'
+import logger from '@adonisjs/core/services/logger'
 import { errors as lucidErrors } from '@adonisjs/lucid'
+import { errors as vineErrors } from '@vinejs/vine'
+import type { MultipartFile } from '@adonisjs/core/bodyparser'
 import Author from '#models/author'
 import ActionType from '#enums/action_type'
 import ActivityLogService from '#services/activity_log_service'
 import AuthorService, { type AuthorListFilters } from '#services/author_service'
+import FileStorageService from '#services/file_storage_service'
+import ImageService, { ImageValidationError, type ImageVariant } from '#services/image_service'
 import { normalizeKey } from '#helpers/normalize'
 import { authorValidator, assertAffiliationRule } from '#validators/admin/author_validator'
 
@@ -47,13 +52,19 @@ export default class AuthorsController {
       AuthorService.institutionOptions(),
     ])
 
+    const authors = paginator.all()
+    const photoUrls = await Promise.all(
+      authors.map((author) => this.photoUrl(author.photoKey, 'w128.webp'))
+    )
+
     return inertia.render('admin/Authors/Index', {
-      authors: paginator.all().map((author) => {
+      authors: authors.map((author, index) => {
         const primary = author.affiliations[0]
         return {
           id: author.id,
           firstNames: author.firstNames,
           lastNames: author.lastNames,
+          photoUrl: photoUrls[index],
           primaryAffiliation: primary
             ? { institution: primary.institution, department: primary.department }
             : null,
@@ -85,10 +96,13 @@ export default class AuthorsController {
   }
 
   async store({ request, auth, response, session }: HttpContext) {
-    const data = await request.validateUsing(authorValidator)
+    const validated = await request.validateUsing(authorValidator)
+    const data = { ...validated, affiliations: validated.affiliations ?? [] }
     assertAffiliationRule(data, { isMigrated: false })
+    // Image processing comes before any write (card or R2 object).
+    const photo = await this.photoVariants(validated.photo)
 
-    const author = await AuthorService.create(data, auth.user!.id)
+    const author = await AuthorService.create(data, auth.user!.id, photo)
 
     // After the commit: ActivityLogService is outside the transaction and never throws.
     await ActivityLogService.log({
@@ -119,16 +133,22 @@ export default class AuthorsController {
         })),
         isMigrated: author.migrationKey !== null,
         productionsCount: await AuthorService.productionsCount(author.id),
+        photoUrl: await this.photoUrl(author.photoKey, 'w384.webp'),
       },
     })
   }
 
   async update({ params, request, auth, response, session }: HttpContext) {
     const author = await this.findOrFail(params.id)
-    const data = await request.validateUsing(authorValidator)
+    const validated = await request.validateUsing(authorValidator)
+    const data = { ...validated, affiliations: validated.affiliations ?? [] }
     assertAffiliationRule(data, { isMigrated: author.migrationKey !== null })
+    const photo = await this.photoVariants(validated.photo)
 
-    const { fields } = await AuthorService.update(author, data)
+    const { fields } = await AuthorService.update(author, data, {
+      photo,
+      removePhoto: validated.removePhoto === true,
+    })
 
     if (fields.length > 0) {
       await ActivityLogService.log({
@@ -170,6 +190,37 @@ export default class AuthorsController {
 
     session.flash('success', 'authors.flash.deleted')
     return response.redirect(listUrl)
+  }
+
+  /**
+   * Decodes and normalizes the uploaded photo; a refused image becomes an inline error
+   * under the photo field (same mechanism as `assertAffiliationRule`).
+   */
+  private async photoVariants(
+    file: MultipartFile | undefined | null
+  ): Promise<ImageVariant[] | null> {
+    if (!file) return null
+    try {
+      if (!file.tmpPath) throw new ImageValidationError('photo_type')
+      return await ImageService.authorPhotoVariants(file.tmpPath)
+    } catch (error) {
+      if (!(error instanceof ImageValidationError)) throw error
+      throw new vineErrors.E_VALIDATION_ERROR([
+        { field: 'photo', message: `authors.form.errors.${error.code}`, rule: error.code },
+      ])
+    }
+  }
+
+  /** Signed preview URL of a photo variant (never public); `null` if signing fails. */
+  private async photoUrl(photoKey: string | null, variant: string): Promise<string | null> {
+    if (!photoKey) return null
+    const key = `${photoKey}/${variant}`
+    try {
+      return await FileStorageService.signedUrl(key)
+    } catch (error) {
+      logger.error({ err: error, key }, 'Failed to sign author photo URL')
+      return null
+    }
   }
 
   /** The list URL with its query string when the referer is the list; never another host. */

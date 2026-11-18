@@ -213,8 +213,18 @@
     "form": {
       "sections": {
         "identity": "Identity",
+        "photo": "Photo",
         "affiliations": "Affiliations",
         "links": "Links"
+      },
+      "photo": {
+        "choose": "Choose a photo",
+        "replace": "Replace photo",
+        "cancel": "Cancel",
+        "remove": "Remove photo",
+        "help": "Optional. JPEG, PNG or WebP · 5 MB max · automatic square cropping",
+        "selected": "Selected file: {{name}}",
+        "uploading": "Uploading photo… {{percent}}%"
       },
       "fields": {
         "last_names": "Last name(s)",
@@ -244,7 +254,10 @@
         "institution_required": "Institution is required.",
         "institution_too_long": "Institution must not exceed 255 characters.",
         "department_too_long": "Department must not exceed 255 characters.",
-        "scholar_url_invalid": "Enter a valid web address starting with http:// or https:// (500 characters at most)."
+        "scholar_url_invalid": "Enter a valid web address starting with http:// or https:// (500 characters at most).",
+        "photo_type": "Choose a valid JPEG, PNG or WebP image.",
+        "photo_size": "The photo must not exceed 5 MB.",
+        "photo_dimensions": "The photo is too large (40 megapixels maximum)."
       }
     },
     "flash": {

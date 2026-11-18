@@ -91,7 +91,10 @@ test.group('Authors Index | suppression', () => {
     assert.include(button, 'aria-describedby="author-delete-hint"')
     assert.notInclude(button, 'disabled={')
     assert.notInclude(editPage, 'Tooltip')
-    assert.include(editPage, 'const { id, isMigrated, productionsCount, ...formData } = author')
+    assert.include(
+      editPage,
+      'const { id, isMigrated, productionsCount, photoUrl, ...formData } = author'
+    )
   })
 
   test('tooltip shadcn : méta-paquet radix-ui et alias ~/', ({ assert }) => {
@@ -128,5 +131,39 @@ test.group('Authors pages | i18n', () => {
     assert.notInclude(en.authors.delete.refused, '{{')
     assert.include(fr.authors.delete.blocked, '{{count}}')
     assert.include(en.authors.delete.blocked, '{{count}}')
+  })
+})
+
+test.group('Authors Index | avatar (Story 9.3)', () => {
+  test('colonne Auteur : Avatar sm (URL signée w128, alt vide) avant le nom', ({ assert }) => {
+    assert.include(indexPage, "import Avatar from '~/components/shared/Avatar'")
+    assert.include(indexPage, 'src={author.photoUrl}')
+    assert.include(indexPage, 'size="sm"')
+    assert.isBelow(
+      indexPage.indexOf('src={author.photoUrl}'),
+      indexPage.indexOf('formatAuthorName(author.firstNames, author.lastNames)')
+    )
+    assert.include(indexPage, 'photoUrl: string | null')
+  })
+
+  test('i18n photo FR/EN', ({ assert }) => {
+    for (const key of [
+      'authors.form.sections.photo',
+      'authors.form.photo.choose',
+      'authors.form.photo.replace',
+      'authors.form.photo.cancel',
+      'authors.form.photo.remove',
+      'authors.form.photo.help',
+      'authors.form.photo.selected',
+      'authors.form.photo.uploading',
+      'authors.form.errors.photo_type',
+      'authors.form.errors.photo_size',
+      'authors.form.errors.photo_dimensions',
+    ]) {
+      assert.isString(lookup(fr, key), key)
+      assert.isString(lookup(en, key), key)
+    }
+    assert.include(fr.authors.form.photo.selected, '{{name}}')
+    assert.include(en.authors.form.photo.uploading, '{{percent}}')
   })
 })

@@ -20,7 +20,7 @@ export default function AdminAuthorsCreate() {
     ...EMPTY_AUTHOR_FORM,
     affiliations: EMPTY_AUTHOR_FORM.affiliations.map((a) => ({ ...a })),
   })
-  const { data, setData, post, processing, errors } = form
+  const { data, setData, post, processing, errors, progress } = form
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -44,6 +44,7 @@ export default function AdminAuthorsCreate() {
           setData={setData}
           errors={errors as Record<string, string | undefined>}
           requireAffiliation
+          uploadPercent={processing && data.photo ? (progress?.percentage ?? null) : null}
         />
 
         <div className="mt-6 flex gap-3">

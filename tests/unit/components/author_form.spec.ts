@@ -44,9 +44,8 @@ test.group('AuthorForm | champs et affiliations', () => {
     assert.include(form, "message('affiliations')")
   })
 
-  test('pas de photo ni de consentement en 9.1', ({ assert }) => {
-    assert.notInclude(form, 'type="file"')
-    assert.notInclude(form, 'type="checkbox"')
+  test('pas encore de consentement (Story 9.4)', ({ assert }) => {
+    assert.notInclude(form, 'consent')
   })
 })
 
@@ -88,5 +87,73 @@ test.group('Pages Authors | création, édition, liste', () => {
       form,
       "aria-describedby={message('affiliations') ? 'affiliations-error' : undefined}"
     )
+  })
+})
+
+test.group('AuthorForm | photo (Story 9.3)', () => {
+  const lib = read('inertia/lib/author_form.ts')
+
+  test('champ fichier : accept, aide reliée, erreur en ligne, aria-invalid sur l’input', ({
+    assert,
+  }) => {
+    assert.include(form, 'type="file"')
+    assert.include(form, 'accept={PHOTO_ACCEPT}')
+    assert.include(form, "t('authors.form.photo.help')")
+    assert.include(form, "message('photo')")
+    assert.include(form, 'aria-invalid={!!error}')
+    assert.include(form, 'aria-describedby={describedBy}')
+    // Focus visible : l'input sr-only est le pair du libellé stylé en bouton.
+    assert.include(form, 'peer sr-only')
+    assert.include(form, 'peer-focus-visible:ring-[3px]')
+  })
+
+  test('aperçu avatar lg : URL d’objet créée puis libérée, photo enregistrée sinon', ({
+    assert,
+  }) => {
+    assert.include(form, 'size="lg"')
+    assert.include(form, 'URL.createObjectURL(data.photo)')
+    assert.include(form, 'URL.revokeObjectURL(url)')
+    assert.include(form, 'photoPreview ?? (data.removePhoto ? null : photoUrl)')
+  })
+
+  test('annuler le fichier choisi, « Retirer la photo » seulement avec une photo enregistrée', ({
+    assert,
+  }) => {
+    assert.include(form, "t('authors.form.photo.cancel')")
+    assert.include(form, "t('authors.form.photo.remove')")
+    assert.include(form, 'hasSavedPhoto && !file')
+    assert.include(form, "setData('removePhoto', checked)")
+    // Choisir un fichier décoche removePhoto.
+    assert.include(form, "if (file) setData('removePhoto', false)")
+  })
+
+  test('section Photo après Identité', ({ assert }) => {
+    assert.isBelow(
+      form.indexOf("t('authors.form.sections.identity')"),
+      form.indexOf("t('authors.form.sections.photo')")
+    )
+    assert.isBelow(
+      form.indexOf("t('authors.form.sections.photo')"),
+      form.indexOf("t('authors.form.sections.affiliations')")
+    )
+  })
+
+  test('règles client : type et taille, mêmes clés que le serveur ; charge utile', ({ assert }) => {
+    assert.include(lib, 'export const PHOTO_MAX_BYTES = 5 * 1024 * 1024')
+    assert.include(lib, "errors.photo = 'authors.form.errors.photo_type'")
+    assert.include(lib, "errors.photo = 'authors.form.errors.photo_size'")
+    assert.include(lib, '...(data.photo instanceof File ? { photo: data.photo } : {})')
+    assert.include(lib, '...(data.removePhoto && !data.photo ? { removePhoto: true } : {})')
+    assert.include(lib, 'photo: null,\n  removePhoto: false,')
+  })
+
+  test('Edit : photoUrl hors état du formulaire, reset après succès, pas de _method', ({
+    assert,
+  }) => {
+    assert.include(editPage, 'const { id, isMigrated, productionsCount, photoUrl, ...formData }')
+    assert.include(editPage, "form.reset('photo', 'removePhoto')")
+    assert.include(editPage, 'photoUrl={photoUrl}')
+    assert.notInclude(editPage, '_method')
+    assert.include(createPage, 'uploadPercent=')
   })
 })

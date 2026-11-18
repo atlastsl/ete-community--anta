@@ -17,6 +17,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/comp
 import AuthorStatusBadges from '~/components/admin/AuthorStatusBadges'
 import DeleteAuthorDialog, { type DeleteAuthorTarget } from '~/components/admin/DeleteAuthorDialog'
 import Pagination from '~/components/shared/Pagination'
+import Avatar from '~/components/shared/Avatar'
 import { formatAuthorName } from '~/lib/author_form'
 import { cn } from '~/lib/utils'
 import { urlFor } from '~/client'
@@ -25,6 +26,8 @@ type AuthorRow = {
   id: string
   firstNames: string
   lastNames: string
+  /** Signed URL of the `w128` variant (Story 9.3), `null` without photo. */
+  photoUrl: string | null
   primaryAffiliation: { institution: string; department: string | null } | null
   updatedAt: string | null
   /** Pivot rows, every production status included (FR55). */
@@ -265,12 +268,21 @@ export default function AdminAuthorsIndex({
                         return (
                           <tr key={author.id} className="border-b border-stone-100 last:border-0">
                             <td className="px-4 py-3 font-medium text-stone-900">
-                              <Link
-                                href={editHref}
-                                className="hover:text-green-700 hover:underline"
-                              >
-                                {formatAuthorName(author.firstNames, author.lastNames)}
-                              </Link>
+                              <div className="flex items-center gap-3">
+                                <Avatar
+                                  src={author.photoUrl}
+                                  firstNames={author.firstNames}
+                                  lastNames={author.lastNames}
+                                  size="sm"
+                                  alt=""
+                                />
+                                <Link
+                                  href={editHref}
+                                  className="hover:text-green-700 hover:underline"
+                                >
+                                  {formatAuthorName(author.firstNames, author.lastNames)}
+                                </Link>
+                              </div>
                             </td>
                             <td className="px-4 py-3 text-stone-600">
                               {primary ? (

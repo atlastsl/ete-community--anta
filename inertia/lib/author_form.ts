@@ -2,7 +2,8 @@
  * Author card form (Story 9.1): shared types, display name and the client copy of the
  * server rules (`app/validators/admin/author_validator.ts`). Intentional duplication,
  * like `production_completion.ts`: same limits, same i18n keys, keyed like VineJS
- * (`affiliations.0.institution`).
+ * (`affiliations.0.institution`). Photo (Story 9.3): type and size are checked here too,
+ * the server then decodes the image (`ImageService`).
  */
 
 export type AffiliationFormData = { institution: string; department: string }
@@ -12,12 +13,19 @@ export type AuthorFormData = {
   firstNames: string
   googleScholarUrl: string
   affiliations: AffiliationFormData[]
+  /** Newly chosen file, sent as multipart; `null` keeps the saved photo. */
+  photo: File | null
+  /** Removes the saved photo (ignored when a new file is chosen). */
+  removePhoto: boolean
 }
 
 export const AUTHOR_NAME_MAX = 120
 export const AFFILIATION_FIELD_MAX = 255
 export const SCHOLAR_URL_MAX = 500
 export const AFFILIATIONS_MAX = 20
+export const PHOTO_MAX_BYTES = 5 * 1024 * 1024
+export const PHOTO_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+export const PHOTO_ACCEPT = '.jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp'
 
 export const EMPTY_AFFILIATION: AffiliationFormData = { institution: '', department: '' }
 
@@ -26,11 +34,22 @@ export const EMPTY_AUTHOR_FORM: AuthorFormData = {
   firstNames: '',
   googleScholarUrl: '',
   affiliations: [{ ...EMPTY_AFFILIATION }],
+  photo: null,
+  removePhoto: false,
 }
 
 /** "Prénom NOM": last name upper-cased for display only, the data keeps its case (D13, D34). */
 export function formatAuthorName(firstNames: string, lastNames: string): string {
   return `${firstNames} ${lastNames.toLocaleUpperCase('fr-FR')}`.trim()
+}
+
+/** Initials of the avatar (D13): first letter of the first word of each field, capitals. */
+export function authorInitials(firstNames: string, lastNames: string): string {
+  const initial = (value: string) => {
+    const word = value.trim().split(/\s+/)[0] ?? ''
+    return Array.from(word)[0] ?? ''
+  }
+  return `${initial(firstNames)}${initial(lastNames)}`.toLocaleUpperCase('fr-FR')
 }
 
 function isHttpUrl(value: string): boolean {
@@ -82,10 +101,21 @@ export function validateAuthorForm(
     errors.googleScholarUrl = 'authors.form.errors.scholar_url_invalid'
   }
 
+  if (data.photo) {
+    if (!PHOTO_MIME_TYPES.includes(data.photo.type)) {
+      errors.photo = 'authors.form.errors.photo_type'
+    } else if (data.photo.size > PHOTO_MAX_BYTES) {
+      errors.photo = 'authors.form.errors.photo_size'
+    }
+  }
+
   return errors
 }
 
-/** Request body: trimmed values, empty optional fields omitted. */
+/**
+ * Request body: trimmed values, empty optional fields omitted. A chosen file makes Inertia
+ * send multipart; `removePhoto` is sent only when checked and no new file is chosen.
+ */
 export function toAuthorPayload(data: AuthorFormData) {
   const scholar = data.googleScholarUrl.trim()
   return {
@@ -98,5 +128,7 @@ export function toAuthorPayload(data: AuthorFormData) {
         : { institution: a.institution.trim() }
     }),
     ...(scholar ? { googleScholarUrl: scholar } : {}),
+    ...(data.photo instanceof File ? { photo: data.photo } : {}),
+    ...(data.removePhoto && !data.photo ? { removePhoto: true } : {}),
   }
 }

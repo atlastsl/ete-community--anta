@@ -5,6 +5,10 @@ import Author from '#models/author'
 import AuthorAffiliation from '#models/author_affiliation'
 import Production from '#models/production'
 import AuthorService from '#services/author_service'
+import drive from '@adonisjs/drive/services/main'
+import sharp from 'sharp'
+import FileStorageService from '#services/file_storage_service'
+import ImageService, { type ImageVariant } from '#services/image_service'
 
 // Fictitious names only (public repository).
 
@@ -197,5 +201,160 @@ test.group('AuthorService | list helpers (Story 9.2)', (group) => {
     const rows = await query
     const names = rows.map((a) => a.lastNames)
     assert.deepEqual(names, ['Zulu', 'Bexel'])
+  })
+})
+
+/** Variants of a generated image (no real photo in the public repository). */
+async function photoVariants(): Promise<ImageVariant[]> {
+  const input = await sharp({
+    create: { width: 200, height: 150, channels: 3, background: { r: 10, g: 120, b: 60 } },
+  })
+    .png()
+    .toBuffer()
+  return ImageService.authorPhotoVariants(input)
+}
+
+/** Every key stored on the fake disk under `authors/`. */
+async function storedKeys(): Promise<string[]> {
+  const { objects } = await drive.use('r2').listAll('authors', { recursive: true })
+  return Array.from(objects)
+    .filter((o) => o.isFile)
+    .map((o) => (o as { key: string }).key)
+    .sort()
+}
+
+test.group('AuthorService | photo (Story 9.3)', (group) => {
+  group.each.setup(async () => {
+    await db.beginGlobalTransaction()
+    drive.fake('r2')
+    return async () => {
+      drive.restore('r2')
+      await db.rollbackGlobalTransaction()
+    }
+  })
+
+  test('create with photo → variants under authors/<id>/<token>, photo_key = prefix', async ({
+    assert,
+  }) => {
+    const author = await AuthorService.create(PAYLOAD, null, await photoVariants())
+    assert.match(author.photoKey!, new RegExp(`^authors/${author.id}/[A-Za-z0-9_-]{20}$`))
+    assert.deepEqual(await storedKeys(), AuthorService.photoKeys(author.photoKey!).sort())
+    const saved = await Author.findOrFail(author.id)
+    assert.equal(saved.photoKey, author.photoKey)
+  })
+
+  test('create failing after the upload → new variants removed, error thrown', async ({
+    assert,
+    cleanup,
+  }) => {
+    const original = Author.generateUniqueSlug
+    Author.generateUniqueSlug = async () => {
+      throw new Error('database down')
+    }
+    cleanup(() => {
+      Author.generateUniqueSlug = original
+    })
+
+    await assert.rejects(
+      async () => AuthorService.create(PAYLOAD, null, await photoVariants()),
+      'database down'
+    )
+    assert.deepEqual(await storedKeys(), [])
+  })
+
+  test('one variant upload failing → the sent ones removed, nothing written', async ({
+    assert,
+    cleanup,
+  }) => {
+    const original = FileStorageService.putObject
+    FileStorageService.putObject = async (key, body, contentType) => {
+      if (key.endsWith('og.jpg')) throw new Error('R2 unavailable')
+      return original.call(FileStorageService, key, body, contentType)
+    }
+    cleanup(() => {
+      FileStorageService.putObject = original
+    })
+
+    await assert.rejects(
+      async () => AuthorService.create(PAYLOAD, null, await photoVariants()),
+      'R2 unavailable'
+    )
+    assert.deepEqual(await storedKeys(), [])
+    assert.isNull(await Author.findBy('lastNames', 'Fictif'))
+  })
+
+  test('update failing in the transaction → new prefix removed, old photo kept', async ({
+    assert,
+    cleanup,
+  }) => {
+    const author = await AuthorService.create(PAYLOAD, null, await photoVariants())
+    const oldPrefix = author.photoKey!
+    const original = AuthorService.replaceAffiliations
+    AuthorService.replaceAffiliations = async () => {
+      throw new Error('constraint')
+    }
+    cleanup(() => {
+      AuthorService.replaceAffiliations = original
+    })
+
+    const fresh = await Author.findOrFail(author.id)
+    await assert.rejects(
+      async () =>
+        AuthorService.update(
+          fresh,
+          { ...PAYLOAD, affiliations: [{ institution: 'Autre Université' }] },
+          { photo: await photoVariants() }
+        ),
+      'constraint'
+    )
+    assert.deepEqual(await storedKeys(), AuthorService.photoKeys(oldPrefix).sort())
+    const saved = await Author.findOrFail(author.id)
+    assert.equal(saved.photoKey, oldPrefix)
+  })
+
+  test('replace → old variants deleted after the commit; delete failure only logged', async ({
+    assert,
+    cleanup,
+  }) => {
+    const author = await AuthorService.create(PAYLOAD, null, await photoVariants())
+    const oldPrefix = author.photoKey!
+
+    const original = FileStorageService.deleteObjects
+    FileStorageService.deleteObjects = async () => {
+      throw new Error('R2 unavailable')
+    }
+    cleanup(() => {
+      FileStorageService.deleteObjects = original
+    })
+
+    const { fields } = await AuthorService.update(await Author.findOrFail(author.id), PAYLOAD, {
+      photo: await photoVariants(),
+    })
+    assert.deepEqual(fields, ['photo'])
+    const saved = await Author.findOrFail(author.id)
+    assert.notEqual(saved.photoKey, oldPrefix)
+    // The deletion failed (logged): both prefixes remain, the request did not fail.
+    assert.includeMembers(await storedKeys(), AuthorService.photoKeys(oldPrefix))
+  })
+
+  test('removePhoto without saved photo → no change, no field', async ({ assert }) => {
+    const author = await AuthorService.create(PAYLOAD, null)
+    const { fields } = await AuthorService.update(author, PAYLOAD, { removePhoto: true })
+    assert.deepEqual(fields, [])
+  })
+
+  test('delete → variants removed after the deletion; refusal keeps them', async ({ assert }) => {
+    const kept = await AuthorService.create(PAYLOAD, null, await photoVariants())
+    await linkToNewProduction(kept)
+    const gone = await AuthorService.create(
+      { ...PAYLOAD, lastNames: 'Exemple' },
+      null,
+      await photoVariants()
+    )
+
+    assert.deepEqual(await AuthorService.delete(gone), { deleted: true })
+    const refused = await AuthorService.delete(kept)
+    assert.isFalse(refused.deleted)
+    assert.deepEqual(await storedKeys(), AuthorService.photoKeys(kept.photoKey!).sort())
   })
 })

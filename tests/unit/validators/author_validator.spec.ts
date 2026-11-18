@@ -38,6 +38,30 @@ function expectAffiliationError(fn: () => void, assert: Assert) {
 }
 
 test.group('AuthorValidator', () => {
+  test('affiliations absent (multipart sans affiliation) → valide, normalisé par le contrôleur', async ({
+    assert,
+  }) => {
+    const out = await authorValidator.validate({ lastNames: 'Fictif', firstNames: 'Jean' })
+    assert.isUndefined(out.affiliations)
+  })
+
+  test("removePhoto : '1' (FormData), true (JSON) et '0' acceptés", async ({ assert }) => {
+    const removePhoto = async (value: unknown) => {
+      const out = await authorValidator.validate({ ...VALID, removePhoto: value })
+      return out.removePhoto
+    }
+    assert.isTrue(await removePhoto('1'))
+    assert.isTrue(await removePhoto(true))
+    assert.isFalse(await removePhoto('0'))
+    assert.isUndefined(await removePhoto(null))
+  })
+
+  test("photo qui n'est pas un fichier → authors.form.errors.photo_type", async ({ assert }) => {
+    assert.deepInclude(await messages({ ...VALID, photo: 'pas-un-fichier' }), {
+      photo: 'authors.form.errors.photo_type',
+    })
+  })
+
   test('fiche valide → trim, champs facultatifs absents', async ({ assert }) => {
     const out = await authorValidator.validate({
       lastNames: '  Fictif ',
@@ -59,7 +83,7 @@ test.group('AuthorValidator', () => {
       googleScholarUrl: null,
     })
     assert.isUndefined(out.googleScholarUrl)
-    assert.isUndefined(out.affiliations[0].department)
+    assert.isUndefined(out.affiliations?.[0].department)
   })
 
   test('noms obligatoires et ≤ 120 caractères', async ({ assert }) => {
@@ -118,10 +142,15 @@ test.group('AuthorValidator', () => {
     )
   })
 
-  test('affiliations manquantes → refus', async ({ assert }) => {
-    assert.deepEqual(await messages({ lastNames: 'A', firstNames: 'B' }), {
-      affiliations: 'authors.form.errors.affiliation_required',
-    })
+  test('affiliations manquantes → refus par assertAffiliationRule après normalisation', async ({
+    assert,
+  }) => {
+    // Le schéma accepte l'absence (multipart, Story 9.3) ; le contrôleur normalise à [].
+    assert.deepEqual(await messages({ lastNames: 'A', firstNames: 'B' }), {})
+    expectAffiliationError(
+      () => assertAffiliationRule({ affiliations: [] }, { isMigrated: false }),
+      assert
+    )
   })
 })
 

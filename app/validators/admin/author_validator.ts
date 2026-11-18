@@ -5,6 +5,9 @@ export const AUTHOR_NAME_MAX = 120
 export const AFFILIATION_FIELD_MAX = 255
 export const SCHOLAR_URL_MAX = 500
 export const AFFILIATIONS_MAX = 20
+/** Photo limits (Story 9.3), shared with `inertia/lib/author_form.ts` and `ImageService`. */
+export const PHOTO_MAX_MB = 5
+export const PHOTO_EXTNAMES = ['jpg', 'jpeg', 'png', 'webp']
 
 /**
  * Author card (Story 9.1, P2.6). Empty strings reach the validator as `null`
@@ -12,7 +15,12 @@ export const AFFILIATIONS_MAX = 20
  * required ones fail on `required`.
  *
  * The "at least one affiliation" rule depends on the card (migrated or not): it is
- * checked after validation by `assertAffiliationRule`.
+ * checked after validation by `assertAffiliationRule`. `affiliations` is optional because
+ * a multipart request (photo attached) carries no field for an empty array: the controller
+ * normalizes it to `[]`.
+ *
+ * `photo` is checked here for size and extension only; `ImageService` then decodes it.
+ * `removePhoto` accepts JSON booleans and the `'1'` / `'0'` of Inertia's FormData.
  */
 export const authorValidator = vine.compile(
   vine.object({
@@ -25,13 +33,16 @@ export const authorValidator = vine.compile(
           department: vine.string().trim().maxLength(AFFILIATION_FIELD_MAX).optional(),
         })
       )
-      .maxLength(AFFILIATIONS_MAX),
+      .maxLength(AFFILIATIONS_MAX)
+      .optional(),
     googleScholarUrl: vine
       .string()
       .trim()
       .maxLength(SCHOLAR_URL_MAX)
       .url({ require_protocol: true, protocols: ['http', 'https'] })
       .optional(),
+    photo: vine.file({ size: `${PHOTO_MAX_MB}mb`, extnames: PHOTO_EXTNAMES }).optional(),
+    removePhoto: vine.boolean().optional(),
   })
 )
 
@@ -51,6 +62,9 @@ authorValidator.messagesProvider = new SimpleMessagesProvider({
   'affiliations.*.department.maxLength': 'authors.form.errors.department_too_long',
   'googleScholarUrl.maxLength': 'authors.form.errors.scholar_url_invalid',
   'googleScholarUrl.url': 'authors.form.errors.scholar_url_invalid',
+  'photo.file': 'authors.form.errors.photo_type',
+  'photo.file.extname': 'authors.form.errors.photo_type',
+  'photo.file.size': 'authors.form.errors.photo_size',
 })
 
 /**
