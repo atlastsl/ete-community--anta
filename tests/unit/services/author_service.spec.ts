@@ -4,6 +4,8 @@ import { DateTime } from 'luxon'
 import Author from '#models/author'
 import AuthorAffiliation from '#models/author_affiliation'
 import Production from '#models/production'
+import AdminUser from '#models/admin_user'
+import { errors as vineErrors } from '@vinejs/vine'
 import AuthorService from '#services/author_service'
 import drive from '@adonisjs/drive/services/main'
 import sharp from 'sharp'
@@ -11,6 +13,12 @@ import FileStorageService from '#services/file_storage_service'
 import ImageService, { type ImageVariant } from '#services/image_service'
 
 // Fictitious names only (public repository).
+
+/** Colonnes de consentement relues en base. */
+async function consentOf(id: string) {
+  const author = await Author.findOrFail(id)
+  return { at: author.consentConfirmedAt, by: author.consentConfirmedById }
+}
 
 const PAYLOAD = {
   lastNames: 'Fictif',
@@ -356,5 +364,133 @@ test.group('AuthorService | photo (Story 9.3)', (group) => {
     const refused = await AuthorService.delete(kept)
     assert.isFalse(refused.deleted)
     assert.deepEqual(await storedKeys(), AuthorService.photoKeys(kept.photoKey!).sort())
+  })
+})
+
+test.group('AuthorService | consent (Story 9.4)', (group) => {
+  group.each.setup(async () => {
+    await db.beginGlobalTransaction()
+    return () => db.rollbackGlobalTransaction()
+  })
+
+  async function admin(): Promise<AdminUser> {
+    return AdminUser.create({
+      email: `${Math.floor(Math.random() * 1_000_000)}@anta.test`,
+      passwordHash: 'plain-password-hashed-by-mixin',
+      role: 'admin',
+      passwordChanged: true,
+      isActive: true,
+      createdById: null,
+    })
+  }
+
+  test('create with consent → confirmed by the admin; without → not public', async ({ assert }) => {
+    const a = await admin()
+    const consented = await AuthorService.create({ ...PAYLOAD, consent: true }, a.id)
+    assert.isNotNull(consented.consentConfirmedAt)
+    assert.equal(consented.consentConfirmedById, a.id)
+    const other = await AuthorService.create({ ...PAYLOAD, lastNames: 'Exemple' }, a.id)
+    assert.isNull(other.consentConfirmedAt)
+  })
+
+  test('confirmConsent → confirmed, then unchanged (same timestamp, same admin)', async ({
+    assert,
+  }) => {
+    const [a, b] = [await admin(), await admin()]
+    const author = await AuthorService.create(PAYLOAD, a.id)
+    assert.equal(await AuthorService.confirmConsent(author, a.id), 'confirmed')
+    const first = await Author.findOrFail(author.id)
+    assert.equal(first.consentConfirmedById, a.id)
+
+    assert.equal(await AuthorService.confirmConsent(first, b.id), 'unchanged')
+    const second = await Author.findOrFail(author.id)
+    assert.equal(second.consentConfirmedById, a.id)
+    assert.equal(second.consentConfirmedAt?.toISO(), first.consentConfirmedAt?.toISO())
+    assert.equal(second.updatedAt?.toISO(), first.updatedAt?.toISO())
+  })
+
+  test('confirmConsent without affiliation → no_affiliation, nothing written (D27)', async ({
+    assert,
+  }) => {
+    const a = await admin()
+    const author = await Author.create({
+      firstNames: 'Jean',
+      lastNames: 'Fictif',
+      migrationKey: 'jean-fictif',
+    })
+    assert.equal(await AuthorService.confirmConsent(author, a.id), 'no_affiliation')
+    assert.isNull(await consentOf(author.id).then((c) => c.at))
+  })
+
+  test('withdrawConsent → withdrawn (both columns NULL), then unchanged', async ({ assert }) => {
+    const a = await admin()
+    const author = await AuthorService.create({ ...PAYLOAD, consent: true }, a.id)
+    assert.equal(await AuthorService.withdrawConsent(author), 'withdrawn')
+    const saved = await Author.findOrFail(author.id)
+    assert.isNull(saved.consentConfirmedAt)
+    assert.isNull(saved.consentConfirmedById)
+    assert.equal(await AuthorService.withdrawConsent(saved), 'unchanged')
+  })
+
+  test('update: consent only → confirmed, no field; already public → not confirmed again', async ({
+    assert,
+  }) => {
+    const [a, b] = [await admin(), await admin()]
+    const author = await AuthorService.create(PAYLOAD, a.id)
+    const first = await AuthorService.update(
+      await Author.findOrFail(author.id),
+      { ...PAYLOAD, consent: true },
+      { adminId: a.id }
+    )
+    assert.deepEqual(first.fields, [])
+    assert.isTrue(first.consentConfirmed)
+
+    const again = await AuthorService.update(
+      await Author.findOrFail(author.id),
+      { ...PAYLOAD, consent: true },
+      { adminId: b.id }
+    )
+    assert.isFalse(again.consentConfirmed)
+    assert.equal(await consentOf(author.id).then((c) => c.by), a.id)
+  })
+
+  test('update: consent confirmed meanwhile (stale instance) → decided on the locked row', async ({
+    assert,
+  }) => {
+    const [a, b] = [await admin(), await admin()]
+    const author = await AuthorService.create(PAYLOAD, a.id)
+    const stale = await Author.findOrFail(author.id)
+    await AuthorService.confirmConsent(await Author.findOrFail(author.id), a.id)
+
+    const result = await AuthorService.update(
+      stale,
+      { ...PAYLOAD, consent: true },
+      { adminId: b.id }
+    )
+    assert.isFalse(result.consentConfirmed)
+    assert.equal(await consentOf(author.id).then((c) => c.by), a.id)
+  })
+
+  test('update: public card emptied of its affiliations → refused, nothing written', async ({
+    assert,
+  }) => {
+    const a = await admin()
+    const author = await Author.create({
+      firstNames: 'Jean',
+      lastNames: 'Fictif',
+      migrationKey: 'jean-fictif',
+    })
+    await AuthorAffiliation.create({ authorId: author.id, position: 1, institution: 'U' })
+    const stale = await Author.findOrFail(author.id)
+    await AuthorService.confirmConsent(await Author.findOrFail(author.id), a.id)
+
+    await assert.rejects(
+      () => AuthorService.update(stale, { ...PAYLOAD, affiliations: [] }),
+      vineErrors.E_VALIDATION_ERROR
+    )
+    const saved = await Author.findOrFail(author.id)
+    await saved.load('affiliations')
+    assert.lengthOf(saved.affiliations, 1)
+    assert.equal(saved.lastNames, 'Fictif')
   })
 })

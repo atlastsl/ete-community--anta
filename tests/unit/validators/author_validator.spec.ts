@@ -172,3 +172,61 @@ test.group('AuthorValidator | assertAffiliationRule', () => {
     )
   })
 })
+
+/** Erreurs levées par `assertAffiliationRule` : [champ, clé], ou [] si rien n'est levé. */
+function ruleErrors(
+  data: { affiliations: unknown[]; consent?: boolean },
+  options: { isMigrated: boolean; isPublic?: boolean }
+): [string, string][] {
+  try {
+    assertAffiliationRule(data, options)
+    return []
+  } catch (error) {
+    if (!(error instanceof errors.E_VALIDATION_ERROR)) throw error
+    return (error.messages as { field: string; message: string }[]).map((m) => [m.field, m.message])
+  }
+}
+
+const AFFILIATION_REQUIRED: [string, string] = [
+  'affiliations',
+  'authors.form.errors.affiliation_required',
+]
+const CONSENT_REQUIRES: [string, string] = [
+  'consent',
+  'authors.form.errors.consent_requires_affiliation',
+]
+
+test.group('AuthorValidator | consentement (Story 9.4)', () => {
+  test("consent : '1' (FormData), true (JSON), '0' et absent acceptés", async ({ assert }) => {
+    const consent = async (value: unknown) => {
+      const out = await authorValidator.validate({ ...VALID, consent: value })
+      return out.consent
+    }
+    assert.isTrue(await consent('1'))
+    assert.isTrue(await consent(true))
+    assert.isFalse(await consent('0'))
+    assert.isUndefined(await consent(null))
+  })
+
+  test('fiche publique (même migrée) : 0 affiliation refusée (P2.1)', ({ assert }) => {
+    assert.deepEqual(ruleErrors({ affiliations: [] }, { isMigrated: true, isPublic: true }), [
+      AFFILIATION_REQUIRED,
+    ])
+    assert.deepEqual(ruleErrors({ affiliations: [] }, { isMigrated: true, isPublic: false }), [])
+  })
+
+  test('consent sans affiliation refusé (D27), cumulé avec la règle FR52', ({ assert }) => {
+    assert.deepEqual(ruleErrors({ affiliations: [], consent: true }, { isMigrated: true }), [
+      CONSENT_REQUIRES,
+    ])
+    assert.deepEqual(ruleErrors({ affiliations: [], consent: true }, { isMigrated: false }), [
+      AFFILIATION_REQUIRED,
+      CONSENT_REQUIRES,
+    ])
+    assert.deepEqual(
+      ruleErrors({ affiliations: [{ institution: 'U' }], consent: true }, { isMigrated: false }),
+      []
+    )
+    assert.deepEqual(ruleErrors({ affiliations: [], consent: false }, { isMigrated: true }), [])
+  })
+})

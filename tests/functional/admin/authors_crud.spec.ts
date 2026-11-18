@@ -268,6 +268,8 @@ test.group('Admin authors | modification', (group) => {
       productionsCount: 0,
       photoUrl: null,
       hasPhoto: false,
+      isPublic: false,
+      isIncomplete: false,
     })
   })
 

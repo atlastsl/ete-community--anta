@@ -55,3 +55,17 @@ test.group('author_form (client) | affichage et envoi', () => {
     assert.include(clientSrc, '? { institution: a.institution.trim(), department }')
   })
 })
+
+test.group('author_form (client) | consentement (Story 9.4)', () => {
+  test('case indisponible sans institution saisie ; consent envoyé seulement si disponible', ({
+    assert,
+  }) => {
+    assert.include(clientSrc, "affiliations.some((a) => a.institution.trim() !== '')")
+    assert.include(clientSrc, 'consent: false')
+    assert.include(
+      clientSrc,
+      '...(data.consent && hasEnteredAffiliation(data.affiliations) ? { consent: true } : {})'
+    )
+    assert.include(clientSrc, "errors.consent = 'authors.form.errors.consent_requires_affiliation'")
+  })
+})

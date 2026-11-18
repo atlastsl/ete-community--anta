@@ -113,6 +113,12 @@ router
         router
           .delete('authors/:id', [controllers.admin.Authors, 'destroy'])
           .as('admin.authors.destroy')
+        router
+          .post('authors/:id/confirm-consent', [controllers.admin.Authors, 'confirmConsent'])
+          .as('admin.authors.confirm-consent')
+        router
+          .post('authors/:id/withdraw-consent', [controllers.admin.Authors, 'withdrawConsent'])
+          .as('admin.authors.withdraw-consent')
         router.get('stats', [controllers.admin.Dashboard, 'stats']).as('admin.stats')
 
         // Sous-groupe super_admin uniquement

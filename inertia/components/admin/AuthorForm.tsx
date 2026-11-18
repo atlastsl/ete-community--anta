@@ -1,14 +1,16 @@
 import { ReactNode, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ChevronDown, ChevronUp, ImageUp, Plus, X } from 'lucide-react'
+import { ChevronDown, ChevronUp, ImageUp, Plus, UserX, X } from 'lucide-react'
 import { Input } from '~/components/ui/input'
 import { Button, buttonVariants } from '~/components/ui/button'
 import Avatar from '~/components/shared/Avatar'
+import AuthorStatusBadges from '~/components/admin/AuthorStatusBadges'
 import { cn } from '~/lib/utils'
 import {
   AFFILIATIONS_MAX,
   EMPTY_AFFILIATION,
   PHOTO_ACCEPT,
+  hasEnteredAffiliation,
   type AffiliationFormData,
   type AuthorFormData,
 } from '~/lib/author_form'
@@ -28,6 +30,10 @@ type Props = {
   hasPhoto?: boolean
   /** Upload progress (0-100) while a photo is being sent. */
   uploadPercent?: number | null
+  /** Public profile (consent confirmed): the box gives way to the badge + withdrawal (D17). */
+  isPublic?: boolean
+  /** Opens the withdrawal dialog; without it (author dialog of 9.8) no button is shown. */
+  onWithdrawConsent?: () => void
 }
 
 type Direction = 'up' | 'down'
@@ -35,8 +41,9 @@ type Direction = 'up' | 'down'
 /**
  * Author card fields (Story 9.1): names, photo (Story 9.3: compact picker, lg avatar
  * preview of the chosen file or of the saved photo, cancel, "Remove photo"), ordered
- * affiliations, Google Scholar link. Consent comes with Story 9.4. Reordering uses
- * explicit ↑ ↓ buttons, no drag and drop (D18).
+ * affiliations, Google Scholar link, consent (Story 9.4: optional box, D16, unavailable
+ * until an affiliation is entered, D27; on a public profile, the "Public" badge and
+ * "Withdraw consent", D17). Reordering uses explicit ↑ ↓ buttons, no drag and drop (D18).
  */
 export default function AuthorForm({
   data,
@@ -46,6 +53,8 @@ export default function AuthorForm({
   photoUrl = null,
   hasPhoto = !!photoUrl,
   uploadPercent = null,
+  isPublic = false,
+  onWithdrawConsent,
 }: Props) {
   const { t } = useTranslation()
   const [announcement, setAnnouncement] = useState('')
@@ -325,6 +334,97 @@ export default function AuthorForm({
           error={message('googleScholarUrl')}
         />
       </Section>
+
+      <Section legend={t('authors.form.sections.consent')}>
+        <ConsentField
+          isPublic={isPublic}
+          checked={data.consent}
+          available={hasEnteredAffiliation(affiliations)}
+          error={message('consent')}
+          onChange={(checked) => setData('consent', checked)}
+          onWithdraw={onWithdrawConsent}
+        />
+      </Section>
+    </div>
+  )
+}
+
+function ConsentField({
+  isPublic,
+  checked,
+  available,
+  error,
+  onChange,
+  onWithdraw,
+}: {
+  isPublic: boolean
+  checked: boolean
+  available: boolean
+  error: string | null
+  onChange: (checked: boolean) => void
+  onWithdraw?: () => void
+}) {
+  const { t } = useTranslation()
+
+  if (isPublic) {
+    return (
+      <div className="flex flex-wrap items-center gap-3 rounded-md border border-stone-200 bg-stone-50 p-3">
+        <AuthorStatusBadges isPublic isIncomplete={false} />
+        <p className="text-sm text-stone-700">{t('authors.consent.public_help')}</p>
+        {onWithdraw && (
+          <Button type="button" variant="outline" size="sm" className="ml-auto" onClick={onWithdraw}>
+            <UserX className="mr-1 size-4" aria-hidden />
+            {t('authors.consent.withdraw_action')}
+          </Button>
+        )}
+      </div>
+    )
+  }
+
+  const describedBy = [
+    'consent-help',
+    available ? null : 'consent-unavailable',
+    error ? 'consent-error' : null,
+  ]
+    .filter(Boolean)
+    .join(' ')
+
+  return (
+    <div className="rounded-md border border-stone-200 bg-stone-50 p-3">
+      <div className="flex items-start gap-3">
+        {/* Optional (D16); disabled and shown unchecked until an affiliation is entered (D27). */}
+        <input
+          id="consent"
+          type="checkbox"
+          checked={checked && available}
+          disabled={!available}
+          onChange={(e) => onChange(e.target.checked)}
+          aria-invalid={!!error}
+          aria-describedby={describedBy}
+          className="mt-0.5 size-4 shrink-0 accent-green-700 disabled:cursor-not-allowed"
+        />
+        <div>
+          <label
+            htmlFor="consent"
+            className={cn('text-sm font-medium text-stone-800', !available && 'text-stone-500')}
+          >
+            {t('authors.consent.label')}
+          </label>
+          <p id="consent-help" className="mt-0.5 text-xs text-stone-600">
+            {t('authors.consent.help')}
+          </p>
+          {!available && (
+            <p id="consent-unavailable" className="mt-1 text-xs font-medium text-stone-700">
+              {t('authors.consent.unavailable')}
+            </p>
+          )}
+          {error && (
+            <p id="consent-error" className="mt-1 text-sm text-red-600">
+              {error}
+            </p>
+          )}
+        </div>
+      </div>
     </div>
   )
 }

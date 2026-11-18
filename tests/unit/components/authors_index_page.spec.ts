@@ -8,6 +8,7 @@ const indexPage = read('inertia/pages/admin/Authors/Index.tsx')
 const editPage = read('inertia/pages/admin/Authors/Edit.tsx')
 const badges = read('inertia/components/admin/AuthorStatusBadges.tsx')
 const dialog = read('inertia/components/admin/DeleteAuthorDialog.tsx')
+const consentDialog = read('inertia/components/admin/ConsentAuthorDialog.tsx')
 const tooltip = read('inertia/components/ui/tooltip.tsx')
 const fr = JSON.parse(read('inertia/locales/admin/fr.json'))
 const en = JSON.parse(read('inertia/locales/admin/en.json'))
@@ -16,9 +17,12 @@ function lookup(dict: Record<string, any>, key: string): unknown {
   return key.split('.').reduce<any>((node, part) => (node ? node[part] : undefined), dict)
 }
 
-/** Bouton « Supprimer » refusé : le JSX entre `aria-disabled` et la fin du bouton. */
-function blockedButton(source: string): string {
-  const start = source.indexOf('aria-disabled="true"')
+/**
+ * Bouton refusé : le JSX du `<Button` qui précède `needle` (son `aria-describedby`) jusqu'à
+ * la fin du bouton. Défaut : le premier bouton `aria-disabled` (« Supprimer » de la fiche).
+ */
+function blockedButton(source: string, needle = 'aria-disabled="true"'): string {
+  const start = source.indexOf(needle)
   const end = source.indexOf('</Button>', start)
   return source.slice(source.lastIndexOf('<Button', start), end)
 }
@@ -64,8 +68,8 @@ test.group('Authors Index | suppression', () => {
   test('bouton refusé : aria-disabled + aria-describedby, jamais disabled, infobulle', ({
     assert,
   }) => {
-    const button = blockedButton(indexPage)
-    assert.include(button, 'aria-describedby={`author-delete-hint-${author.id}`}')
+    const button = blockedButton(indexPage, 'aria-describedby={`author-delete-hint-${author.id}`}')
+    assert.include(button, 'aria-disabled="true"')
     assert.include(button, 'e.preventDefault()')
     assert.notInclude(button, 'disabled={')
     assert.include(indexPage, '<TooltipTrigger asChild>')
@@ -91,15 +95,60 @@ test.group('Authors Index | suppression', () => {
     assert.include(button, 'aria-describedby="author-delete-hint"')
     assert.notInclude(button, 'disabled={')
     assert.notInclude(editPage, 'Tooltip')
-    assert.include(
-      editPage,
-      'const { id, isMigrated, productionsCount, photoUrl, hasPhoto, ...formData } = author'
-    )
+    assert.match(editPage, /isPublic,\s+isIncomplete,\s+\.\.\.formData\s+\} = author/)
   })
 
   test('tooltip shadcn : méta-paquet radix-ui et alias ~/', ({ assert }) => {
     assert.include(tooltip, 'from "radix-ui"')
     assert.include(tooltip, 'from "~/lib/utils"')
+  })
+})
+
+test.group('Authors Index | consentement (Story 9.4)', () => {
+  test('actions : retirer (public), confirmer, ou indisponible sans affiliation', ({ assert }) => {
+    assert.include(indexPage, "t('authors.consent.withdraw_action')")
+    assert.include(indexPage, "t('authors.consent.confirm_action')")
+    assert.include(indexPage, "setConsentTarget({ author, mode: 'withdraw' })")
+    assert.include(indexPage, "setConsentTarget({ author, mode: 'confirm' })")
+    assert.isBelow(
+      indexPage.indexOf('author.isPublic ?'),
+      indexPage.indexOf('author.isIncomplete ?')
+    )
+  })
+
+  test('confirmation indisponible : aria-disabled focusable, infobulle et texte relié (D27)', ({
+    assert,
+  }) => {
+    const button = blockedButton(indexPage, 'aria-describedby={consentHintId}')
+    assert.include(button, 'aria-describedby={consentHintId}')
+    assert.include(button, 'aria-disabled="true"')
+    assert.include(button, 'e.preventDefault()')
+    assert.notInclude(button, 'disabled={')
+    assert.include(indexPage, "<TooltipContent>{t('authors.consent.unavailable')}</TooltipContent>")
+    assert.include(indexPage, '<span id={consentHintId} className="sr-only">')
+  })
+
+  test('dialog de consentement partagé (liste et fiche)', ({ assert }) => {
+    assert.include(indexPage, '<ConsentAuthorDialog')
+    assert.include(editPage, '<ConsentAuthorDialog')
+    assert.include(editPage, 'mode="withdraw"')
+    assert.include(consentDialog, 'role="alertdialog"')
+    assert.include(consentDialog, 'if (!target || submitting.current) return')
+    assert.include(consentDialog, "urlFor('admin.authors.confirm-consent', { id: target.id })")
+    assert.include(consentDialog, "urlFor('admin.authors.withdraw-consent', { id: target.id })")
+    assert.include(consentDialog, "t('authors.consent.confirm_description', { name })")
+    assert.include(consentDialog, "t('authors.consent.withdraw_description', { name })")
+    assert.include(consentDialog, 'variant="destructive"')
+    assert.include(consentDialog, 'disabled={isProcessing}')
+  })
+
+  test('fiche : badges de statut, affiliation exigée pour un profil public', ({ assert }) => {
+    assert.include(
+      editPage,
+      '<AuthorStatusBadges isPublic={isPublic} isIncomplete={isIncomplete} />'
+    )
+    assert.include(editPage, 'const requireAffiliation = !isMigrated || isPublic')
+    assert.include(editPage, "form.reset('photo', 'removePhoto', 'consent')")
   })
 })
 
@@ -116,7 +165,7 @@ test.group('AuthorStatusBadges', () => {
 test.group('Authors pages | i18n', () => {
   test('toutes les clés authors.* utilisées existent en FR et EN', ({ assert }) => {
     const keys = new Set<string>()
-    for (const source of [indexPage, editPage, badges, dialog]) {
+    for (const source of [indexPage, editPage, badges, dialog, consentDialog]) {
       for (const match of source.matchAll(/t\('(authors\.[a-z_.]+)'/g)) keys.add(match[1])
     }
     assert.isAbove(keys.size, 15)

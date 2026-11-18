@@ -48,8 +48,35 @@ test.group('AuthorForm | champs et affiliations', () => {
     assert.include(form, "message('affiliations')")
   })
 
-  test('pas encore de consentement (Story 9.4)', ({ assert }) => {
-    assert.notInclude(form, 'consent')
+  test('consentement (Story 9.4) : case facultative, aide reliée, indisponible sans affiliation', ({
+    assert,
+  }) => {
+    assert.include(form, 'id="consent"')
+    assert.include(form, 'type="checkbox"')
+    assert.include(form, "t('authors.consent.label')")
+    assert.include(form, "t('authors.consent.help')")
+    assert.include(form, "t('authors.consent.unavailable')")
+    assert.include(form, 'checked={checked && available}')
+    assert.include(form, 'disabled={!available}')
+    assert.include(form, 'available={hasEnteredAffiliation(affiliations)}')
+    assert.include(form, "'consent-help'")
+    assert.include(form, "available ? null : 'consent-unavailable'")
+    assert.include(form, "message('consent')")
+    assert.include(form, 'accent-green-700')
+  })
+
+  test('profil public : badge « Public » + « Retirer le consentement » à la place de la case', ({
+    assert,
+  }) => {
+    assert.include(form, 'if (isPublic) {')
+    assert.include(form, '<AuthorStatusBadges isPublic isIncomplete={false} />')
+    assert.include(form, "t('authors.consent.withdraw_action')")
+    assert.include(form, '{onWithdraw && (')
+    // Section Consentement en dernier, après Liens.
+    assert.isBelow(
+      form.indexOf("t('authors.form.sections.links')"),
+      form.indexOf("t('authors.form.sections.consent')")
+    )
   })
 })
 
@@ -61,7 +88,7 @@ test.group('Pages Authors | création, édition, liste', () => {
     }
     assert.include(createPage, "post(urlFor('admin.authors.store'))")
     assert.include(editPage, "urlFor('admin.authors.update', { id })")
-    assert.include(editPage, 'const requireAffiliation = !isMigrated')
+    assert.include(editPage, 'const requireAffiliation = !isMigrated || isPublic')
   })
 
   test('liste : nom formaté, affiliation principale ou « Aucune affiliation », état vide', ({
@@ -154,11 +181,8 @@ test.group('AuthorForm | photo (Story 9.3)', () => {
   test('Edit : photoUrl hors état du formulaire, reset après succès, pas de _method', ({
     assert,
   }) => {
-    assert.include(
-      editPage,
-      'const { id, isMigrated, productionsCount, photoUrl, hasPhoto, ...formData }'
-    )
-    assert.include(editPage, "form.reset('photo', 'removePhoto')")
+    assert.match(editPage, /photoUrl,\s+hasPhoto,[\s\S]*\.\.\.formData\s+\} = author/)
+    assert.include(editPage, "form.reset('photo', 'removePhoto', 'consent')")
     assert.include(editPage, 'photoUrl={photoUrl}')
     assert.notInclude(editPage, '_method')
     assert.include(createPage, 'uploadPercent=')

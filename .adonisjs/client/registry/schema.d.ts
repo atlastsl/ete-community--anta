@@ -395,24 +395,24 @@ export interface Registry {
     methods: ["POST"]
     pattern: '/admin/authors'
     types: {
-      body: ExtractBody<InferInput<(typeof import('#validators/admin/author_validator').authorValidator)>>
+      body: {}
       paramsTuple: []
       params: {}
-      query: ExtractQuery<InferInput<(typeof import('#validators/admin/author_validator').authorValidator)>>
+      query: {}
       response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/authors_controller').default['store']>>>
-      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/authors_controller').default['store']>>> | { status: 422; response: { errors: SimpleError[] } }
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/authors_controller').default['store']>>>
     }
   }
   'admin.authors.update': {
     methods: ["PUT"]
     pattern: '/admin/authors/:id'
     types: {
-      body: ExtractBody<InferInput<(typeof import('#validators/admin/author_validator').authorValidator)>>
+      body: {}
       paramsTuple: [ParamValue]
       params: { id: ParamValue }
-      query: ExtractQuery<InferInput<(typeof import('#validators/admin/author_validator').authorValidator)>>
+      query: {}
       response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/authors_controller').default['update']>>>
-      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/authors_controller').default['update']>>> | { status: 422; response: { errors: SimpleError[] } }
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/authors_controller').default['update']>>>
     }
   }
   'admin.authors.destroy': {
@@ -425,6 +425,30 @@ export interface Registry {
       query: {}
       response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/authors_controller').default['destroy']>>>
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/authors_controller').default['destroy']>>>
+    }
+  }
+  'admin.authors.confirm-consent': {
+    methods: ["POST"]
+    pattern: '/admin/authors/:id/confirm-consent'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/authors_controller').default['confirmConsent']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/authors_controller').default['confirmConsent']>>>
+    }
+  }
+  'admin.authors.withdraw-consent': {
+    methods: ["POST"]
+    pattern: '/admin/authors/:id/withdraw-consent'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/authors_controller').default['withdrawConsent']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/authors_controller').default['withdrawConsent']>>>
     }
   }
   'admin.stats': {

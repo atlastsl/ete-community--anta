@@ -29,6 +29,8 @@ test.group('ActivityLogService', (group) => {
       ActionType.UNPUBLISH,
       ActionType.DELETE,
       ActionType.PASSWORD_RESET,
+      ActionType.CONSENT_CONFIRM,
+      ActionType.CONSENT_WITHDRAW,
     ]
 
     for (const actionType of actionTypes) {
@@ -41,7 +43,7 @@ test.group('ActivityLogService', (group) => {
     }
 
     const logs = await AdminActivityLog.query().where('adminUserId', testUser.id)
-    assert.equal(logs.length, 7)
+    assert.equal(logs.length, actionTypes.length)
 
     const loggedTypes = logs.map((log) => log.actionType).sort()
     const expectedTypes = [...actionTypes].sort()

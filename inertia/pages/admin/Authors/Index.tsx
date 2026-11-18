@@ -2,7 +2,7 @@ import { ReactElement, useEffect, useState } from 'react'
 import { Link } from '@adonisjs/inertia/react'
 import { router } from '@inertiajs/react'
 import { useTranslation } from 'react-i18next'
-import { BookUser, Plus, Search } from 'lucide-react'
+import { BookUser, Plus, Search, UserCheck, UserX } from 'lucide-react'
 import AdminLayout from '~/layouts/AdminLayout'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
@@ -16,6 +16,10 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/components/ui/tooltip'
 import AuthorStatusBadges from '~/components/admin/AuthorStatusBadges'
 import DeleteAuthorDialog, { type DeleteAuthorTarget } from '~/components/admin/DeleteAuthorDialog'
+import ConsentAuthorDialog, {
+  type ConsentAuthorTarget,
+  type ConsentMode,
+} from '~/components/admin/ConsentAuthorDialog'
 import Pagination from '~/components/shared/Pagination'
 import Avatar from '~/components/shared/Avatar'
 import { formatAuthorName } from '~/lib/author_form'
@@ -67,6 +71,10 @@ export default function AdminAuthorsIndex({
   // preserveState keeps the input across visits: follow the server value (back/forward, clear).
   useEffect(() => setSearchText(filters.q ?? ''), [filters.q])
   const [deleteTarget, setDeleteTarget] = useState<DeleteAuthorTarget | null>(null)
+  const [consentTarget, setConsentTarget] = useState<{
+    author: ConsentAuthorTarget
+    mode: ConsentMode
+  } | null>(null)
 
   // Active filters, kept by the pagination links.
   const activeQuery: Record<string, string | undefined> = {
@@ -262,6 +270,7 @@ export default function AdminAuthorsIndex({
                         const editHref = urlFor('admin.authors.edit', { id: author.id })
                         const primary = author.primaryAffiliation
                         const hintId = `author-delete-hint-${author.id}`
+                        const consentHintId = `author-consent-hint-${author.id}`
                         const blockedText = t('authors.delete.blocked', {
                           count: author.productionsCount,
                         })
@@ -312,6 +321,49 @@ export default function AdminAuthorsIndex({
                                     {t('authors.actions.edit')}
                                   </Button>
                                 </Link>
+                                {author.isPublic ? (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setConsentTarget({ author, mode: 'withdraw' })}
+                                  >
+                                    <UserX className="mr-1 size-4" aria-hidden />
+                                    {t('authors.consent.withdraw_action')}
+                                  </Button>
+                                ) : author.isIncomplete ? (
+                                  <>
+                                    {/* D27: unavailable without affiliation; aria-disabled stays
+                                        focusable, so the tooltip also opens on keyboard focus. */}
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          aria-disabled="true"
+                                          aria-describedby={consentHintId}
+                                          className="cursor-not-allowed opacity-50"
+                                          onClick={(e) => e.preventDefault()}
+                                        >
+                                          <UserCheck className="mr-1 size-4" aria-hidden />
+                                          {t('authors.consent.confirm_action')}
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>{t('authors.consent.unavailable')}</TooltipContent>
+                                    </Tooltip>
+                                    <span id={consentHintId} className="sr-only">
+                                      {t('authors.consent.unavailable')}
+                                    </span>
+                                  </>
+                                ) : (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setConsentTarget({ author, mode: 'confirm' })}
+                                  >
+                                    <UserCheck className="mr-1 size-4" aria-hidden />
+                                    {t('authors.consent.confirm_action')}
+                                  </Button>
+                                )}
                                 {author.productionsCount === 0 ? (
                                   <Button
                                     variant="ghost"
@@ -365,6 +417,11 @@ export default function AdminAuthorsIndex({
         )}
 
         <DeleteAuthorDialog target={deleteTarget} onClose={() => setDeleteTarget(null)} />
+        <ConsentAuthorDialog
+          target={consentTarget?.author ?? null}
+          mode={consentTarget?.mode ?? 'confirm'}
+          onClose={() => setConsentTarget(null)}
+        />
       </div>
     </TooltipProvider>
   )

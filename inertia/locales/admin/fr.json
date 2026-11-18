@@ -215,7 +215,8 @@
         "identity": "Identité",
         "photo": "Photo",
         "affiliations": "Affiliations",
-        "links": "Liens"
+        "links": "Liens",
+        "consent": "Consentement"
       },
       "photo": {
         "choose": "Choisir une photo",
@@ -257,7 +258,8 @@
         "scholar_url_invalid": "Saisissez une adresse web valide commençant par http:// ou https:// (500 caractères au maximum).",
         "photo_type": "Choisissez une image JPEG, PNG ou WebP valide.",
         "photo_size": "La photo ne doit pas dépasser 5 Mo.",
-        "photo_dimensions": "La photo est trop grande (40 mégapixels au maximum)."
+        "photo_dimensions": "La photo est trop grande (40 mégapixels au maximum).",
+        "consent_requires_affiliation": "Complétez d'abord une affiliation."
       }
     },
     "flash": {
@@ -286,6 +288,25 @@
       "confirm": "Supprimer",
       "blocked": "Suppression impossible : fiche liée à {{count}} production(s) (brouillons compris).",
       "refused": "Suppression impossible : cette fiche est liée à au moins une production (brouillons compris)."
+    },
+    "consent": {
+      "label": "L'auteur a consenti à la publication de son profil.",
+      "help": "Facultatif. Sans ce consentement, la fiche est créée mais le profil reste non public : le nom apparaît sur les productions, sans lien vers un profil. Vous pourrez le confirmer plus tard dans la fiche de l'auteur.",
+      "unavailable": "Complétez d'abord une affiliation.",
+      "public_help": "Le profil de cet auteur est public.",
+      "confirm_action": "Confirmer le consentement",
+      "withdraw_action": "Retirer le consentement",
+      "confirm_title": "Confirmer le consentement ?",
+      "confirm_description": "Le profil de {{name}} deviendra public.",
+      "confirm_submit": "Confirmer",
+      "withdraw_title": "Retirer le consentement ?",
+      "withdraw_description": "Le profil de {{name}} ne sera plus public. Ses productions restent publiées, son nom s'affichera sans lien.",
+      "withdraw_submit": "Retirer le consentement",
+      "flash": {
+        "confirmed": "Consentement confirmé.",
+        "withdrawn": "Consentement retiré.",
+        "refused": "Confirmation impossible : complétez d'abord une affiliation."
+      }
     }
   },
   "users": {
@@ -421,7 +442,9 @@
       "publish": "Publication",
       "unpublish": "Dépublication",
       "delete": "Suppression",
-      "password_reset": "Réinit. mot de passe"
+      "password_reset": "Réinit. mot de passe",
+      "consent_confirm": "Consentement confirmé",
+      "consent_withdraw": "Consentement retiré"
     },
     "resource": {
       "author": "Auteur"

@@ -24,9 +24,10 @@ function strInput(value: unknown): string | null {
 }
 
 /**
- * Authors referential in the admin panel (Stories 9.1 and 9.2, FR52, FR55) - admin and
+ * Authors referential in the admin panel (Stories 9.1 to 9.4, FR52, FR53, FR55) - admin and
  * super admin (`middleware.admin()` group, P2-15): list with search, filters and counters,
- * create, edit and delete (refused while the card is linked to a production).
+ * create, edit and delete (refused while the card is linked to a production), photo, and
+ * consent confirmation / withdrawal (journaled `consent_confirm` / `consent_withdraw`).
  */
 export default class AuthorsController {
   async index({ request, inertia }: HttpContext) {
@@ -121,6 +122,9 @@ export default class AuthorsController {
       resourceId: author.id,
       metadata: { name: AuthorService.displayName(author) },
     })
+    if (author.consentConfirmedAt !== null) {
+      await this.logConsent(auth.user!.id, author, ActionType.CONSENT_CONFIRM)
+    }
 
     session.flash('success', 'authors.flash.created')
     return response.redirect(`/admin/authors/${author.id}/edit`)
@@ -145,6 +149,8 @@ export default class AuthorsController {
         photoUrl: await this.photoUrl(author.photoKey, 'w384.webp'),
         // From the key, not the URL: "Remove the photo" stays offered if signing fails.
         hasPhoto: author.photoKey !== null,
+        isPublic: author.consentConfirmedAt !== null,
+        isIncomplete: author.affiliations.length === 0,
       },
     })
   }
@@ -161,12 +167,16 @@ export default class AuthorsController {
     const author = await this.findOrFail(params.id)
     const validated = await request.validateUsing(authorValidator)
     const data = { ...validated, affiliations: this.affiliationsOf(validated, request) }
-    assertAffiliationRule(data, { isMigrated: author.migrationKey !== null })
+    assertAffiliationRule(data, {
+      isMigrated: author.migrationKey !== null,
+      isPublic: author.consentConfirmedAt !== null,
+    })
     const photo = await this.photoVariants(validated.photo)
 
-    const { fields } = await AuthorService.update(author, data, {
+    const { fields, consentConfirmed } = await AuthorService.update(author, data, {
       photo,
       removePhoto: validated.removePhoto === true,
+      adminId: auth.user!.id,
     })
 
     if (fields.length > 0) {
@@ -177,6 +187,9 @@ export default class AuthorsController {
         resourceId: author.id,
         metadata: { name: AuthorService.displayName(author), fields },
       })
+    }
+    if (consentConfirmed) {
+      await this.logConsent(auth.user!.id, author, ActionType.CONSENT_CONFIRM)
     }
 
     session.flash('success', 'authors.flash.saved')
@@ -209,6 +222,64 @@ export default class AuthorsController {
 
     session.flash('success', 'authors.flash.deleted')
     return response.redirect(listUrl)
+  }
+
+  /**
+   * Confirms the consent from the list (Story 9.4, FR53). Refused without affiliation (D27,
+   * checked by the service on the locked row); an already public card is left untouched.
+   */
+  async confirmConsent({ params, auth, request, response, session }: HttpContext) {
+    const author = await this.findOrFail(params.id)
+    const result = await AuthorService.confirmConsent(author, auth.user!.id)
+    if (result === 'confirmed') {
+      await this.logConsent(auth.user!.id, author, ActionType.CONSENT_CONFIRM)
+      session.flash('success', 'authors.consent.flash.confirmed')
+    } else if (result === 'no_affiliation') {
+      session.flash('error', 'authors.consent.flash.refused')
+    }
+    return response.redirect(this.consentReturnUrl(request.header('referer'), author.id))
+  }
+
+  /** Withdraws the consent (Story 9.4, D17); a card that is not public is left untouched. */
+  async withdrawConsent({ params, auth, request, response, session }: HttpContext) {
+    const author = await this.findOrFail(params.id)
+    const result = await AuthorService.withdrawConsent(author)
+    if (result === 'withdrawn') {
+      await this.logConsent(auth.user!.id, author, ActionType.CONSENT_WITHDRAW)
+      session.flash('success', 'authors.consent.flash.withdrawn')
+    }
+    return response.redirect(this.consentReturnUrl(request.header('referer'), author.id))
+  }
+
+  /**
+   * Back to where the action came from: the card, or the list with its filters and page
+   * (`redirect().back()` drops the query string). Never another host or page.
+   */
+  private consentReturnUrl(referer: string | undefined, authorId: string): string {
+    const editPath = `/admin/authors/${authorId}/edit`
+    if (referer) {
+      try {
+        if (new URL(referer).pathname === editPath) return editPath
+      } catch {
+        // Malformed referer: fall back on the list.
+      }
+    }
+    return this.listUrlFrom(referer)
+  }
+
+  /** After the commit: ActivityLogService is outside the transaction and never throws. */
+  private async logConsent(
+    adminUserId: string,
+    author: Author,
+    actionType: typeof ActionType.CONSENT_CONFIRM | typeof ActionType.CONSENT_WITHDRAW
+  ): Promise<void> {
+    await ActivityLogService.log({
+      adminUserId,
+      actionType,
+      resourceType: 'author',
+      resourceId: author.id,
+      metadata: { name: AuthorService.displayName(author) },
+    })
   }
 
   /**

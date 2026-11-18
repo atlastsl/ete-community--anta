@@ -7,11 +7,13 @@ import AdminLayout from '~/layouts/AdminLayout'
 import { Button } from '~/components/ui/button'
 import AuthorForm from '~/components/admin/AuthorForm'
 import DeleteAuthorDialog, { type DeleteAuthorTarget } from '~/components/admin/DeleteAuthorDialog'
+import ConsentAuthorDialog, { type ConsentAuthorTarget } from '~/components/admin/ConsentAuthorDialog'
+import AuthorStatusBadges from '~/components/admin/AuthorStatusBadges'
 import { toAuthorPayload, validateAuthorForm, type AuthorFormData } from '~/lib/author_form'
 import { urlFor } from '~/client'
 
 type Props = {
-  author: Omit<AuthorFormData, 'photo' | 'removePhoto'> & {
+  author: Omit<AuthorFormData, 'photo' | 'removePhoto' | 'consent'> & {
     id: string
     /** Migrated card (FR56): may stay without affiliation until completed (FR52). */
     isMigrated: boolean
@@ -20,16 +22,36 @@ type Props = {
     /** Signed URL of the saved photo (`w384`), never public (Story 9.3). */
     photoUrl: string | null
     hasPhoto: boolean
+    /** Consent confirmed (Story 9.4): the profile is public. */
+    isPublic: boolean
+    /** No saved affiliation ("À compléter", derived). */
+    isIncomplete: boolean
   }
 }
 
 export default function AdminAuthorsEdit({ author }: Props) {
   const { t } = useTranslation()
-  const { id, isMigrated, productionsCount, photoUrl, hasPhoto, ...formData } = author
+  const {
+    id,
+    isMigrated,
+    productionsCount,
+    photoUrl,
+    hasPhoto,
+    isPublic,
+    isIncomplete,
+    ...formData
+  } = author
   const [deleteTarget, setDeleteTarget] = useState<DeleteAuthorTarget | null>(null)
-  const form = useForm<AuthorFormData>({ ...formData, photo: null, removePhoto: false })
+  const [withdrawTarget, setWithdrawTarget] = useState<ConsentAuthorTarget | null>(null)
+  const form = useForm<AuthorFormData>({
+    ...formData,
+    photo: null,
+    removePhoto: false,
+    consent: false,
+  })
   const { data, setData, put, processing, errors, progress } = form
-  const requireAffiliation = !isMigrated
+  // A public card never falls back to 0 affiliation, even a migrated one (P2.1).
+  const requireAffiliation = !isMigrated || isPublic
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -43,13 +65,16 @@ export default function AdminAuthorsEdit({ author }: Props) {
     // A chosen file switches Inertia to multipart on its own (PUT, no method spoofing).
     put(urlFor('admin.authors.update', { id }), {
       preserveScroll: true,
-      onSuccess: () => form.reset('photo', 'removePhoto'),
+      onSuccess: () => form.reset('photo', 'removePhoto', 'consent'),
     })
   }
 
   return (
     <div className="mx-auto max-w-3xl">
-      <h1 className="text-2xl font-semibold text-stone-900">{t('authors.edit_title')}</h1>
+      <div className="flex flex-wrap items-center gap-3">
+        <h1 className="text-2xl font-semibold text-stone-900">{t('authors.edit_title')}</h1>
+        <AuthorStatusBadges isPublic={isPublic} isIncomplete={isIncomplete} />
+      </div>
 
       <form onSubmit={handleSubmit} noValidate className="mt-6">
         <AuthorForm
@@ -60,6 +85,10 @@ export default function AdminAuthorsEdit({ author }: Props) {
           photoUrl={photoUrl}
           hasPhoto={hasPhoto}
           uploadPercent={processing && data.photo ? (progress?.percentage ?? null) : null}
+          isPublic={isPublic}
+          onWithdrawConsent={() =>
+            setWithdrawTarget({ id, firstNames: author.firstNames, lastNames: author.lastNames })
+          }
         />
 
         <div className="mt-6 flex flex-wrap items-start gap-3">
@@ -115,6 +144,11 @@ export default function AdminAuthorsEdit({ author }: Props) {
       </form>
 
       <DeleteAuthorDialog target={deleteTarget} onClose={() => setDeleteTarget(null)} />
+      <ConsentAuthorDialog
+        target={withdrawTarget}
+        mode="withdraw"
+        onClose={() => setWithdrawTarget(null)}
+      />
     </div>
   )
 }

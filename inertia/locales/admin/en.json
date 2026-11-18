@@ -215,7 +215,8 @@
         "identity": "Identity",
         "photo": "Photo",
         "affiliations": "Affiliations",
-        "links": "Links"
+        "links": "Links",
+        "consent": "Consent"
       },
       "photo": {
         "choose": "Choose a photo",
@@ -257,7 +258,8 @@
         "scholar_url_invalid": "Enter a valid web address starting with http:// or https:// (500 characters at most).",
         "photo_type": "Choose a valid JPEG, PNG or WebP image.",
         "photo_size": "The photo must not exceed 5 MB.",
-        "photo_dimensions": "The photo is too large (40 megapixels maximum)."
+        "photo_dimensions": "The photo is too large (40 megapixels maximum).",
+        "consent_requires_affiliation": "Add an affiliation first."
       }
     },
     "flash": {
@@ -286,6 +288,25 @@
       "confirm": "Delete",
       "blocked": "Cannot delete: this record is linked to {{count}} production(s), drafts included.",
       "refused": "Cannot delete: this record is linked to at least one production, drafts included."
+    },
+    "consent": {
+      "label": "The author has consented to the publication of their profile.",
+      "help": "Optional. Without consent, the record is created but the profile stays private: the name appears on productions, without a link to a profile. You can confirm it later from the author's record.",
+      "unavailable": "Add an affiliation first.",
+      "public_help": "This author's profile is public.",
+      "confirm_action": "Confirm consent",
+      "withdraw_action": "Withdraw consent",
+      "confirm_title": "Confirm consent?",
+      "confirm_description": "{{name}}'s profile will become public.",
+      "confirm_submit": "Confirm",
+      "withdraw_title": "Withdraw consent?",
+      "withdraw_description": "{{name}}'s profile will no longer be public. Their productions stay published; their name will be shown without a link.",
+      "withdraw_submit": "Withdraw consent",
+      "flash": {
+        "confirmed": "Consent confirmed.",
+        "withdrawn": "Consent withdrawn.",
+        "refused": "Cannot confirm: add an affiliation first."
+      }
     }
   },
   "users": {
@@ -421,7 +442,9 @@
       "publish": "Publish",
       "unpublish": "Unpublish",
       "delete": "Delete",
-      "password_reset": "Password reset"
+      "password_reset": "Password reset",
+      "consent_confirm": "Consent confirmed",
+      "consent_withdraw": "Consent withdrawn"
     },
     "resource": {
       "author": "Author"

@@ -10,6 +10,7 @@ import AuthorAffiliation from '#models/author_affiliation'
 import { normalizeKey } from '#helpers/normalize'
 import FileStorageService from '#services/file_storage_service'
 import { AUTHOR_PHOTO_VARIANTS, type ImageVariant } from '#services/image_service'
+import { affiliationRequiredError } from '#validators/admin/author_validator'
 
 export type AffiliationInput = { institution: string; department?: string | null }
 
@@ -19,6 +20,8 @@ export type AuthorPayload = {
   firstNames: string
   affiliations: AffiliationInput[]
   googleScholarUrl?: string | null
+  /** "The author has consented" box (Story 9.4, D16): confirms a non-public card. */
+  consent?: boolean
 }
 
 /** Fields compared to build the `fields` list of the `update` activity entry. */
@@ -26,6 +29,12 @@ export type AuthorField = 'lastNames' | 'firstNames' | 'googleScholarUrl' | 'aff
 
 /** Photo options of `update` (Story 9.3): a new photo wins over `removePhoto`. */
 export type AuthorPhotoOptions = { photo?: ImageVariant[] | null; removePhoto?: boolean }
+
+/** Options of `update`: photo (9.3) and the admin who confirms the consent (9.4). */
+export type AuthorUpdateOptions = AuthorPhotoOptions & { adminId?: string | null }
+
+export type ConsentConfirmResult = 'confirmed' | 'unchanged' | 'no_affiliation'
+export type ConsentWithdrawResult = 'withdrawn' | 'unchanged'
 
 /** Filters of the admin authors list (Story 9.2), already sanitized by the controller. */
 export type AuthorListFilters = {
@@ -125,6 +134,10 @@ export default class AuthorService {
       author.lastNames = payload.lastNames.trim()
       author.googleScholarUrl = emptyToNull(payload.googleScholarUrl)
       author.createdById = adminId
+      // The controller has checked D27 (consent needs an affiliation) beforehand.
+      const consent = payload.consent === true
+      author.consentConfirmedAt = consent ? DateTime.now() : null
+      author.consentConfirmedById = consent ? adminId : null
       await author.save()
       await this.replaceAffiliations(author, payload.affiliations, trx)
       return author
@@ -132,15 +145,18 @@ export default class AuthorService {
   }
 
   /**
-   * Updates the card, replaces its affiliations and adds, replaces or removes its photo;
-   * returns the fields that changed. New variants are uploaded before the transaction
-   * (removed if it fails); the replaced ones are deleted after the commit (best-effort).
+   * Updates the card, replaces its affiliations, adds, replaces or removes its photo and
+   * confirms its consent (`payload.consent`, Story 9.4); returns the fields that changed
+   * (consent is never one of them: it has its own activity entry) and whether the consent
+   * was confirmed. New variants are uploaded before the transaction (removed if it fails);
+   * the replaced ones are deleted after the commit (best-effort). D27 and "a public card
+   * keeps an affiliation" are checked again on the locked row.
    */
   static async update(
     author: Author,
     payload: AuthorPayload,
-    options: AuthorPhotoOptions = {}
-  ): Promise<{ author: Author; fields: AuthorField[] }> {
+    options: AuthorUpdateOptions = {}
+  ): Promise<{ author: Author; fields: AuthorField[]; consentConfirmed: boolean }> {
     await author.load('affiliations')
     const before = {
       lastNames: author.lastNames,
@@ -160,10 +176,15 @@ export default class AuthorService {
     const photo = options.photo && options.photo.length > 0 ? options.photo : null
     const photoChange = photo ? 'replace' : options.removePhoto && author.photoKey ? 'remove' : null
     if (photoChange) fields.push('photo')
-    if (fields.length === 0) return { author, fields }
+    const wantsConsent = payload.consent === true && author.consentConfirmedAt === null
+    if (fields.length === 0 && !wantsConsent) return { author, fields, consentConfirmed: false }
+    const affiliationsAfter = fields.includes('affiliations')
+      ? payload.affiliations.length
+      : author.affiliations.length
 
     const newPrefix = photo ? await this.uploadPhoto(author.id, photo) : null
     let oldPrefix: string | null = null
+    let consentConfirmed = false
     try {
       await db.transaction(async (trx) => {
         // Serializes concurrent saves of one card: without the lock, the second DELETE misses
@@ -173,6 +194,10 @@ export default class AuthorService {
           .where('id', author.id)
           .forUpdate()
           .firstOrFail()
+        const isPublic = locked.consentConfirmedAt !== null
+        if ((isPublic || wantsConsent) && affiliationsAfter === 0) {
+          throw affiliationRequiredError()
+        }
         author.useTransaction(trx)
         author.lastNames = after.lastNames
         author.firstNames = after.firstNames
@@ -180,6 +205,15 @@ export default class AuthorService {
         if (photoChange) {
           oldPrefix = locked.photoKey
           author.photoKey = newPrefix
+        }
+        if (wantsConsent && !isPublic) {
+          author.consentConfirmedAt = DateTime.now()
+          author.consentConfirmedById = options.adminId ?? null
+          consentConfirmed = true
+        } else {
+          // Keep the instance in line with the locked row (consent changed meanwhile).
+          author.consentConfirmedAt = locked.consentConfirmedAt
+          author.consentConfirmedById = locked.consentConfirmedById
         }
         // An affiliations-only change leaves no dirty column: Lucid would skip the UPDATE.
         author.updatedAt = DateTime.now()
@@ -193,7 +227,55 @@ export default class AuthorService {
       throw error
     }
     if (oldPrefix && oldPrefix !== newPrefix) await this.discardPhoto(oldPrefix)
-    return { author, fields }
+    return { author, fields, consentConfirmed }
+  }
+
+  /**
+   * Confirms the consent from the list action (Story 9.4, FR53). Decided on the locked row:
+   * an already public card is left untouched (no second activity entry), a card without
+   * affiliation is refused (D27).
+   */
+  static async confirmConsent(author: Author, adminId: string): Promise<ConsentConfirmResult> {
+    return db.transaction(async (trx): Promise<ConsentConfirmResult> => {
+      const locked = await Author.query({ client: trx })
+        .where('id', author.id)
+        .forUpdate()
+        .firstOrFail()
+      if (locked.consentConfirmedAt !== null) return 'unchanged'
+      const row = await AuthorAffiliation.query({ client: trx })
+        .where('authorId', author.id)
+        .count('* as total')
+        .first()
+      if (Number(row?.$extras.total ?? 0) === 0) return 'no_affiliation'
+      locked.useTransaction(trx)
+      locked.consentConfirmedAt = DateTime.now()
+      locked.consentConfirmedById = adminId
+      await locked.save()
+      author.consentConfirmedAt = locked.consentConfirmedAt
+      author.consentConfirmedById = locked.consentConfirmedById
+      return 'confirmed'
+    })
+  }
+
+  /**
+   * Withdraws the consent (Story 9.4, D17): the profile is no longer public, the productions
+   * stay published. A card that is not public is left untouched.
+   */
+  static async withdrawConsent(author: Author): Promise<ConsentWithdrawResult> {
+    return db.transaction(async (trx): Promise<ConsentWithdrawResult> => {
+      const locked = await Author.query({ client: trx })
+        .where('id', author.id)
+        .forUpdate()
+        .firstOrFail()
+      if (locked.consentConfirmedAt === null) return 'unchanged'
+      locked.useTransaction(trx)
+      locked.consentConfirmedAt = null
+      locked.consentConfirmedById = null
+      await locked.save()
+      author.consentConfirmedAt = null
+      author.consentConfirmedById = null
+      return 'withdrawn'
+    })
   }
 
   /** Uploads the variants under a fresh prefix; on a failed upload, removes the sent ones. */

@@ -20,7 +20,8 @@ export const PHOTO_EXTNAMES = ['jpg', 'jpeg', 'png', 'webp']
  * normalizes it to `[]`.
  *
  * `photo` is checked here for size and extension only; `ImageService` then decodes it.
- * `removePhoto` accepts JSON booleans and the `'1'` / `'0'` of Inertia's FormData.
+ * `removePhoto` and `consent` (Story 9.4, D16) accept JSON booleans and the `'1'` / `'0'`
+ * of Inertia's FormData.
  */
 export const authorValidator = vine.compile(
   vine.object({
@@ -43,6 +44,7 @@ export const authorValidator = vine.compile(
       .optional(),
     photo: vine.file({ size: `${PHOTO_MAX_MB}mb`, extnames: PHOTO_EXTNAMES }).optional(),
     removePhoto: vine.boolean().optional(),
+    consent: vine.boolean().optional(),
   })
 )
 
@@ -67,21 +69,42 @@ authorValidator.messagesProvider = new SimpleMessagesProvider({
   'photo.file.size': 'authors.form.errors.photo_size',
 })
 
+/** "At least one affiliation" error on the `affiliations` field (validator and service). */
+export function affiliationRequiredError() {
+  return new errors.E_VALIDATION_ERROR([
+    {
+      field: 'affiliations',
+      message: 'authors.form.errors.affiliation_required',
+      rule: 'minLength',
+    },
+  ])
+}
+
 /**
  * FR52: a card created in the panel keeps at least one affiliation; a migrated card
- * (`migration_key` not NULL) may stay without one until it is completed.
+ * (`migration_key` not NULL) may stay without one until it is completed, unless its profile
+ * is public (P2.1: a public card never falls back to 0 affiliation).
+ * D27: consent cannot be confirmed without an affiliation (`consent` field).
  */
 export function assertAffiliationRule(
-  data: { affiliations: unknown[] },
-  options: { isMigrated: boolean }
+  data: { affiliations: unknown[]; consent?: boolean },
+  options: { isMigrated: boolean; isPublic?: boolean }
 ): void {
-  if (!options.isMigrated && data.affiliations.length === 0) {
-    throw new errors.E_VALIDATION_ERROR([
-      {
-        field: 'affiliations',
-        message: 'authors.form.errors.affiliation_required',
-        rule: 'minLength',
-      },
-    ])
+  const empty = data.affiliations.length === 0
+  const messages: { field: string; message: string; rule: string }[] = []
+  if (empty && (!options.isMigrated || options.isPublic === true)) {
+    messages.push({
+      field: 'affiliations',
+      message: 'authors.form.errors.affiliation_required',
+      rule: 'minLength',
+    })
   }
+  if (empty && data.consent === true) {
+    messages.push({
+      field: 'consent',
+      message: 'authors.form.errors.consent_requires_affiliation',
+      rule: 'consent',
+    })
+  }
+  if (messages.length > 0) throw new errors.E_VALIDATION_ERROR(messages)
 }

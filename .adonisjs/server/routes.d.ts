@@ -39,6 +39,8 @@ export type ScannedRoutes = {
     'admin.authors.store': { paramsTuple?: []; params?: {} }
     'admin.authors.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'admin.authors.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'admin.authors.confirm-consent': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'admin.authors.withdraw-consent': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'admin.stats': { paramsTuple?: []; params?: {} }
     'admin.users.create': { paramsTuple?: []; params?: {} }
     'admin.users': { paramsTuple?: []; params?: {} }
@@ -106,6 +108,8 @@ export type ScannedRoutes = {
     'admin.productions.files.store': { paramsTuple: [ParamValue]; params: {'productionId': ParamValue} }
     'admin.productions.links.store': { paramsTuple: [ParamValue]; params: {'productionId': ParamValue} }
     'admin.authors.store': { paramsTuple?: []; params?: {} }
+    'admin.authors.confirm-consent': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'admin.authors.withdraw-consent': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'admin.users.store': { paramsTuple?: []; params?: {} }
     'admin.users.reset-password': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
   }

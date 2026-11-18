@@ -55,6 +55,8 @@ export interface ApiDefinition {
       store: typeof routes['admin.authors.store']
       update: typeof routes['admin.authors.update']
       destroy: typeof routes['admin.authors.destroy']
+      confirmConsent: typeof routes['admin.authors.confirm-consent']
+      withdrawConsent: typeof routes['admin.authors.withdraw-consent']
     }
     stats: typeof routes['admin.stats']
     users: typeof routes['admin.users'] & {

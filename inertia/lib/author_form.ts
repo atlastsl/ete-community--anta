@@ -3,7 +3,8 @@
  * server rules (`app/validators/admin/author_validator.ts`). Intentional duplication,
  * like `production_completion.ts`: same limits, same i18n keys, keyed like VineJS
  * (`affiliations.0.institution`). Photo (Story 9.3): type and size are checked here too,
- * the server then decodes the image (`ImageService`).
+ * the server then decodes the image (`ImageService`). Consent (Story 9.4): the box needs an
+ * affiliation (D27), checked here, in `assertAffiliationRule` and in `AuthorService`.
  */
 
 export type AffiliationFormData = { institution: string; department: string }
@@ -17,6 +18,8 @@ export type AuthorFormData = {
   photo: File | null
   /** Removes the saved photo (ignored when a new file is chosen). */
   removePhoto: boolean
+  /** "The author has consented to the publication of their profile" (D16, optional). */
+  consent: boolean
 }
 
 export const AUTHOR_NAME_MAX = 120
@@ -36,6 +39,12 @@ export const EMPTY_AUTHOR_FORM: AuthorFormData = {
   affiliations: [{ ...EMPTY_AFFILIATION }],
   photo: null,
   removePhoto: false,
+  consent: false,
+}
+
+/** At least one affiliation with an institution typed: the consent box is available (D27). */
+export function hasEnteredAffiliation(affiliations: AffiliationFormData[]): boolean {
+  return affiliations.some((a) => a.institution.trim() !== '')
 }
 
 /** "Prénom NOM": last name upper-cased for display only, the data keeps its case (D13, D34). */
@@ -111,12 +120,17 @@ export function validateAuthorForm(
     }
   }
 
+  if (data.consent && !hasEnteredAffiliation(data.affiliations)) {
+    errors.consent = 'authors.form.errors.consent_requires_affiliation'
+  }
+
   return errors
 }
 
 /**
  * Request body: trimmed values, empty optional fields omitted. A chosen file makes Inertia
- * send multipart; `removePhoto` is sent only when checked and no new file is chosen.
+ * send multipart; `removePhoto` is sent only when checked and no new file is chosen;
+ * `consent` only when checked while available (an affiliation is entered).
  */
 export function toAuthorPayload(data: AuthorFormData) {
   const scholar = data.googleScholarUrl.trim()
@@ -132,5 +146,6 @@ export function toAuthorPayload(data: AuthorFormData) {
     ...(scholar ? { googleScholarUrl: scholar } : {}),
     ...(data.photo instanceof File ? { photo: data.photo } : {}),
     ...(data.removePhoto && !data.photo ? { removePhoto: true } : {}),
+    ...(data.consent && hasEnteredAffiliation(data.affiliations) ? { consent: true } : {}),
   }
 }

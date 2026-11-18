@@ -216,6 +216,18 @@ const routes = {
     tokens: [{"old":"/admin/authors/:id","type":0,"val":"admin","end":""},{"old":"/admin/authors/:id","type":0,"val":"authors","end":""},{"old":"/admin/authors/:id","type":1,"val":"id","end":""}],
     types: placeholder as Registry['admin.authors.destroy']['types'],
   },
+  'admin.authors.confirm-consent': {
+    methods: ["POST"],
+    pattern: '/admin/authors/:id/confirm-consent',
+    tokens: [{"old":"/admin/authors/:id/confirm-consent","type":0,"val":"admin","end":""},{"old":"/admin/authors/:id/confirm-consent","type":0,"val":"authors","end":""},{"old":"/admin/authors/:id/confirm-consent","type":1,"val":"id","end":""},{"old":"/admin/authors/:id/confirm-consent","type":0,"val":"confirm-consent","end":""}],
+    types: placeholder as Registry['admin.authors.confirm-consent']['types'],
+  },
+  'admin.authors.withdraw-consent': {
+    methods: ["POST"],
+    pattern: '/admin/authors/:id/withdraw-consent',
+    tokens: [{"old":"/admin/authors/:id/withdraw-consent","type":0,"val":"admin","end":""},{"old":"/admin/authors/:id/withdraw-consent","type":0,"val":"authors","end":""},{"old":"/admin/authors/:id/withdraw-consent","type":1,"val":"id","end":""},{"old":"/admin/authors/:id/withdraw-consent","type":0,"val":"withdraw-consent","end":""}],
+    types: placeholder as Registry['admin.authors.withdraw-consent']['types'],
+  },
   'admin.stats': {
     methods: ["GET","HEAD"],
     pattern: '/admin/stats',
