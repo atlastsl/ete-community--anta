@@ -28,7 +28,7 @@ classification:
   domain: general
   complexity: low
   projectContext: brownfield
-lastEdited: '2026-11-16'
+lastEdited: '2026-11-18'
 editHistory:
   - date: '2026-11-15'
     changes: 'Phase 1 (MVP) marquée livrée. Phase 2 (Growth) redéfinie : refonte de la page d accueil (recherche avancée, bannière des productions à la une, 4 blocs titrés), entité Auteur (gestion admin, liste et profils publics, migration des auteurs existants), suggestions de productions similaires, conformité WCAG 2.1 AA du site public. Notifications aux membres reportées en Phase 3. FR5, FR9, FR17, FR21, FR36 modifiés ; FR44–FR61 ajoutés ; parcours 2 et 3 mis à jour, parcours 5 ajouté ; NFR Accessibilité ajoutée.'
@@ -38,6 +38,8 @@ editHistory:
     changes: 'Arbitrages de la révision UX Phase 2 (ux-designs/ux-anta-2026-11-16, décisions D1, D5, D16, D17) : FR46 exclusion des éléments à 0 sur 365 j, départage, totaux affichés ; FR50 vignette = attribut facultatif de la production réutilisé sur le site public ; FR53 consentement facultatif à la création (fiche non publique sans lui) et retrait du consentement.'
   - date: '2026-11-16'
     changes: 'Clarification issue du rapport implementation-readiness-report-2026-11-16.md : FR5 alignée sur la décision UX D12 validée (filtre auteur limité aux profils publics, cohérent avec FR53).'
+  - date: '2026-11-18'
+    changes: 'Correction d Aurélien (décision UX D37, amende D1) : FR50, la vignette est réservée aux productions à la une, renseignée depuis l écran de mise à la une et affichée uniquement dans la bannière ; aucune image dans les autres cartes ni en image Open Graph des productions.'
 ---
 
 # Product Requirements Document — Anta
@@ -362,7 +364,7 @@ AdonisJS génère côté serveur les balises meta (title, description, Open Grap
   - **3 productions :** la première occupe 2/3 de la largeur ; les deux suivantes se partagent le tiers restant, empilées et de hauteur égale
   - Sur mobile, les productions s'empilent verticalement dans l'ordre défini
 - **FR49 :** Chaque production à la une affiche uniquement sa vignette, son titre, son ou ses auteurs et ses nombres totaux de vues et de téléchargements ; un clic ouvre sa page de détail
-- **FR50 :** La vignette (image) est un attribut facultatif de la production, renseigné dans son formulaire ou depuis l'écran de mise à la une ; lorsqu'elle existe, elle illustre la production sur le site public (bannière, cartes, suggestions, image Open Graph). Une vignette est obligatoire pour mettre à la une une production, sauf pour une vidéo hébergée sur Anta : sa vignette est facultative et, à défaut, une image extraite de la vidéo est affichée. Une vidéo disponible uniquement en lien externe requiert une vignette
+- **FR50 :** Seules les productions à la une ont une vignette (image) : elle est renseignée depuis l'écran de mise à la une et n'est affichée que dans la bannière ; les autres cartes du site public (blocs, listing, profils, suggestions) restent sans image. Une vignette est obligatoire pour mettre à la une une production, sauf pour une vidéo hébergée sur Anta : sa vignette est facultative et, à défaut, une image extraite de la vidéo est affichée. Une vidéo disponible uniquement en lien externe requiert une vignette
 - **FR51 :** Une production dépubliée ou supprimée est retirée automatiquement de la sélection à la une
 
 ### Gestion des Auteurs — Panel Admin (Phase 2)

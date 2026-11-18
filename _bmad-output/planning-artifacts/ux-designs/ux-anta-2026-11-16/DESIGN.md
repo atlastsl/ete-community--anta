@@ -2,11 +2,11 @@
 name: Anta
 description: Bibliothèque numérique académique d'ETEC Community. shadcn/ui (new-york, base stone) + Tailwind v4 sur Inertia React ; identité MVP héritée du code, ce fichier ajoute les deltas visuels de la Phase 2.
 status: final
-updated: 2026-11-16
+updated: 2026-11-18
 sources:
   - ../../prd.md                      # FR44–FR61, FR5/FR9/FR17/FR21/FR36 modifiés, NFR Accessibilité (amendé 2026-11-16 : FR46, FR50, FR53)
   - ../../validation-report-2026-11-15.md
-  - .decision-log.md                  # D1–D36 (canonique)
+  - .decision-log.md                  # D1–D37 (canonique)
   - mockups/                          # 7 maquettes HTML + index (références, les spines priment)
   - code:inertia/css/app.css          # tokens @theme (valeurs exactes)
   - code:inertia/components/          # ProductionCard, SearchBar, FilterChip, Pagination, shadcn ui
@@ -278,9 +278,9 @@ components:
 
 Anta est une bibliothèque académique associative : sobre, lisible, sérieuse sans être austère. L'esthétique est celle d'un **papier chaud** (neutres stone) relevé d'**un seul vert** (`{colors.primary}`, le vert du logo) et d'un **serif de titre** (Playfair Display) sur un corps Inter. La profondeur vient des bordures, pas des ombres.
 
-**L'identité visuelle du MVP est héritée telle qu'implémentée dans le code** (`inertia/css/app.css`, composants shadcn passés en classes stone). Ce fichier la consigne ; la Phase 2 l'**étend** seulement : vignettes 16:9 (D1), bannière à la une (D9), cartes et avatars d'auteurs (D3), squelettes (D22), composants admin des auteurs et de la une. Les anciens `ux-design-specification.md` et `ux-design-directions.html` sont obsolètes et sans autorité.
+**L'identité visuelle du MVP est héritée telle qu'implémentée dans le code** (`inertia/css/app.css`, composants shadcn passés en classes stone). Ce fichier la consigne ; la Phase 2 l'**étend** seulement : vignettes 16:9 réservées à la bannière (D37), bannière à la une (D9), cartes et avatars d'auteurs (D3), squelettes (D22), composants admin des auteurs et de la une. Les anciens `ux-design-specification.md` et `ux-design-directions.html` sont obsolètes et sans autorité.
 
-Images : jusqu'ici aucune image de contenu ; la Phase 2 introduit la **vignette**, facultative (D1, FR50). Une carte sans vignette reste la carte texte actuelle, sans image de substitution.
+Images : jusqu'ici aucune image de contenu ; la Phase 2 introduit la **vignette**, réservée aux productions à la une et affichée **uniquement dans la bannière** (D37, FR50). Toutes les autres cartes restent la carte texte actuelle, sans image.
 
 **Références visuelles** : [index des maquettes](mockups/index.html). Elles utilisent Tailwind CDN et Google Fonts (D29) et des dégradés à la place des vignettes et des photos. En cas de conflit, les spines priment sur les maquettes.
 
@@ -356,7 +356,7 @@ Maquettes : [accueil](mockups/home.html) · [liste des auteurs](mockups/authors-
 | Composant | Spec visuelle |
 |---|---|
 | **SearchBar + Recherche avancée** (modifié, D8, [maquette](mockups/home.html)) | `{components.search-bar}` inchangé ; bouton `{components.advanced-search-button}` (outline pilule 48 px, icône `SlidersHorizontal` size-4, survol bordure et texte `{colors.primary}`) accolé à droite ≥ sm, sous la barre en pleine largeur < sm. Puces de catégories du hero supprimées. |
-| **ProductionCard** (étendu, D1/D2) | `{components.production-card}`. Ordre : vignette facultative `{components.production-thumbnail}` en tête (variante grille) ou à gauche sur 160 px ≥ sm (variante liste) → titre → byline → méta → résumé (`line-clamp-3`) → compteurs `Eye`/`Download`/`Calendar`. Sans vignette : carte texte actuelle, aucun placeholder. Noms d'auteurs liés en `{components.author-link}`. |
+| **ProductionCard** (inchangé visuellement, D2/D37) | `{components.production-card}`. Carte texte actuelle, sans vignette ni placeholder : titre → byline → méta → résumé (`line-clamp-3`) → compteurs `Eye`/`Download`/`Calendar`. Noms d'auteurs liés en `{components.author-link}`. |
 | **FeaturedBanner / FeaturedCard** (nouveau, D9, [maquette](mockups/home.html)) | `{components.featured-banner-card}` : vignette 16:9 en haut, texte **sous** l'image sur fond blanc : titre, byline, compteurs totaux `Eye`/`Download` en `{typography.body-sm}` `{colors.muted-foreground}`. Rien d'autre (FR49). Titre : 3 lignes max (emplacement 1), 2 lignes (emplacements 2–3). Focus clavier du titre → contour 2 px `{colors.ring}` sur toute la carte (`:has(:focus-visible)`). Pas de titre de section visible. |
 | **HomeBlock** (nouveau) | En-tête : h2 `{components.home-block-header}` + sous-titre `{typography.body-sm}` `{colors.muted-foreground}` « sur les 12 derniers mois » (blocs classés, D4) ; lien « Voir plus » `{colors.primary}` medium + `ArrowRight` size-4, aligné à droite, hauteur `{spacing.touch-target}`, souligné au survol. Grille de cartes en dessous. |
 | **AuthorCard** (nouveau, D3, [maquette](mockups/authors-list.html)) | `{components.author-card}` : rangée avatar `{components.avatar.size-md}` + colonne texte : nom `{typography.card-title}`, institution principale `{typography.body-sm}` `{colors.text-secondary}` (1 ligne tronquée), ligne de stats `{typography.body-sm}` `{colors.muted-foreground}` : `BookOpen` n productions · `Eye` n vues. |
@@ -388,7 +388,7 @@ Maquettes : [accueil](mockups/home.html) · [liste des auteurs](mockups/authors-
 | Neutres stone + `{colors.primary}` comme seul accent ; aplats verts survolés en `{colors.primary-hover}` | Ajouter une seconde couleur de marque, des dégradés (hors hero existant) ou un dark mode |
 | Séparer les surfaces par `{colors.border}` sur fond `{colors.background}` | Hiérarchiser par ombres ; animer les cartes au survol (translation, échelle) |
 | Playfair uniquement pour les titres (h1/h2, `.font-display`) ; Inter partout ailleurs | Mettre du corps ou des boutons en Playfair |
-| Vignette 16:9 `object-cover` seulement quand la production en a une | Placeholder, image générique par catégorie ou icône de remplacement dans une carte publique sans vignette |
+| Vignette 16:9 `object-cover` uniquement dans la bannière à la une (et ses aperçus admin) | Vignette, placeholder, image générique ou icône dans les cartes des blocs, du listing, des profils ou des suggestions (D37) |
 | Texte de bannière **sous** l'image, sur blanc (D9) | Texte superposé à une image (contraste non garanti) |
 | Noms d'auteurs liés soulignés stone-300 ; non liés en texte simple (D24) | Distinguer les liens par la seule couleur |
 | Initiales green-800 sur green-100 (D25) | Initiales sur un fond saturé ou en blanc sur vert |

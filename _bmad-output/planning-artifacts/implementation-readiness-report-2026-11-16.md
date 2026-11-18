@@ -53,7 +53,7 @@ FR46 : classements sur 365 j glissants, éléments à 0 exclus, départage par p
 FR47 : 0 à 3 productions publiées, ordonnées, sans échéance
 FR48 : bannière sans titre, dispositions 1 / 2 / 3, empilée sur mobile
 FR49 : contenu strict (vignette, titre, auteurs, totaux)
-FR50 : vignette = attribut facultatif réutilisé partout ; obligatoire pour la une sauf vidéo hébergée (image extraite)
+FR50 (amendé 2026-11-18, D37) : vignette réservée aux productions à la une, affichée seulement dans la bannière ; obligatoire pour la une sauf vidéo hébergée (image extraite)
 FR51 : retrait automatique à la dépublication / suppression
 
 **Auteurs — panel (FR52–FR56)**
@@ -94,14 +94,14 @@ Le PRD Phase 2 est **complet et testable** : critères de succès mesurables, pa
 | FR9  | Ordre de l'accueil                                 | Epic 11 / 11.6 + Epic 12 / 12.1–12.3    | Couvert |
 | FR17 | Auteurs choisis dans le référentiel                | Epic 9 / 9.7, 9.8                       | Couvert |
 | FR21 | Au moins un auteur enregistré pour publier         | Epic 9 / 9.7                            | Couvert |
-| FR36 | Meta des profils, og:image                         | 10.7, 11.2 (+ 13.3 facultative)         | Couvert |
+| FR36 | Meta des profils, og:image des profils             | 10.7 (+ 13.3 facultative)               | Couvert |
 | FR44 | Bouton « Recherche avancée » (+ pied de page)      | 12.1 (+ 10.5)                           | Couvert |
 | FR45 | 4 blocs de 3 + « Voir plus »                       | 12.2, 12.3                              | Couvert |
 | FR46 | Fenêtre 365 j, exclusion des 0, départage, totaux  | 12.2, 12.3                              | Couvert |
 | FR47 | Sélection 0–3 ordonnée                             | 11.4                                    | Couvert |
 | FR48 | Bannière, dispositions                             | 11.6                                    | Couvert |
 | FR49 | Contenu strict de la carte à la une                | 11.6                                    | Couvert |
-| FR50 | Vignette, règle de la une, image extraite          | 11.1, 11.2, 11.3, 11.4                  | Couvert |
+| FR50 | Vignette de la une, règle, image extraite          | 11.1, 11.2, 11.3, 11.4, 11.6            | Couvert |
 | FR51 | Retrait automatique                                | 11.5                                    | Couvert |
 | FR52 | Fiche auteur, « à compléter »                      | 9.1, 9.2, 9.3                           | Couvert |
 | FR53 | Consentement : confirmation, retrait, effets       | 9.4 + 10.2–10.6 + 12.3                  | Couvert |
@@ -136,7 +136,7 @@ Trouvé : spines `DESIGN.md` et `EXPERIENCE.md` en `status: final`, 36 décision
 
 | Aspect UX                                                     | Couverture PRD          | Statut |
 | ------------------------------------------------------------- | ----------------------- | ------ |
-| D1 vignette = attribut de la production                       | FR50 (amendé 2026-11-16) | Aligné |
+| D1 / D37 vignette réservée à la une (bannière seulement)       | FR50 (amendé 2026-11-18) | Aligné |
 | D5 exclusion des 0, départage, totaux                         | FR46 (amendé 2026-11-16) | Aligné |
 | D16 / D17 consentement facultatif, retrait                    | FR53 (amendé 2026-11-16) | Aligné |
 | D11 profil sans production publiée → 404                       | FR57–FR58 (précision UX) | Conforme |
@@ -153,7 +153,7 @@ Trouvé : spines `DESIGN.md` et `EXPERIENCE.md` en `status: final`, 36 décision
 | Combobox accents/casse, institutions dédoublonnées  | P2.1 `normalizeKey` + `pg_trgm` (extension et index trigram déjà présents : `1775918742000_enable_pg_trgm_extension.ts`) | Aligné |
 | Avatar dans les options du combobox (DESIGN.md → AuthorCombobox, SelectedAuthorList) | P2.6 `search` sans URL de photo | ⚠️ → corrigé (Mineur 4) |
 | Image extraite à t = 1 s                            | P2.5 `ffmpeg` (présent sur le VPS de dev : `/usr/bin/ffmpeg`) | Aligné, précision (Mineur 3) |
-| Vignettes 16:9, `srcset`, og:image stable           | P2.5 `sharp`, `/media/*`                                 | Aligné |
+| Vignettes 16:9 de la bannière, `srcset`             | P2.5 `sharp`, `/media/*`                                 | Aligné |
 | Classements 365 j et LCP                            | P2.3 SQL + cache mémoire, colonnes `recorded_at` / `downloaded_at` confirmées dans les migrations | Aligné |
 | Fenêtre « Créer un auteur » sans navigation         | P2-14 `fetch` + `X-XSRF-TOKEN` (`enableXsrfCookie: true` confirmé, `config/shield.ts:46`) | Aligné |
 | Journal des nouveaux événements                     | P2.6 (4 types, `metadata`) ; filtre `Object.values(ActionType)` confirmé (`activity_logs_controller.ts:7`) | Aligné |
@@ -301,3 +301,7 @@ Lancer `bmad-sprint-planning` pour intégrer les Epics 9–13, puis `bmad-create
 **Documents évalués :** prd.md · architecture.md (Phase 2) · ux-designs/ux-anta-2026-11-16/ · epics.md (Epics 9–13) · code `development` @ c5cde51
 **Problèmes identifiés :** 0 critique · 3 majeurs (corrigés) · 12 mineurs (6 corrigés, 6 acceptés)
 **Problèmes bloquants :** 0
+
+## Addendum 2026-11-18 — décision D37
+
+Correction d'Aurélien : seules les productions à la une ont une vignette. D37 amende D1 et D2 ; FR50, l'architecture (P2.5, P2-17) et les stories 11.1 à 11.4, 11.7, 12.2, 12.4, 13.2 et 13.4 ont été alignés, ainsi que les maquettes `home.html`, `author-profile.html` et `production-detail-suggestions.html`. La story 11.2 est recentrée sur la diffusion des images de la bannière (`/media/thumbnails`) ; plus d'`og:image` de production. Toujours 33 stories, couverture inchangée hors FR36 (désormais 10.7 seule). Statut : 🟢 maintenu.

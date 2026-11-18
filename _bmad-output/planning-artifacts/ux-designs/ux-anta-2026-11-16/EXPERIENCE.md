@@ -1,11 +1,11 @@
 ---
 name: Anta
 status: final
-updated: 2026-11-16
+updated: 2026-11-18
 sources:
   - ../../prd.md                      # FR1–FR61, parcours 1/2/3/5, NFR Accessibilité, Données des auteurs (amendé 2026-11-16 : FR46, FR50, FR53)
   - ../../validation-report-2026-11-15.md
-  - .decision-log.md                  # D1–D36 (canonique, prime sur ce fichier en cas d'écart)
+  - .decision-log.md                  # D1–D37 (canonique, prime sur ce fichier en cas d'écart)
   - mockups/                          # 7 maquettes HTML + index (références, les spines priment)
   - code:start/routes.ts, inertia/pages/, inertia/locales/, app/services/search_service.ts  # comportement MVP tel qu'implémenté
 ---
@@ -17,7 +17,7 @@ sources:
 - **Surfaces** : site public web responsive (desktop, tablette, mobile ; mobile-first) ; panel admin desktop-first (`lg`), fonctionnel sur tablette, message « utilisez un ordinateur » en dessous de `lg` (inchangé).
 - **UI system** : shadcn/ui `new-york`, base `stone`, Tailwind v4, icônes lucide, toasts sonner (public `top-center`, admin `bottom-right`). `DESIGN.md` est la référence visuelle ; ce fichier ne spécifie que le comportement.
 - **i18n** : react-i18next FR (fallback) / EN, sans préfixe d'URL ; toute nouvelle chaîne passe par `inertia/locales/{public,admin}/{fr,en}.json`. Métadonnées des productions et des auteurs non traduites (FR40–FR41).
-- **Rendu** : Inertia, `ssr: false` ; meta SEO/OG côté edge (FR36) : vignette en `og:image` des productions (D1), photo + nom + affiliation principale pour les profils.
+- **Rendu** : Inertia, `ssr: false` ; meta SEO/OG côté edge (FR36) : pas d'`og:image` pour les productions (D37), photo + nom + affiliation principale pour les profils.
 - **Références visuelles** : [maquettes HTML](mockups/index.html) (7 écrans clés) ; les pages actuelles (`inertia/`) font foi pour l'existant. En cas de conflit, les spines priment sur les maquettes.
 - **Périmètre** : deltas Phase 2 (FR44–FR61, FR5/FR9/FR17/FR21/FR36 modifiés, WCAG 2.1 AA du site public). Tout comportement MVP non cité ici reste **tel qu'implémenté**.
 
@@ -33,7 +33,7 @@ Nouvelles URL en anglais, comme l'existant (`/productions`, `/privacy-policy`) (
 | Listing / recherche avancée | `/productions?q=&sort=relevance\|date\|views\|downloads&author=<slug>&…` | SearchBar, « Recherche avancée », « Voir plus », pied de page | Valeurs de tri existantes (`search_service.ts`) ; tris vues / téléchargements sur les **totaux** (D7). Filtre auteur = auteurs à profil public, paramètre `author` = slug, répétable (FR5, D12, D28). Vignettes dans les cartes (D1). | FR5, FR44–FR45 · D7, D12, D28 |
 | Liste des auteurs — [maquette](mockups/authors-list.html) | `/authors?q=&institution=&domain=&sort=views\|name\|productions&page=` | « Voir plus » du bloc auteurs, pied de page « Auteurs » | h1 « Auteurs » + phrase d'introduction ; AuthorFilters ; AuthorCard ×24/page ; pagination. | FR57, FR60 · D3, D13, D14, D31 |
 | Profil d'auteur — [maquette](mockups/author-profile.html) | `/authors/:slug?sort=date\|views\|downloads\|title&page=` | AuthorCard, AuthorByline (cartes, bannière, détail) | Fil d'Ariane, AuthorProfileHeader, section « Productions » (compteur, tri, 12/page). 404 si non public ou sans production publiée (D11). | FR58, FR59, FR36 · D11, D15 |
-| Détail d'une production — [maquette](mockups/production-detail-suggestions.html) | `/productions/:slug` | cartes, bannière, suggestions | AuthorByline liée (byline et aside « Auteurs ») ; SuggestionsGrid pleine largeur sous la grille principale ; vignette en `og:image`. | FR59, FR61 · D22 |
+| Détail d'une production — [maquette](mockups/production-detail-suggestions.html) | `/productions/:slug` | cartes, bannière, suggestions | AuthorByline liée (byline et aside « Auteurs ») ; SuggestionsGrid pleine largeur sous la grille principale ; cartes sans vignette (D37). | FR59, FR61 · D22 |
 | Pied de page | toutes pages | — | Colonne « Explorer » : Accueil, **Recherche avancée** (renommé, même destination `/productions`), **Auteurs** (nouveau), Politique de confidentialité. | FR38, FR44, FR60 · D34 |
 | Page 404 | URL inconnue, profil non public | — | NotFoundPage traduite dans PublicLayout. | D11, D36 |
 
@@ -48,7 +48,7 @@ Header inchangé (logo + LanguageSwitcher, pas de menu). Profil atteint en ≤ 2
 | Auteurs — liste — [maquette](mockups/admin-authors-list.html) | `/admin/authors?q=&institution=&consent=pending&incomplete=1&page=` | barre latérale « Auteurs » | Recherche, filtre Institution, filtres rapides « Consentement en attente » et « À compléter » (avec compteurs). Tableau : Auteur, Affiliation principale, Productions (tous statuts), Statut (badges), Mise à jour, Actions (Modifier, Confirmer / Retirer le consentement, Supprimer). Bouton « Créer un auteur ». | FR52, FR53, FR55 · D19, D27, D32 |
 | Fiche auteur | `/admin/authors/create`, `/admin/authors/:id/edit` | liste | AuthorForm pleine page ; actions Enregistrer, Confirmer / Retirer le consentement, Supprimer. | FR52, FR53, FR55 · D16, D17, D27 |
 | Fenêtre « Créer un auteur » — [maquette](mockups/admin-author-picker.html) | modale dans le formulaire de production | AuthorCombobox, bouton « Créer un auteur » | AuthorFormDialog ; l'auteur créé est ajouté en fin de sélection. | FR54 · D16 |
-| Formulaire de production (modifié) | `/admin/productions/create`, `…/:id/edit` | — | Fieldset « Auteurs » : SelectedAuthorList + AuthorCombobox (remplace ChipInput) ; ThumbnailField dans le fieldset « Fichiers ». | FR17, FR21, FR50, FR54 · D1, D10, D18 |
+| Formulaire de production (modifié) | `/admin/productions/create`, `…/:id/edit` | — | Fieldset « Auteurs » : SelectedAuthorList + AuthorCombobox (remplace ChipInput). Pas de vignette dans le formulaire : elle se gère depuis « À la une » (D37). | FR17, FR21, FR54 · D18, D37 |
 | À la une — [maquette](mockups/admin-featured.html) | `/admin/featured` | barre latérale « À la une » | 3 FeaturedSlot ordonnés, ProductionPicker dans l'emplacement libre, BannerPreview, barre « Enregistrer ». | FR47, FR50 · D20, D26, D30 |
 | ConfirmDialog (dépublier / supprimer) (modifié) | listing admin, formulaire | — | Avertissement si la production est à la une. | FR51 · D21 |
 
@@ -104,7 +104,7 @@ Comportemental. Visuel : `DESIGN.md` → Components.
 | FeaturedBanner | Accueil | Rendue seulement si ≥ 1 production à la une, sans titre visible (FR48) ; ordre défini par l'admin ; disposition selon le nombre (`DESIGN.md` → Layout & Spacing). Pas de carrousel, pas de rotation. |
 | FeaturedCard | Bannière | Contenu strict FR49 : vignette, titre, auteurs, totaux vues + téléchargements. Titre = lien vers le détail avec zone de clic étendue à la carte (stretched link) ; noms d'auteurs à profil public = liens distincts au-dessus (D9). Vignette `alt=""`. Vidéo hébergée sans vignette → image extraite (D10). |
 | HomeBlock | Accueil | 3 éléments max (FR45) ; 1–2 éléments → bloc affiché avec « Voir plus » (D5) ; 0 → bloc absent, titre compris (FR46). « Voir plus » (D28) : récent → `/productions?sort=date`, vues → `?sort=views`, téléchargements → `?sort=downloads`, auteurs → `/authors` (tri par défaut, FR45). |
-| ProductionCard | Blocs, listing, profil, suggestions | Seul le titre est le lien principal (comportement actuel). Vignette éventuelle enveloppée dans un lien vers le même détail, `tabindex="-1"` + `aria-hidden="true"` (pas de 2e arrêt de tabulation). Compteurs = totaux. Sur le profil d'un auteur, son propre nom est rendu en texte simple (pas de lien vers la page courante). |
+| ProductionCard | Blocs, listing, profil, suggestions | Seul le titre est le lien principal (comportement actuel). Carte texte, sans vignette (D37). Compteurs = totaux. Sur le profil d'un auteur, son propre nom est rendu en texte simple (pas de lien vers la page courante). |
 | AuthorByline | Cartes, bannière, détail | Liens en `{components.author-link}` (D24). Ordre = ordre défini par l'admin (FR54). Profil public → lien `/authors/:slug` ; sinon texte simple (FR53, D12). Séparateur « , » ; pas de troncature sur le détail ; sur les cartes, 3 auteurs puis « et {n} autres ». |
 | AuthorCard | Bloc auteurs, liste des auteurs | Lien unique sur le nom, étendu à la carte (stretched link). Affiche photo ou initiales, « Prénom NOM », institution principale (1re affiliation, omise si aucune), nb de productions publiées, **total** des vues (D3, FR57). |
 | Avatar | Cartes auteur, profil, admin | Photo si présente ; sinon initiales = 1re lettre du 1er prénom + 1re lettre du 1er nom (D13). Échec de chargement de la photo → initiales. |
@@ -125,7 +125,7 @@ Comportemental. Visuel : `DESIGN.md` → Components.
 | ProductionPicker | À la une | Combobox dans l'emplacement libre (D30) : recherche par titre ou auteur parmi les productions **publiées** ; productions déjà choisies exclues ; chaque option indique l'état de sa vignette ; une production sans vignette reste sélectionnable (elle bloque alors l'enregistrement jusqu'au téléversement). |
 | BannerPreview | À la une | Reflète l'état non enregistré, disposition `lg` ; **n'affiche que les emplacements valides** (vignette présente ou image extraite) et l'indique (« 2 productions affichées — l'emplacement 3 attend sa vignette ») ; non interactif. |
 | Enregistrement de la une (D26) | À la une | Sélection enregistrée **explicitement** par « Enregistrer ». Bouton désactivé tant qu'un emplacement rempli n'a pas de vignette requise, avec explication visible reliée par `aria-describedby` (« Enregistrement impossible : l'emplacement {n} n'a pas de vignette. ») ; il se réactive dès le téléversement. Succès → toast, bannière publique à jour immédiatement (parcours 5). Quitter avec des changements non enregistrés → confirmation (navigation Inertia et fermeture d'onglet). |
-| ThumbnailField | Formulaire de production, FeaturedSlot | Téléversement immédiat avec progression (comme `FileUploader`), type et taille validés côté client et serveur (JPEG/PNG/WebP ≤ 5 Mo) ; aperçu recadré 16:9 ; Remplacer, Retirer. Facultatif dans le formulaire (hors `CompletionIndicator`) (D1). Retirer la vignette d'une production à la une qui en exige une → refus avec le message « Vignette requise pour une production à la une. ». Vidéo hébergée sans vignette → aperçu de l'image extraite à t = 1 s, générée au téléversement de la vidéo (D10). |
+| ThumbnailField | FeaturedSlot (seul point d'entrée, D37) | Téléversement immédiat avec progression (comme `FileUploader`), type et taille validés côté client et serveur (JPEG/PNG/WebP ≤ 5 Mo) ; aperçu recadré 16:9 ; Remplacer, Retirer. Retirer la vignette d'une production à la une qui en exige une → refus avec le message « Vignette requise pour une production à la une. ». Vidéo hébergée sans vignette → aperçu de l'image extraite à t = 1 s, générée au téléversement de la vidéo (D10). |
 | ConfirmDialog (dépublier / supprimer) | Admin productions | Si la production est à la une : avertissement D21 dans le corps ; la confirmation retire la production de la sélection (FR51) et journalise le retrait. |
 | Badges auteurs | Liste admin, fiche, combobox | « À compléter » tant qu'aucune affiliation ; « Public » / « Non public » selon le consentement (D32) ; informatifs, non cliquables ; mis à jour dès l'enregistrement. Filtre « Consentement en attente » = fiches « Non public ». |
 | Admin sidebar | Panel | Entrées « Auteurs » et « À la une » ; active sur toutes les sous-pages de leur section ; visibles pour admin et super admin. |
@@ -139,8 +139,7 @@ Comportemental. Visuel : `DESIGN.md` → Components.
 | Accueil | Bloc à 1–2 éléments | Affiché tel quel + « Voir plus » (D5) ; la grille garde ses colonnes (cellules vides). |
 | Accueil | Catalogue vide | Seul le hero reste affiché. |
 | Accueil | Bannière n−1 après retrait automatique (D21, FR51) | Disposition recalculée (3 → 2 colonnes égales, 2 → pleine largeur, 1 → absente). |
-| Accueil / cartes | Production sans vignette | Carte texte actuelle (D1). |
-| Bannière, cartes | Vignette en erreur de chargement | Zone 16:9 `{colors.muted}` vide, texte intact. |
+| Bannière | Vignette en erreur de chargement | Zone 16:9 `{colors.muted}` vide, texte intact. |
 | Listing | Tri sans requête | `relevance` sans `q` retombe sur `date` (comportement actuel). |
 | Listing | Filtre auteur | Facette = auteurs à profil public ayant ≥ 1 production publiée (D12). |
 | Liste des auteurs | Aucun profil public | h1 + « Aucun auteur pour le moment. » ; lien du pied de page conservé. |
@@ -187,8 +186,8 @@ Exigences PRD (NFR Accessibilité, verbatim) :
 
 Règles comportementales :
 - **Structure** : un seul h1 par page (accueil : accroche du hero ; liste : « Auteurs » ; profil : nom) ; blocs, « Productions » du profil et suggestions en h2 ; titres de cartes en h3. Bannière = `<section aria-label="Productions à la une">` sans titre visible. Fil d'Ariane en `<nav aria-label="Fil d'Ariane">` avec `aria-current="page"`. Landmarks `header` / `main` / `footer`, lien d'évitement existant conservé.
-- **Clavier** : ordre de tabulation = ordre de lecture ; par FeaturedCard : titre puis auteurs liés ; par ProductionCard : titre puis auteurs (vignette hors tabulation). Focus visible global `{colors.ring}` 2 px (existant) ; sur les cartes à stretched link, le contour couvre la carte.
-- **Textes alternatifs** (D9, D36) : vignette ou photo adjacente à son titre ou au nom (bannière, cartes, suggestions, cartes auteur, combobox) → `alt=""`, l'information étant portée par le texte voisin ; photo du profil → `alt="Photo de {Prénom NOM}"`. Initiales `aria-hidden`.
+- **Clavier** : ordre de tabulation = ordre de lecture ; par FeaturedCard : titre puis auteurs liés ; par ProductionCard : titre puis auteurs. Focus visible global `{colors.ring}` 2 px (existant) ; sur les cartes à stretched link, le contour couvre la carte.
+- **Textes alternatifs** (D9, D36) : vignette ou photo adjacente à son titre ou au nom (bannière, cartes auteur, combobox, emplacements « À la une ») → `alt=""`, l'information étant portée par le texte voisin ; photo du profil → `alt="Photo de {Prénom NOM}"`. Initiales `aria-hidden`.
 - **Liens** : « Voir plus » doté d'un nom accessible complet (« Voir plus : Les plus consultées ») ; noms d'auteurs liés distinguables sans la couleur (soulignés, D24) ; Google Scholar annonce l'ouverture d'un nouvel onglet (D15).
 - **Suggestions** : conteneur `aria-busy="true"` et statut masqué pendant le chargement ; à l'arrivée, région `aria-live="polite"` masquée qui annonce une fois « {n} productions similaires » ; rien n'est annoncé en cas d'échec (D22) ; le focus n'est jamais déplacé.
 - **Compteurs** : icônes `aria-hidden` + libellé complet (« 1 234 vues »), comme `ProductionCard` actuel.
@@ -245,7 +244,7 @@ Le sous-titre « sur les 12 derniers mois » (D4) lève l'apparente incohérence
 
 ### Flux 2 — Production avec co-auteur inconnu (Fatou, administratrice) — parcours 3
 
-1. Fatou crée une production, remplit les métadonnées, téléverse le PDF et, si elle le souhaite, une vignette (ThumbnailField, aperçu 16:9).
+1. Fatou crée une production, remplit les métadonnées, téléverse le PDF (pas de vignette ici : elle se pose depuis « À la une », D37).
 2. Dans « Ajouter un auteur », elle tape « Diallo » : le combobox propose deux homonymes, distingués par leur affiliation ; l'un porte « À compléter ». Elle sélectionne le bon.
 3. Le co-auteur n'existe pas : elle tape son nom et choisit « Créer un auteur « Moussa Konaté » ».
 4. La fenêtre « Créer un auteur » s'ouvre préremplie (nom KONATÉ, prénom Moussa) ; elle ajoute une affiliation (institution obligatoire) et laisse la case de consentement décochée, faute de consentement obtenu (D16).
@@ -294,7 +293,7 @@ Le sous-titre « sur les 12 derniers mois » (D4) lève l'apparente incohérence
 | `≥ lg` (1024 px) | Bannière en disposition 1/2/3 (FR48, D35) ; liste des auteurs et profil en 3 colonnes ; filtres des auteurs sur une ligne ; aside statistiques du profil à droite ; suggestions en 4 colonnes ; panel admin disponible. |
 | `≥ xl` (1280 px) | Liste des auteurs en 4 colonnes. |
 
-Navigateurs : 2 dernières versions de Chrome, Firefox, Edge, Safari. LCP < 3 s sur mobile 4G simulé pour l'accueil complet, la liste des auteurs et les profils (NFR Performance) : vignettes servies en tailles adaptées (`srcset`), `loading="lazy"` hors bannière, dimensions fixées pour éviter le CLS.
+Navigateurs : 2 dernières versions de Chrome, Firefox, Edge, Safari. LCP < 3 s sur mobile 4G simulé pour l'accueil complet, la liste des auteurs et les profils (NFR Performance) : vignettes de la bannière servies en tailles adaptées (`srcset`), `loading="lazy"` hors bannière, dimensions fixées pour éviter le CLS.
 
 ## Questions ouvertes non bloquantes (architecture)
 

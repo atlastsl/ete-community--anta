@@ -27,6 +27,8 @@ editHistory:
     changes: 'Phase 2 (Growth) ajoutée : inventaire FR5/FR9/FR17/FR21/FR36 modifiés, FR44–FR61, NFR16–NFR20, exigences d architecture P2.x/P2-xx et décisions UX D1–D36 ; carte de couverture étendue ; Epics 9 (Référentiel d auteurs), 10 (Auteurs sur le site public), 11 (Vignettes et à la une), 12 (Accueil refondu et suggestions), 13 (WCAG 2.1 AA) — 33 stories. Portes manuelles : conversion des auteurs (Story 9.6) et bascule (Story 9.7) sur validation du CSV par Aurélien ; rattrapage des images extraites (Story 11.3) sur accord d Aurélien. ux-design-specification.md obsolète pour la Phase 2.'
   - date: '2026-11-16'
     changes: 'Corrections du rapport implementation-readiness-report-2026-11-16.md : 9.7 (colonne authors plus écrite depuis la requête, seeder de démo avec auteurs et pivot, photoUrl du combobox), 9.6 (COALESCE, doublons dans une production), 9.1 (alias #helpers), 11.3 (poster après création de la ligne), 11.5 (recompactage DELETE + INSERT, journal après commit), 12.5 (stats de démo datées), FR5 précisée (D12).'
+  - date: '2026-11-18'
+    changes: 'Décision D37 (amende D1/D2, Aurélien) : vignette réservée aux productions à la une. FR50 et D37 dans l inventaire, Epic 11 (11.1 ThumbnailField sur la page « À la une » seulement, sans og.jpg ; 11.2 recentrée sur /media et srcset de la bannière, cartes sans image, pas d og:image de production ; 11.3, 11.4, 11.7), 12.2, 12.4, 13.2, 13.4, couverture FR36/FR50. Toujours 33 stories.'
 ---
 
 # anta - Epic Breakdown
@@ -166,7 +168,7 @@ FR46 (amendé 2026-11-16) : Les classements « consultées », « téléchargée
 FR47 : Un administrateur sélectionne de 0 à 3 productions publiées à mettre à la une et définit leur ordre ; la sélection reste affichée jusqu'à sa modification
 FR48 : La bannière à la une s'affiche en tête de l'accueil, sans titre de section, absente si aucune sélection ; écran large : 1 = pleine largeur, 2 = deux colonnes égales, 3 = la 1re en 2/3, les deux suivantes empilées dans le tiers restant ; mobile : empilées dans l'ordre
 FR49 : Chaque production à la une affiche uniquement sa vignette, son titre, son ou ses auteurs et ses totaux de vues et de téléchargements ; un clic ouvre sa page de détail
-FR50 (amendé 2026-11-16) : La vignette est un attribut facultatif de la production (formulaire ou écran « À la une ») ; quand elle existe, elle illustre la production sur le site public (bannière, cartes, suggestions, Open Graph) ; obligatoire pour la une, sauf vidéo hébergée (image extraite à défaut) ; une vidéo en lien externe seulement requiert une vignette
+FR50 (amendé 2026-11-18) : Seules les productions à la une ont une vignette, renseignée depuis l'écran « À la une » et affichée uniquement dans la bannière ; les autres cartes restent sans image ; obligatoire pour la une, sauf vidéo hébergée (image extraite à défaut) ; une vidéo en lien externe seulement requiert une vignette
 FR51 : Une production dépubliée ou supprimée est retirée automatiquement de la sélection à la une
 FR52 : Un administrateur crée et modifie une fiche auteur : nom(s) et prénom(s) obligatoires, au moins une affiliation (institution obligatoire, département facultatif ; seules les fiches migrées peuvent n'en avoir aucune, signalées « à compléter »), lien Google Scholar facultatif (URL valide), photo facultative
 FR53 (amendé 2026-11-16) : Un profil n'est public qu'après confirmation par un administrateur du consentement de l'auteur (à la création ou plus tard) ; une fiche créée sans elle reste non publique ; le consentement peut être retiré (profil repassé non public) ; confirmation et retrait sont journalisés ; sans consentement, l'auteur n'apparaît ni dans la liste ni dans le bloc auteurs et son nom s'affiche sans lien
@@ -209,8 +211,8 @@ NFR9 (précisée Phase 2) : logs de connexion et d'activité admin conservés au
 
 _Sources : `EXPERIENCE.md` (comportement), `DESIGN.md` (visuel), `.decision-log.md` (D1–D36), maquettes `mockups/` : `home.html`, `authors-list.html`, `author-profile.html`, `production-detail-suggestions.html`, `admin-authors-list.html`, `admin-author-picker.html`, `admin-featured.html`. Les spines priment sur les maquettes. `ux-design-specification.md` et `ux-design-directions.html` sont obsolètes pour la Phase 2._
 
-D1 : Vignette = attribut facultatif de la production, affichée partout où présente (bannière, cartes, suggestions, og:image) ; sans vignette : carte texte actuelle
-D2 : Cartes des blocs et des suggestions = carte du listing (+ vignette) ; blocs en grille 3 colonnes desktop, 1 colonne mobile
+D1 : (amendée par D37) Vignette facultative stockée sur la production ; affichée uniquement dans la bannière à la une
+D2 : Cartes des blocs et des suggestions = carte texte du listing, sans vignette (D37) ; blocs en grille 3 colonnes desktop, 1 colonne mobile
 D3 : Carte auteur : photo ou initiales, nom, institution principale, nb de productions publiées, total des vues
 D4 : Blocs classés sous-titrés « sur les 12 derniers mois » ; chiffres = totaux
 D5 : Bloc à 1–2 éléments affiché avec « Voir plus » ; éléments à 0 sur 365 j exclus ; ex æquo : la plus récemment publiée sur Anta d'abord
@@ -244,7 +246,8 @@ D32 : Admin auteurs : badges « Public » / « Non public » / « À compléter 
 D33 : Bordure d'input (1,49:1) conservée, à recontrôler à l'audit manuel (critère 1.4.11)
 D34 : NOM en capitales à l'affichage seulement ; pied de page « Recherche avancée » ; région « Productions à la une » ; tris du listing = titres des blocs ; « Créer un auteur » ; champs Nom puis Prénom
 D35 : Bannière en colonnes dès `lg`, blocs 3 colonnes dès `md`, suggestions compactes < sm, profil max-w-6xl avec aside statistiques
-D36 : Propre nom en texte simple sur son profil ; byline des cartes limitée à 3 + « et {n} autres » ; `alt=""` des photos adjacentes au nom, `alt="Photo de {Prénom NOM}"` sur le profil ; attribut `lang` des contenus ; page hors limites → dernière page ; combobox dès 2 caractères (250 ms), découpage prénom/nom au dernier espace ; ThumbnailField dans « Fichiers » ; NotFoundPage traduite ; départage des auteurs par dernière publication puis nom
+D36 : Propre nom en texte simple sur son profil ; byline des cartes limitée à 3 + « et {n} autres » ; `alt=""` des photos adjacentes au nom, `alt="Photo de {Prénom NOM}"` sur le profil ; attribut `lang` des contenus ; page hors limites → dernière page ; combobox dès 2 caractères (250 ms), découpage prénom/nom au dernier espace ; ThumbnailField dans l'écran « À la une » (D37) ; NotFoundPage traduite ; départage des auteurs par dernière publication puis nom
+D37 (2026-11-18, amende D1/D2) : Seules les productions à la une ont une vignette ; téléversée depuis la page « À la une » (pas dans le formulaire de production), affichée uniquement dans la bannière ; cartes des blocs, du listing, des profils et des suggestions sans image ; pas d'og:image de production
 
 ### FR Coverage Map
 
@@ -282,7 +285,7 @@ FR32: Epic 3 — Création d'un compte admin (super admin)
 FR33: Epic 3 — Désactivation d'un compte admin (super admin)
 FR34: Epic 1 — Super admin initial via seeder
 FR35: Epic 4 — Gestion des trois niveaux de dates par production
-FR36: Epic 5 — Meta tags SSR côté serveur pour pages publiques ; Phase 2 : Epic 10 — profils et liste des auteurs (Story 10.7), Epic 11 — og:image des productions (Story 11.2), Epic 13 — sitemap facultatif (Story 13.3)
+FR36: Epic 5 — Meta tags SSR côté serveur pour pages publiques ; Phase 2 : Epic 10 — profils et liste des auteurs (Story 10.7), Epic 13 — sitemap facultatif (Story 13.3)
 FR37: Epic 2 — Panel admin exclu de l'indexation (noindex + robots.txt)
 FR38: Epic 5 — Politique de confidentialité accessible depuis toutes les pages
 FR39: Epic 3 — Suppression d'un compte admin et de ses données (RGPD)
@@ -296,7 +299,7 @@ FR46: Epic 12 — Classements 365 j glissants, exclusion des 0, départage, tota
 FR47: Epic 11 — Sélection ordonnée de 0 à 3 productions à la une (Story 11.4)
 FR48: Epic 11 — Bannière en tête de l'accueil, dispositions 1/2/3 (Story 11.6)
 FR49: Epic 11 — Contenu strict d'une production à la une (Story 11.6)
-FR50: Epic 11 — Vignette facultative, réutilisée sur le site, obligatoire pour la une sauf vidéo hébergée (Stories 11.1, 11.2, 11.3, 11.4)
+FR50: Epic 11 — Vignette réservée aux productions à la une, affichée dans la bannière, obligatoire sauf vidéo hébergée (Stories 11.1, 11.2, 11.3, 11.4, 11.6)
 FR51: Epic 11 — Retrait automatique à la dépublication / suppression (Story 11.5)
 FR52: Epic 9 — Création et modification d'une fiche auteur, « à compléter » (Stories 9.1, 9.2, 9.3)
 FR53: Epic 9 (confirmation / retrait, Story 9.4) + Epic 10 (effets publics : liste, profil, liens, Stories 10.2–10.6) + Epic 12 (bloc auteurs, Story 12.3)
@@ -397,10 +400,10 @@ Un visiteur découvre les auteurs de la bibliothèque : liste des auteurs à pro
 
 ### Epic 11 : Vignettes et productions à la une (Phase 2)
 
-Les administrateurs illustrent les productions par une vignette (ou l'image extraite d'une vidéo hébergée) et mettent jusqu'à 3 productions à la une ; les visiteurs voient les vignettes dans les cartes et les partages, et la bannière à la une en tête de l'accueil.
-**FRs couverts :** FR47, FR48, FR49, FR50, FR51, FR36 (og:image des productions)
+Les administrateurs illustrent les productions par une vignette (ou l'image extraite d'une vidéo hébergée) et mettent jusqu'à 3 productions à la une ; les visiteurs voient la bannière à la une, seul endroit où figurent les vignettes, en tête de l'accueil.
+**FRs couverts :** FR47, FR48, FR49, FR50, FR51
 **NFRs :** NFR17, NFR19, NFR9 (journal)
-**UX :** D1, D2, D9, D10, D20, D21, D26, D30, D35, D36 — maquettes `admin-featured.html`, `home.html`
+**UX :** D9, D10, D20, D21, D26, D30, D35, D36 — maquettes `admin-featured.html`, `home.html`
 **Architecture :** P2.5, P2.6 (thumbnails, featured), P2-08 à P2-12
 **Dépend de :** Epic 10 (byline liée et `/media` réutilisés)
 
@@ -411,7 +414,7 @@ Un visiteur trouve dès l'accueil la recherche avancée, la bannière à la une 
 **NFRs :** NFR17, NFR18, NFR20
 **UX :** D2, D4, D5, D6, D7, D8, D22, D28, D34, D35 — maquettes `home.html`, `production-detail-suggestions.html`
 **Architecture :** P2.3, P2.4, P2-06, P2-07
-**Dépend de :** Epic 10 (cartes auteur), Epic 11 (bannière, vignettes)
+**Dépend de :** Epic 10 (cartes auteur), Epic 11 (bannière)
 
 ### Epic 13 : Conformité WCAG 2.1 AA du site public (Phase 2)
 
@@ -2515,7 +2518,7 @@ Afin de reconnaître le profil avant de cliquer (FR36).
 
 **Given** `MetaTags` et `resources/views/inertia_layout.edge`
 **When** une page porte une `ogImage`
-**Then** le HTML contient `og:image` et `twitter:card` = `summary_large_image` ; sans image, `twitter:card` = `summary` (comportement réutilisé par les productions en Story 11.2)
+**Then** le HTML contient `og:image` et `twitter:card` = `summary_large_image` ; sans image, `twitter:card` = `summary` (les pages de production restent sans `og:image`, D37)
 
 **Given** `/authors`
 **When** la page est rendue
@@ -2563,15 +2566,15 @@ Afin de garantir qu'aucun profil non consenti n'est exposé.
 
 ## Epic 11 : Vignettes et productions à la une (Phase 2)
 
-Les administrateurs illustrent les productions par une vignette (ou l'image extraite d'une vidéo hébergée) et mettent jusqu'à 3 productions à la une ; les visiteurs voient les vignettes dans les cartes et les partages, et la bannière à la une en tête de l'accueil.
+Les administrateurs illustrent les productions par une vignette (ou l'image extraite d'une vidéo hébergée) et mettent jusqu'à 3 productions à la une ; les visiteurs voient la bannière à la une en tête de l'accueil. La vignette n'apparaît que dans la bannière (D37).
 
-**Image affichée d'une production (P2.1)** : `productions.thumbnail_key` sinon `poster_key` du premier fichier `video/mp4` (ordre de création) ; aucune largeur/hauteur stockée (variantes à dimensions fixes).
+**Image de la bannière (P2.1)** : `productions.thumbnail_key` sinon `poster_key` du premier fichier `video/mp4` (ordre de création) ; aucune largeur/hauteur stockée (variantes à dimensions fixes).
 
 ### Story 11.1 : Vignette d'une production dans le panel admin
 
 En tant qu'administrateur,
 Je veux téléverser, remplacer ou retirer la vignette d'une production,
-Afin de l'illustrer sur le site public (FR50, D1, NFR19).
+Afin de l'illustrer dans la bannière à la une (FR50, D37, NFR19).
 
 **Acceptance Criteria:**
 
@@ -2581,7 +2584,7 @@ Afin de l'illustrer sur le site public (FR50, D1, NFR19).
 
 **Given** `ImageService` (Story 9.3) étendu au format 16:9
 **When** une vignette est traitée
-**Then** les variantes `w400.webp` (400×225), `w800.webp`, `w1600.webp` et `og.jpg` (1200×675, JPEG q85) sont produites par recadrage centré (`fit: 'cover'`), après validation réelle du format (JPEG, PNG, WebP ≤ 5 Mo, sinon `thumbnail.errors.invalid_type` / `thumbnail.errors.too_large`) et suppression des métadonnées
+**Then** les variantes `w400.webp` (400×225), `w800.webp` et `w1600.webp` sont produites par recadrage centré (`fit: 'cover'`), après validation réelle du format (JPEG, PNG, WebP ≤ 5 Mo, sinon `thumbnail.errors.invalid_type` / `thumbnail.errors.too_large`) et suppression des métadonnées
 
 **Given** `POST /admin/productions/:productionId/thumbnail` (`admin.productions.thumbnail.store`, `app/controllers/admin/thumbnails_controller.ts`)
 **When** une vignette valide est envoyée
@@ -2592,10 +2595,10 @@ Afin de l'illustrer sur le site public (FR50, D1, NFR19).
 **When** l'administrateur retire la vignette
 **Then** `thumbnail_key` passe à NULL, le préfixe R2 est supprimé, journal `metadata: { field: 'thumbnail', op: 'remove' }`
 
-**Given** le formulaire de production (dès que la production existe, comme `FileUploader`)
-**When** le fieldset « Fichiers » s'affiche
-**Then** `ThumbnailField` (`inertia/components/admin/ThumbnailField.tsx`) propose un téléversement immédiat avec barre de progression, validation type/taille côté client, aperçu recadré 16:9 (URL signée), « Remplacer » et « Retirer », et l'aide « JPEG, PNG ou WebP · 5 Mo max · format 16:9 conseillé (recadrage automatique) » (D36)
-**And** la vignette est facultative et n'entre pas dans `CompletionIndicator` (D1) ; erreur de type ou de taille en ligne, échec réseau → toast d'erreur persistant (`notify`)
+**Given** le composant `ThumbnailField` (`inertia/components/admin/ThumbnailField.tsx`), utilisé par les emplacements de la page « À la une » (Story 11.4)
+**When** il s'affiche
+**Then** il propose un téléversement immédiat avec barre de progression, validation type/taille côté client, aperçu recadré 16:9 (URL signée), « Remplacer » et « Retirer », et l'aide « JPEG, PNG ou WebP · 5 Mo max · format 16:9 conseillé (recadrage automatique) » (D36)
+**And** le formulaire de production ne propose pas de vignette et `CompletionIndicator` est inchangé (D37) ; erreur de type ou de taille en ligne, échec réseau → toast d'erreur persistant (`notify`)
 
 **Given** une production supprimée
 **When** la suppression aboutit
@@ -2606,11 +2609,11 @@ Afin de l'illustrer sur le site public (FR50, D1, NFR19).
 
 ---
 
-### Story 11.2 : Vignettes sur le site public et image de partage
+### Story 11.2 : Diffusion publique des images de la bannière
 
 En tant que visiteur,
-Je veux voir la vignette des productions dans les cartes et dans les aperçus de partage,
-Afin d'identifier visuellement une production (FR50, FR36, D1, D2, NFR17).
+Je veux que les images de la bannière à la une se chargent vite et restent en cache,
+Afin que l'accueil reste rapide (FR50, D37, NFR17).
 
 **Acceptance Criteria:**
 
@@ -2618,21 +2621,17 @@ Afin d'identifier visuellement une production (FR50, FR36, D1, D2, NFR17).
 **When** le préfixe est le `thumbnail_key` courant d'une production **publiée**
 **Then** l'image est diffusée avec `Cache-Control: public, max-age=31536000, immutable` ; sinon (brouillon, ancienne clé) 404 `no-store`
 
-**Given** `production_card_transformer.ts`
-**When** une carte est sérialisée
-**Then** elle expose `thumbnailUrl` (base `/media/thumbnails/<id>/<token>` ou `null`) ; `inertia/lib/media.ts` construit `srcSet` (`w400 400w, w800 800w, w1600 1600w`) et les `sizes` par contexte, `width`/`height` toujours renseignés (16:9), `loading="lazy"`
+**Given** `inertia/lib/media.ts`
+**When** une image 16:9 est rendue à partir de sa base (`imageUrl`)
+**Then** il construit `src`/`srcSet` (`w400 400w, w800 800w, w1600 1600w`) et les `sizes` par emplacement de la bannière, avec `width`/`height` toujours renseignés (16:9)
 
-**Given** une `ProductionCard` (listing, accueil, profil) d'une production avec vignette
-**When** elle s'affiche
-**Then** la vignette est en tête de carte (D1, D2), enveloppée dans un lien vers le même détail avec `tabindex="-1"` et `aria-hidden="true"`, `alt=""` (pas de 2e arrêt de tabulation)
-**And** sans vignette, la carte texte actuelle est inchangée ; en cas d'erreur de chargement, la zone 16:9 reste vide en `muted`, texte intact
+**Given** `production_card_transformer.ts` et la page de détail d'une production
+**When** une carte est sérialisée ou les meta de la page sont générées
+**Then** la carte n'expose aucune image : les cartes des blocs, du listing, des profils et des suggestions restent des cartes texte (D37)
+**And** la page de détail n'a pas d'`og:image` (`twitter:card=summary`, comportement actuel)
 
-**Given** la page de détail d'une production avec vignette
-**When** ses meta sont générées
-**Then** `SeoService.forProduction` reçoit l'image et le HTML contient `og:image` (URL absolue `APP_URL` + `/media/…/og.jpg`, stable) et `twitter:card=summary_large_image` (mécanisme de la Story 10.7)
-
-**Notes techniques :** P2.5 « Diffusion », « Front », « SEO », P2-10. Extension de `media_controller.ts` (Story 10.2) au préfixe `thumbnails/`.
-**Tests :** functional `media.spec.ts` (vignette publiée servie, brouillon 404, ancienne clé 404), `seo.spec.ts` (`og:image` présent / absent) ; composant `ProductionCard` par lecture de source (`tabindex="-1"`, `aria-hidden`, `alt=""`, `width`/`height`).
+**Notes techniques :** P2.5 « Portée », « Diffusion », « Front », P2-10, P2-17. Extension de `media_controller.ts` (Story 10.2) au préfixe `thumbnails/`.
+**Tests :** functional `media.spec.ts` (vignette publiée servie, brouillon 404, ancienne clé 404), `seo.spec.ts` (aucune `og:image` sur une production, même avec vignette) ; unit `media.ts` (`srcSet`, dimensions).
 
 ---
 
@@ -2640,7 +2639,7 @@ Afin d'identifier visuellement une production (FR50, FR36, D1, D2, NFR17).
 
 En tant qu'administrateur,
 Je veux qu'une vidéo hébergée sans vignette soit illustrée par une image extraite automatiquement,
-Afin de pouvoir l'illustrer et la mettre à la une sans préparer d'image (FR50, D10).
+Afin de pouvoir la mettre à la une sans préparer d'image (FR50, D10).
 
 **Acceptance Criteria:**
 
@@ -2659,7 +2658,7 @@ Afin de pouvoir l'illustrer et la mettre à la une sans préparer d'image (FR50,
 **Then** le préfixe de son poster est supprimé de R2
 
 **Given** une production avec une vidéo hébergée pourvue d'un poster et sans vignette
-**When** elle est affichée (cartes, `og:image`) ou servie par `/media/posters/…` (poster courant d'un fichier d'une production publiée, sinon 404)
+**When** elle est affichée (bannière) ou servie par `/media/posters/…` (poster courant d'un fichier d'une production publiée, sinon 404)
 **Then** l'image extraite est utilisée ; retirer la vignette d'une production fait réapparaître l'image extraite sans retraitement
 **And** le lecteur vidéo de la page de détail utilise ce poster comme attribut `poster`
 
@@ -2707,6 +2706,7 @@ Afin d'éditorialiser la bannière de l'accueil (FR47, FR50, D20, D26, D30).
 **Then** elle présente le texte d'introduction (« Jusqu'à 3 productions publiées… Les changements ne s'appliquent à l'accueil qu'après « Enregistrer ». »), 3 `FeaturedSlot` ordonnés (1 = grand format), une `BannerPreview` et une barre « Enregistrer »
 **And** un emplacement vide contient `ProductionPicker` : combobox (ARIA 1.2) interrogeant `GET /admin/featured/candidates?q=&exclude[]=` (productions **publiées** par titre ou auteur, avec état de vignette ; déjà choisies exclues)
 **And** un emplacement rempli propose ↑ ↓ (permutation avec le voisin) et « Retirer » (les suivants remontent, D30) et affiche le badge « Affichée » ou « Vignette manquante »
+**And** un emplacement rempli permet aussi de remplacer la vignette existante (`ThumbnailField`) : la page « À la une » est le seul point d'entrée de la vignette (D37)
 
 **Given** un emplacement dont la production n'a pas la vignette requise
 **When** il est rempli
@@ -2787,7 +2787,7 @@ Afin de découvrir les productions que l'association met en avant (FR48, FR49, F
 
 En tant que développeur,
 Je veux une suite de tests couvrant les vignettes, l'image extraite et la une,
-Afin de garantir la cohérence de la bannière et des images publiques.
+Afin de garantir la cohérence de la bannière et de ses images.
 
 **Acceptance Criteria:**
 
@@ -2798,7 +2798,7 @@ Afin de garantir la cohérence de la bannière et des images publiques.
 - Vignette → pose, remplacement (ancien préfixe supprimé), retrait, format et taille refusés, journal `update` `{ field: 'thumbnail' }`
 - Image extraite → poster créé au téléversement d'un MP4 généré, échec non bloquant, suppression avec la vidéo
 - `/media` → vignette et poster servis pour une production publiée, 404 pour un brouillon ou une ancienne clé, `Cache-Control` attendus
-- `og:image` → présent avec vignette ou poster, `twitter:card` adapté
+- Cartes et détail → aucune image dans les cartes, aucune `og:image` de production (D37)
 - Une → enregistrement ordonné, vide, > 3, brouillon, vignette requise (vidéo hébergée exemptée, vidéo externe non), journal `featured_update`
 - Retrait automatique → dépublication et suppression, recompactage, journal `featured_auto_remove`
 - Accueil → bannière ordonnée, absente si vide, à jour immédiatement
@@ -2865,7 +2865,7 @@ Afin de repérer ce qui intéresse la communauté en ce moment (FR9, FR45, FR46,
 
 **Given** un `HomeBlock`
 **When** il s'affiche
-**Then** il a un titre `h2` (« Récemment publiées », « Les plus consultées », « Les plus téléchargées »), le sous-titre discret « sur les 12 derniers mois » pour les blocs classés (D4), une grille 3 colonnes dès `md`, 1 colonne en dessous (D2, D35), des `ProductionCard` identiques au listing (vignette comprise)
+**Then** il a un titre `h2` (« Récemment publiées », « Les plus consultées », « Les plus téléchargées »), le sous-titre discret « sur les 12 derniers mois » pour les blocs classés (D4), une grille 3 colonnes dès `md`, 1 colonne en dessous (D2, D35), des `ProductionCard` identiques au listing (cartes texte, sans vignette, D37)
 **And** un bloc à 1–2 éléments est affiché avec « Voir plus » (cellules vides conservées) ; un bloc à 0 élément est absent, titre compris (FR46, D5) ; catalogue vide → seul le hero reste
 **And** « Voir plus » mène à `/productions?sort=date`, `?sort=views`, `?sort=downloads` (D28) et porte un nom accessible complet (« Voir plus : Les plus consultées », texte masqué), cible ≥ 44 px
 **And** aucun dédoublonnage avec la bannière (D6)
@@ -2916,7 +2916,7 @@ Afin de poursuivre ma découverte sans nouvelle recherche (FR61, D22, NFR18).
 
 **Given** `GET /productions/:slug/suggestions` (`production.suggestions`)
 **When** il est appelé
-**Then** il renvoie `{ results: ProductionCard[] }` (≤ 4, sérialisés par le transformer, auteurs liés et vignettes compris) avec `Cache-Control: public, max-age=300` ; 404 si la production n'est pas publiée
+**Then** il renvoie `{ results: ProductionCard[] }` (≤ 4, sérialisés par le transformer, auteurs liés compris, sans vignette) avec `Cache-Control: public, max-age=300` ; 404 si la production n'est pas publiée
 
 **Given** la page de détail
 **When** elle se charge
@@ -3017,7 +3017,7 @@ Afin d'accéder aux productions sans souris ni vue (NFR16, D33, D36).
 
 **Given** chaque page publique
 **When** elle est parcourue au clavier
-**Then** l'ordre de tabulation suit l'ordre de lecture (carte de production : titre puis auteurs ; vignette hors tabulation), aucun piège au clavier, focus visible global (`ring` 2 px) y compris sur les cartes à stretched link (contour couvrant la carte), lien d'évitement fonctionnel
+**Then** l'ordre de tabulation suit l'ordre de lecture (carte de production : titre puis auteurs), aucun piège au clavier, focus visible global (`ring` 2 px) y compris sur les cartes à stretched link (contour couvrant la carte), lien d'évitement fonctionnel
 **And** un seul `h1` par page, blocs et sections en `h2`, titres de cartes en `h3`, landmarks `header` / `main` / `footer`
 **And** les lecteurs intégrés (PDF, EPUB, vidéo, audio) sont pilotables au clavier ; les contrôles publics nouveaux font ≥ 44 px
 
@@ -3067,7 +3067,7 @@ Afin de livrer la Phase 2 avec la preuve du respect des NFR.
 
 - Attributs ARIA des composants Phase 2 (`aria-busy`, `aria-live`, `aria-current`, `aria-label` de la bannière, `aria-describedby` des actions indisponibles)
 - `alt=""` des images adjacentes à un texte, `alt="Photo de {Prénom NOM}"` du profil
-- `tabindex="-1"` des vignettes liées, aucun lien imbriqué dans les cartes
+- aucun lien imbriqué dans les cartes
 - Toutes les clés Phase 2 présentes en FR et en EN
 
 **Given** la suite `browser`

@@ -34,6 +34,8 @@ editHistory:
     changes: 'Section Phase 2 — Growth : auteurs (tables, pivot, conversion FR56), classements 365 j et cache, suggestions, vignettes (sharp, ffmpeg, /media), à la une, routes, journal, tests, séquence, décisions P2-01 à P2-16.'
   - date: '2026-11-16'
     changes: 'Corrections du rapport implementation-readiness-report-2026-11-16.md : tables ordonnées réorganisées par DELETE + INSERT, recompactage FR51 et journal après commit, COALESCE de refreshDenormalizedNames, colonne authors plus écrite par le contrôleur dès la bascule, doublons de conversion, poster écrit après la ligne production_files, photoUrl du combobox, seeder de démo étendu.'
+  - date: '2026-11-18'
+    changes: 'Décision D37 (amende D1, Aurélien) : vignette réservée aux productions à la une (bannière seulement), gérée depuis la page « À la une » ; plus de vignette dans les cartes ni d og:image de production, plus de variante og.jpg 16:9 ; P2-17.'
 ---
 
 # Architecture Decision Document
@@ -1042,13 +1044,13 @@ featured_productions                    (FR47–FR51)
 
 | Table | Colonne | Rôle |
 |---|---|---|
-| `productions` | `thumbnail_key` varchar 255 | Vignette téléversée (D1, FR50) : préfixe R2 `thumbnails/<productionId>/<token>` |
+| `productions` | `thumbnail_key` varchar 255 | Vignette téléversée depuis la page « À la une » (D37, FR50), affichée seulement dans la bannière et conservée si la production quitte la une : préfixe R2 `thumbnails/<productionId>/<token>` |
 | `production_files` | `poster_key` varchar 255 | Image extraite à t = 1 s d'une vidéo hébergée (D10) : `posters/<fileId>/<token>` ; aussi utilisable en `poster` du lecteur vidéo |
 | `admin_activity_logs` | `metadata` jsonb | Détails des nouveaux événements (P2.6) ; NULL pour l'existant |
 
 **Tables ordonnées** (`production_authors`, `author_affiliations`, `featured_productions`) : toute réorganisation des positions se fait par `DELETE` + `INSERT` dans une transaction, jamais par `UPDATE … SET position = position ± 1` : PostgreSQL vérifie une contrainte UNIQUE/PK non différable ligne à ligne et l'`UPDATE` échoue selon l'ordre physique des lignes.
 
-**Pas de colonne `thumbnail_source`.** Vignette téléversée et image extraite sont stockées séparément : image affichée = `productions.thumbnail_key` sinon `poster_key` du premier fichier `video/mp4` (ordre de création). Retirer la vignette fait réapparaître l'image extraite sans retraitement, et supprimer la vidéo supprime son poster. **Pas de largeur/hauteur stockées** : toutes les variantes ont des dimensions fixes (P2.5).
+**Pas de colonne `thumbnail_source`.** Vignette téléversée et image extraite sont stockées séparément : image affichée = `productions.thumbnail_key` sinon `poster_key` du premier fichier `video/mp4` (ordre de création) ; c'est l'image de la bannière, aucune autre carte n'affiche d'image (D37). Retirer la vignette fait réapparaître l'image extraite sans retraitement, et supprimer la vidéo supprime son poster. **Pas de largeur/hauteur stockées** : toutes les variantes ont des dimensions fixes (P2.5).
 
 **« À compléter » est dérivé, jamais stocké** : `NOT EXISTS (author_affiliations)`. **Profil public** = `consent_confirmed_at IS NOT NULL` ; **visible sur le site** = public ET au moins une production publiée liée (D11). La règle D27 (confirmation impossible sans affiliation) est appliquée au service et au validateur ; une fiche à consentement confirmé ne peut pas retomber à 0 affiliation (validateur `minLength(1)`).
 
@@ -1160,7 +1162,9 @@ LIMIT 4;
 
 Ne pas utiliser l'opérateur jsonb `?` dans `db.rawQuery` : knex le prend pour un paramètre lié. Balayage de toutes les productions publiées : quelques centaines de lignes, < 50 ms attendus ; pas de cache. `SuggestionService` dans `app/services/suggestion_service.ts`, hydratation par le transformer de cartes (P2.6).
 
-## P2.5 Vignettes, photos et image extraite (D1, D9, D10, FR50)
+## P2.5 Vignettes, photos et image extraite (D9, D10, D37, FR50)
+
+**Portée (D37, 2026-11-18)** : la vignette (ou l'image extraite d'une vidéo hébergée) n'est affichée que dans la bannière à la une. Les cartes des blocs, du listing, des profils et des suggestions restent des cartes texte, et les pages de production n'ont pas d'`og:image`.
 
 **Traitement serveur avec `sharp`** (nouvelle dépendance de production ; binaires précompilés linux-x64 glibc, compatibles `node:24-bookworm-slim`). Service `app/services/image_service.ts` :
 
@@ -1170,20 +1174,20 @@ Ne pas utiliser l'opérateur jsonb `?` dans `db.rawQuery` : knex le prend pour u
 
 | Usage | Ratio | Variantes R2 (`<préfixe>/…`) |
 |---|---|---|
-| Vignette de production / poster vidéo | 16:9 | `w400.webp` (400×225), `w800.webp`, `w1600.webp`, `og.jpg` (1200×675, JPEG q85) |
+| Vignette de production / poster vidéo | 16:9 | `w400.webp` (400×225), `w800.webp`, `w1600.webp` |
 | Photo d'auteur | 1:1 | `w128.webp`, `w384.webp`, `og.jpg` (600×600) |
 
 4. Clé : préfixe neuf à chaque téléversement (`thumbnails/<productionId>/<token 20>`), écrit en base **après** l'envoi des variantes ; l'ancien préfixe est supprimé ensuite (best-effort, journalisé en cas d'échec — même compensation que `files_controller.ts`). Les clés sont immuables, d'où un cache navigateur d'un an.
 
 **Image extraite à t = 1 s : `ffmpeg` côté serveur, synchrone, au téléversement de la vidéo.** Ajout dans l'étape `runtime` du `Dockerfile` (avant `USER node`) : `apt-get install -y --no-install-recommends ffmpeg` (paquet Debian maintenu ; déjà présent sur le VPS de dev ; à installer dans `ci.yml`). `VideoFrameService.extract(inputPath)` : `execFile('ffmpeg', ['-ss','1','-i',input,'-frames:v','1','-f','image2','-c:v','png', out])` (repli `-ss 0` pour une vidéo < 1 s), délai maximal 20 s, puis passage dans `ImageService` (variantes 16:9) → `production_files.poster_key`. Appelé dans `FilesController.store` **avant** `FileStorageService.upload` (qui déplace le fichier temporaire) ; les variantes sont envoyées et `poster_key` écrit **après** la création de la ligne `production_files` (son identifiant n'existe qu'alors). Échec d'extraction = journalisé, **ne fait jamais échouer le téléversement de la vidéo** ; la production exige alors une vignette pour la une. Rattrapage des vidéos déjà hébergées : `node ace thumbnails:extract-video-frames [--dry-run]` (ffmpeg lit l'URL signée R2 par requêtes de plage, sans télécharger tout le fichier), exécuté une fois avec l'accord d'Aurélien (écrit en base partagée et dans R2). Extraction dans le navigateur (canvas) rejetée : dépend du codec et de l'onglet ouvert, ne couvre pas le rattrapage, exige la CORS R2.
 
-**Diffusion : route publique `GET /media/*` adossée à R2, pas d'URL signée.** Le bucket est privé (`config/drive.ts`, `visibility: 'private'`) et les URL signées changent à chaque rendu (TTL 1 h) : elles casseraient le cache navigateur (LCP), et une `og:image` doit rester stable pour les robots des réseaux sociaux. `MediaController.show` sert uniquement `thumbnails/…`, `posters/…` et `authors/…` (jamais `productions/…`, les fichiers sous licence restent en URL signée) : il vérifie que la clé est la clé **courante** d'un propriétaire visible (production publiée ; auteur public) puis diffuse le flux R2 (`disk.getStream`) avec `Content-Type` et `Cache-Control: public, max-age=31536000, immutable` (photos d'auteurs : `max-age=3600`, le consentement est révocable) ; sinon 404 `no-store`. Les aperçus admin (brouillons, profils non publics) utilisent `FileStorageService.signedUrl`. Évolution possible hors V1 : domaine public R2 ou cache nginx devant `/media`.
+**Diffusion : route publique `GET /media/*` adossée à R2, pas d'URL signée.** Le bucket est privé (`config/drive.ts`, `visibility: 'private'`) et les URL signées changent à chaque rendu (TTL 1 h) : elles casseraient le cache navigateur (LCP), et l'`og:image` des profils d'auteurs doit rester stable pour les robots des réseaux sociaux. `MediaController.show` sert uniquement `thumbnails/…`, `posters/…` et `authors/…` (jamais `productions/…`, les fichiers sous licence restent en URL signée) : il vérifie que la clé est la clé **courante** d'un propriétaire visible (production publiée ; auteur public) puis diffuse le flux R2 (`disk.getStream`) avec `Content-Type` et `Cache-Control: public, max-age=31536000, immutable` (photos d'auteurs : `max-age=3600`, le consentement est révocable) ; sinon 404 `no-store`. Les aperçus admin (brouillons, profils non publics) utilisent `FileStorageService.signedUrl`. Évolution possible hors V1 : domaine public R2 ou cache nginx devant `/media`.
 
-**Front.** Les props exposent une base (`thumbnailUrl: '/media/thumbnails/<id>/<token>' | null`, `photoUrl`) ; `inertia/lib/media.ts` construit `src`/`srcSet` (`w400 400w, w800 800w, w1600 1600w`) et les `sizes` par contexte. `width`/`height` toujours renseignés (16:9) contre le décalage de mise en page ; première carte de la bannière en `loading="eager"` + `fetchpriority="high"` (élément LCP probable), le reste en `loading="lazy"`. `alt` selon D9/D36.
+**Front.** Les props exposent une base (`imageUrl` des seules productions de la prop `featured` : `/media/thumbnails/<id>/<token>` ou `/media/posters/<fileId>/<token>` ; `photoUrl`) ; `inertia/lib/media.ts` construit `src`/`srcSet` (`w400 400w, w800 800w, w1600 1600w`) et les `sizes` par contexte. `width`/`height` toujours renseignés (16:9) contre le décalage de mise en page ; première carte de la bannière en `loading="eager"` + `fetchpriority="high"` (élément LCP probable), le reste en `loading="lazy"`. `alt` selon D9/D36.
 
 **Règle FR50 côté serveur** (`FeaturedService.requiresThumbnail(production)`) : une vignette est requise sauf si la production possède une vidéo hébergée avec `poster_key`. Vérifiée à l'enregistrement de la une et au retrait d'une vignette d'une production à la une (refus `thumbnail.errors.required_for_featured`).
 
-**SEO** : `MetaTags` gagne `ogImage?: string` (URL absolue `APP_URL` + `/media/…/og.jpg`) ; `resources/views/inertia_layout.edge` ajoute `og:image` et `twitter:card` (`summary_large_image` si image, sinon `summary`). `SeoService.forProduction` reçoit la vignette ou le poster ; aucune donnée d'auteur non public dans les meta d'une production (seuls les noms affichés, déjà publics sur la page).
+**SEO** : `MetaTags` gagne `ogImage?: string` (URL absolue `APP_URL` + `/media/authors/…/og.jpg`, profils d'auteurs seulement) ; `resources/views/inertia_layout.edge` ajoute `og:image` et `twitter:card` (`summary_large_image` si image, sinon `summary`). les pages de production n'ont pas d'`og:image` (`twitter:card=summary`, D37) ; aucune donnée d'auteur non public dans les meta d'une production (seuls les noms affichés, déjà publics sur la page).
 
 ## P2.6 Routes, contrôleurs, pages
 
@@ -1193,13 +1197,13 @@ Ne pas utiliser l'opérateur jsonb `?` dans `db.rawQuery` : knex le prend pour u
 |---|---|---|---|
 | `GET /` | `home` | `public/home_controller.ts` (modifié) | `home` : props `featured`, `recent`, `mostViewed`, `mostDownloaded`, `topAuthors`, `meta` ; `categories` supprimé (D8) ; 3 éléments par bloc |
 | `GET /productions` | `productions` | `public/productions_controller.ts` (modifié) | filtre `author=<slug>` répétable (OR) via `whereExists` sur le pivot + `authors.slug` ; facette auteurs = `{ value: slug, label }[]` des profils publics ayant ≥ 1 production publiée (D12) |
-| `GET /productions/:slug` | `production.show` | idem | auteurs `{ name, slug \| null }[]` ordonnés (slug seulement si profil public), `thumbnailUrl`, `ogImage` |
+| `GET /productions/:slug` | `production.show` | idem | auteurs `{ name, slug \| null }[]` ordonnés (slug seulement si profil public) |
 | `GET /productions/:slug/suggestions` | `production.suggestions` | idem, `suggestions` | JSON (P2.4) |
 | `GET /authors` | `authors.index` | `public/authors_controller.ts` | `authors` : `q`, `institution` (libellé, normalisé en `institution_key`), `domain`, `sort=views\|name\|productions`, 24/page |
 | `GET /authors/:slug` | `authors.show` | idem | `author` : `sort=date\|views\|downloads\|title`, 12/page ; **404** (`errors/not_found`, statut 404, comme `ProductionsController.show`) si slug inconnu, consentement absent ou aucune production publiée (D11, D17) |
 | `GET /media/*` | `media.show` | `public/media_controller.ts` | flux image (P2.5) |
 
-Page hors limites (D36) : redirection 302 vers la dernière page en conservant les paramètres. Facette institution (D14) : `SELECT institution_key, mode() WITHIN GROUP (ORDER BY institution) AS label … GROUP BY institution_key` sur les affiliations des auteurs visibles. Les cartes de production sont sérialisées par un transformer unique `app/transformers/production_card_transformer.ts` (remplace les deux `serialize()` dupliqués de `home_controller.ts` et `productions_controller.ts`), qui précharge les auteurs ordonnés.
+Page hors limites (D36) : redirection 302 vers la dernière page en conservant les paramètres. Facette institution (D14) : `SELECT institution_key, mode() WITHIN GROUP (ORDER BY institution) AS label … GROUP BY institution_key` sur les affiliations des auteurs visibles. Les cartes de production sont sérialisées par un transformer unique `app/transformers/production_card_transformer.ts` (remplace les deux `serialize()` dupliqués de `home_controller.ts` et `productions_controller.ts`), qui précharge les auteurs ordonnés ; une carte n'expose aucune image (D37).
 
 ### Panel admin (groupe `middleware.admin()` existant : admin **et** super admin)
 
@@ -1259,7 +1263,7 @@ Page hors limites (D36) : redirection 302 vers la dernière page en conservant l
 - **Exécution** : `npm run test:local [-- unit|functional|browser]` sur Postgres Docker local, jamais sous `doppler run`. CI : ajouter `ffmpeg` (apt) au job de `ci.yml`.
 - **Unit** (`tests/unit/services`, `tests/unit/validators`) : `normalizeKey`, slug d'auteur (collisions, figé au renommage), regroupement et découpage de `AuthorConversionService` (cas « NOM Prénom », jetons inversés, homonymes), `SeoService.forAuthor`/`ogImage`, validateurs (affiliations conditionnelles, URL Scholar, `authorIds`), `FeaturedService.requiresThumbnail`.
 - **Functional** (`tests/functional/{public,admin}`, gotchas de memory : `.withCsrfToken()`, `.redirects(0)`, `loginAs()`, `SESSION_DRIVER=memory`) : classements (exclusion des 0 sur 365 j avec des stats datées de 366 j, départages, totaux affichés), suggestions (ordre par critère puis nombre puis date, exclusion de la production courante, 404 brouillon), `/authors` (filtres, tris, page hors limites → 302), profil (404 sans consentement, sans production publiée, après retrait), filtre `author=<slug>`, CRUD auteurs + consentement + journal, suppression refusée (FR55), une (ordre, vignette requise, retrait automatique à la dépublication/suppression + recompactage), conversion `apply` idempotente (deux exécutions = même état) et `verify`. Uploads : `drive.fake('r2')` (`config/drive.ts`) ; images de test générées par `sharp` dans le test ; vidéo de test = MP4 de 2 s généré par `ffmpeg` dans le setup (pas de binaire commité).
-- **Composants React** : par lecture de source, jamais par import (frontière TS6305, `tests/unit/components/*.spec.ts`) : attributs ARIA (`aria-busy`, `aria-live`, `aria-current`), `alt=""`, `tabindex="-1"` des vignettes, pas de liens imbriqués, clés i18n présentes en FR et EN (`tests/unit/i18n/translations.spec.ts`).
+- **Composants React** : par lecture de source, jamais par import (frontière TS6305, `tests/unit/components/*.spec.ts`) : attributs ARIA (`aria-busy`, `aria-live`, `aria-current`), `alt=""`, pas de liens imbriqués, clés i18n présentes en FR et EN (`tests/unit/i18n/translations.spec.ts`).
 - **Accessibilité** : suite `browser` déjà déclarée (`adonisrc.ts`, `@japa/browser-client` dans `tests/bootstrap.ts`) + `@axe-core/playwright` (devDependency) : 0 violation A/AA sur accueil, listing, détail, liste des auteurs, profil, politique de confidentialité, en FR et EN (NFR). Audit manuel clavier/NVDA/VoiceOver hors automatisation, consigné à la recette.
 - **Performance** : `EXPLAIN ANALYZE` des requêtes P2.3/P2.4 sur la base **locale** remplie (seeder démo 300 productions étendu : fiches fictives `seed-demo:` + pivot, stats datées sur 540 jours ; jamais de stats factices dans la base partagée) ; Lighthouse mobile 4G sur le staging à chaque release Phase 2 (accueil, `/authors`, profil : LCP < 3 s) ; suggestions affichées < 2 s.
 - **Build** : vérifier que `package-lock.json` contient `@img/sharp-linux-x64` et `@img/sharp-libvips-linux-x64` (lockfile possiblement généré sous Windows) ; un test d'infrastructure (`tests/unit/infrastructure/deployment.spec.ts`) vérifie la présence de `ffmpeg` dans le `Dockerfile`.
@@ -1273,7 +1277,7 @@ Page hors limites (D36) : redirection 302 vers la dernière page en conservant l
 | 3 | Commandes de conversion `propose`/`validate`/`apply`/`verify` ; `propose` exécutée → CSV à Aurélien | 1 | lecture seule tant que non validé |
 | 4 | **Bascule** : formulaire de production (combobox, `quick-store`, `ProductionAuthorService.sync`, FR21), lecture du pivot partout (cartes, détail, facette/filtre `author=<slug>`) | 2, 3 | **Porte** : `apply` + `verify` à 100 % le jour du déploiement de ce lot en staging ; `verify` relancée après déploiement |
 | 5 | Site public auteurs : `/authors`, `/authors/:slug`, `AuthorByline` liée, pied de page, SEO profil, NotFoundPage | 4 | |
-| 6 | Vignettes : `ThumbnailField`, `/media`, `srcset`, `og:image`, ffmpeg (Dockerfile, CI, upload) + rattrapage `thumbnails:extract-video-frames` | 1 | parallélisable avec 2–5 |
+| 6 | Vignettes : `ThumbnailField`, `/media`, `srcset` de la bannière, ffmpeg (Dockerfile, CI, upload) + rattrapage `thumbnails:extract-video-frames` | 1 | parallélisable avec 2–5 |
 | 7 | À la une : page admin, `FeaturedService`, retrait automatique + journal | 6 | |
 | 8 | Refonte de l'accueil : bannière, 4 blocs, `RankingService` + cache, « Recherche avancée », tris du listing | 5, 7 | |
 | 9 | Suggestions : service, endpoint, `SuggestionsGrid` | 4, 6 | |
@@ -1290,20 +1294,21 @@ Page hors limites (D36) : redirection 302 vers la dernière page en conservant l
 | P2-05 | Conversion FR56 par commandes Ace idempotentes, CSV hors dépôt, exécution sur accord d'Aurélien | D19, base partagée, dépôt public |
 | P2-06 | Classements en SQL direct + cache mémoire 10 min invalidé explicitement ; une et récentes non cachées | un processus par environnement, LCP, parcours 5 |
 | P2-07 | Suggestions par endpoint JSON, abandon à 2 s, critère « partagé » = élément commun | NFR non bloquante, D22, départage discriminant |
-| P2-08 | `sharp` serveur, variantes WebP fixes + `og.jpg`, recadrage centré | srcset, EXIF retiré, validation réelle du format |
+| P2-08 | `sharp` serveur, variantes WebP fixes (+ `og.jpg` des photos d'auteurs), recadrage centré | srcset, EXIF retiré, validation réelle du format |
 | P2-09 | Image extraite par `ffmpeg` (apt dans l'image), synchrone et non bloquante, stockée par fichier vidéo (`poster_key`) | robuste, rattrapage possible, retrait de vignette réversible |
-| P2-10 | Images servies par `/media/*` (clés immuables, contrôle de visibilité), pas d'URL signée | cache navigateur, `og:image` stable, profils retirés non servis |
+| P2-10 | Images servies par `/media/*` (clés immuables, contrôle de visibilité), pas d'URL signée | cache navigateur, `og:image` des profils stable, profils retirés non servis |
 | P2-11 | Une = table `featured_productions` (position PK 1–3, production UNIQUE), enregistrement transactionnel | contraintes d'unicité en base, recompactage D30 |
 | P2-12 | Retrait automatique dans `ProductionService` (même transaction) + journal | FR51, D21 |
 | P2-13 | Journal : 4 nouveaux types + `metadata jsonb` | question ouverte 1, auditabilité |
 | P2-14 | Fenêtre « Créer un auteur » en JSON (`X-XSRF-TOKEN`) | pas de navigation, saisies préservées (FR54) |
 | P2-15 | Toutes les routes Phase 2 admin ouvertes à admin et super admin | PRD périmètre super admin |
 | P2-16 | Accessibilité vérifiée par la suite `browser` + axe à chaque livraison | NFR Accessibilité |
+| P2-17 | Vignette réservée à la une : gérée depuis la page « À la une », affichée seulement dans la bannière, pas d'`og:image` de production (D37, 2026-11-18) | FR50 amendé, cartes texte inchangées |
 
 ### Réponses aux questions ouvertes non bloquantes (EXPERIENCE.md)
 
 1. **Types d'action du journal** : P2.6 « Journal d'activité » (4 nouveaux types, réutilisation de `create`/`update`/`delete` avec `resourceType: 'author'`, détails dans `metadata`).
 2. **Extraction vidéo à t = 1 s** : `ffmpeg` installé par apt dans l'image ; traitement synchrone au téléversement, avant le transfert R2, non bloquant en cas d'échec ; rattrapage par `node ace thumbnails:extract-video-frames` sur URL signée (P2.5, P2-09).
-3. **Tailles et stockage des vignettes** : R2, préfixe immuable par téléversement, WebP 400/800/1600 + `og.jpg` 1200×675, recadrage 16:9 centré côté serveur, `srcset`/`sizes` construits par `inertia/lib/media.ts` (P2.5).
+3. **Tailles et stockage des vignettes** : R2, préfixe immuable par téléversement, WebP 400/800/1600, recadrage 16:9 centré côté serveur, `srcset`/`sizes` construits par `inertia/lib/media.ts` (P2.5).
 4. **Calcul des classements 365 j** : requête directe indexée (`production_id, recorded_at`), jointure interne pour exclure les 0, totaux par agrégats ; cache mémoire TTL 10 min avec invalidation explicite ; vue matérialisée rejetée (P2.3, P2-06).
 5. **Recherche du combobox et dédoublonnage des institutions** : `search_name` et `institution_key` normalisés (casse et accents) en TypeScript, index GIN trigram, `LIKE` + `similarity` ; facette institution groupée par `institution_key`, libellé = graphie la plus fréquente (P2.1, P2.6).
