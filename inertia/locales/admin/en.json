@@ -305,7 +305,9 @@
       "flash": {
         "confirmed": "Consent confirmed.",
         "withdrawn": "Consent withdrawn.",
-        "refused": "Cannot confirm: add an affiliation first."
+        "refused": "Cannot confirm: add an affiliation first.",
+        "already_public": "The profile was already public.",
+        "already_private": "The profile was already not public."
       }
     }
   },

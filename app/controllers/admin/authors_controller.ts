@@ -236,6 +236,8 @@ export default class AuthorsController {
       session.flash('success', 'authors.consent.flash.confirmed')
     } else if (result === 'no_affiliation') {
       session.flash('error', 'authors.consent.flash.refused')
+    } else {
+      session.flash('success', 'authors.consent.flash.already_public')
     }
     return response.redirect(this.consentReturnUrl(request.header('referer'), author.id))
   }
@@ -243,10 +245,17 @@ export default class AuthorsController {
   /** Withdraws the consent (Story 9.4, D17); a card that is not public is left untouched. */
   async withdrawConsent({ params, auth, request, response, session }: HttpContext) {
     const author = await this.findOrFail(params.id)
+    // Kept in the activity entry: the confirmation columns are reset by the withdrawal.
+    const previous = {
+      confirmedAt: author.consentConfirmedAt?.toISO() ?? null,
+      confirmedById: author.consentConfirmedById,
+    }
     const result = await AuthorService.withdrawConsent(author)
     if (result === 'withdrawn') {
-      await this.logConsent(auth.user!.id, author, ActionType.CONSENT_WITHDRAW)
+      await this.logConsent(auth.user!.id, author, ActionType.CONSENT_WITHDRAW, { previous })
       session.flash('success', 'authors.consent.flash.withdrawn')
+    } else {
+      session.flash('success', 'authors.consent.flash.already_private')
     }
     return response.redirect(this.consentReturnUrl(request.header('referer'), author.id))
   }
@@ -271,14 +280,15 @@ export default class AuthorsController {
   private async logConsent(
     adminUserId: string,
     author: Author,
-    actionType: typeof ActionType.CONSENT_CONFIRM | typeof ActionType.CONSENT_WITHDRAW
+    actionType: typeof ActionType.CONSENT_CONFIRM | typeof ActionType.CONSENT_WITHDRAW,
+    extra: Record<string, unknown> = {}
   ): Promise<void> {
     await ActivityLogService.log({
       adminUserId,
       actionType,
       resourceType: 'author',
       resourceId: author.id,
-      metadata: { name: AuthorService.displayName(author) },
+      metadata: { name: AuthorService.displayName(author), ...extra },
     })
   }
 

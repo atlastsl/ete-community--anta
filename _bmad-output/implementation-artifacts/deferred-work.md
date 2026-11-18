@@ -92,3 +92,8 @@
 - **URLs signées des avatars** : nouvelles à chaque rendu, donc jamais en cache navigateur ; pas de `loading="lazy"` dans la liste. Action : durée de signature arrondie ou diffusion publique (Epic 10, `/media`).
 - **Constantes dupliquées** : 5 Mo et 40 Mpx répétés dans `image_service`, le validateur, `author_form.ts` et les libellés FR/EN.
 
+## Deferred from: code review of 9-4-confirmer-et-retirer-le-consentement-d-un-auteur (2026-11-18)
+
+- **Noms accessibles des actions de ligne** : « Modifier », « Supprimer », « Confirmer / Retirer le consentement » identiques sur chaque ligne de la liste des auteurs (WCAG 2.4.6). Action : `aria-label` avec le nom de l'auteur (« Supprimer Jean FICTIF »), à appliquer aussi aux listes Productions et Utilisateurs.
+- **Case de consentement désactivée** : `disabled` natif retire la case de l'ordre de tabulation ; la raison (« Complétez d'abord une affiliation. ») n'est lue qu'en mode lecture. Action : `aria-disabled` focusable comme les actions de la liste.
+

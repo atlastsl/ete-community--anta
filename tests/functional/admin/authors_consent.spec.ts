@@ -395,7 +395,11 @@ test.group('Admin authors consent | actions confirmer / retirer', (group) => {
     assert.isNull(saved.consentConfirmedById)
     assert.deepEqual(await actionsFor(author.id), ['consent_withdraw'])
     const log = await AdminActivityLog.query().where('resourceId', author.id).firstOrFail()
-    assert.deepEqual(log.metadata, { name: 'Jean Fictif' })
+    // The previous confirmation stays traceable once the columns are reset.
+    assert.equal(log.metadata!.name, 'Jean Fictif')
+    const previous = log.metadata!.previous as { confirmedAt: string; confirmedById: string }
+    assert.equal(previous.confirmedById, admin.id)
+    assert.isString(previous.confirmedAt)
   })
 
   test('withdraw-consent sur un profil non public → aucun changement ni journal', async ({
@@ -413,7 +417,7 @@ test.group('Admin authors consent | actions confirmer / retirer', (group) => {
       .redirects(0)
 
     response.assertStatus(302)
-    assert.isUndefined(response.flashMessages().success)
+    assert.equal(response.flashMessages().success, 'authors.consent.flash.already_private')
     const saved = await Author.findOrFail(author.id)
     assert.equal(saved.updatedAt?.toMillis(), before.updatedAt?.toMillis())
     assert.deepEqual(await actionsFor(author.id), [])

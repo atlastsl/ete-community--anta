@@ -35,7 +35,11 @@ export default function ConsentAuthorDialog({ target, mode, onClose }: Props) {
   const [isProcessing, setIsProcessing] = useState(false)
   // A second click before the re-render would send a second POST.
   const submitting = useRef(false)
-  const isConfirm = mode === 'confirm'
+  // The mode of the last opening: on close the parent resets it while Radix still animates
+  // the exit, which would flash the green « Confirm » variant.
+  const [shownMode, setShownMode] = useState(mode)
+  if (target && mode !== shownMode) setShownMode(mode)
+  const isConfirm = shownMode === 'confirm'
 
   function handleConfirm() {
     if (!target || submitting.current) return

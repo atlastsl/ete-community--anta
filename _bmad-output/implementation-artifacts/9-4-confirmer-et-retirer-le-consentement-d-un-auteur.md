@@ -4,7 +4,7 @@ baseline_commit: 840c6bf
 
 # Story 9.4 : Confirmer et retirer le consentement d'un auteur
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -116,6 +116,23 @@ afin que **seuls les profils consentis deviennent publics, avec une trace de cha
   - [x] 8.4 Lecture de source : `author_form.spec.ts` — remplacer « pas encore de consentement (Story 9.4) » par des assertions : `id="consent"`, `authors.consent.label`, `authors.consent.help`, `aria-describedby`, `disabled={!available}`, `authors.consent.unavailable`, `onWithdrawConsent`, `accent-green-700` ; pages : `Edit` (`requireAffiliation = !isMigrated || isPublic`, `ConsentAuthorDialog`, `'consent'` dans `form.reset`) ; `authors_index_page.spec.ts` — `authors.consent.confirm_action`, `authors.consent.withdraw_action`, `aria-describedby={`consent-hint-` (ou équivalent), `authors.consent.unavailable`, `ConsentAuthorDialog` ; nouveau `tests/unit/components/consent_author_dialog.spec.ts` — `role="alertdialog"`, `useRef`, `admin.authors.confirm-consent`, `admin.authors.withdraw-consent`, `urlFor`, clés `confirm_description` / `withdraw_description`.
   - [x] 8.5 Adapter les attentes existantes touchées : `authors_crud.spec.ts` (`deepEqual` des props de `GET edit` → `isPublic: false`, `isIncomplete: …`), tout test qui déstructure le retour de `AuthorService.update` (champ `consentConfirmed` ajouté), `activity_logs.spec.ts` (9 types).
   - [x] 8.6 Suite complète + `npm run typecheck` + `npm run lint` + `node ace build` verts ; `.adonisjs/*` régénérés (nouvelles routes) et committés.
+
+### Review Findings
+
+Revue adversariale du 2026-11-18 (Blind Hunter, Edge Case Hunter, Acceptance Auditor), constats vérifiés avant correction.
+
+- [x] [Review][Patch] Course : affiliations comptées depuis l'instance chargée avant le verrou → une sauvegarde concurrente qui les retire laisse confirmer le consentement d'une fiche à 0 affiliation (D27) [app/services/author_service.ts] — comptage sous le verrou, décision du consentement sur la ligne verrouillée ; test qui simule la course.
+- [x] [Review][Patch] Case cochée devenue indisponible : enregistrement bloqué par une erreur sous une case désactivée, et case recochée à la ressaisie d'une institution (AC2) [inertia/components/admin/AuthorForm.tsx] — décochée dès qu'elle devient indisponible.
+- [x] [Review][Patch] Le retrait efface qui avait confirmé et quand, sans trace (fiches importées en 9.6 : aucune entrée `consent_confirm`) [app/controllers/admin/authors_controller.ts] — `metadata.previous { confirmedAt, confirmedById }` dans `consent_withdraw` ; test.
+- [x] [Review][Patch] D27 non revérifiée dans `AuthorService.create` (dialog 9.8, imports) [app/services/author_service.ts] — refus `consent_requires_affiliation` ; test.
+- [x] [Review][Patch] Refus du service toujours signalé sous « Affiliations », même quand la cause est le consentement [author_service.ts, author_validator.ts] — `consentRequiresAffiliationError()` sur le champ `consent`.
+- [x] [Review][Patch] Action sans effet (déjà public / déjà non public) sans aucun retour [authors_controller.ts] — flash « Le profil était déjà public. » / « …n'était déjà plus public. ».
+- [x] [Review][Patch] Le dialog bascule en variante « Confirmer » pendant son animation de fermeture [inertia/components/admin/ConsentAuthorDialog.tsx] — mode de la dernière ouverture conservé.
+- [x] [Review][Patch] Test i18n aveugle aux clés de `AuthorForm` et aux clés envoyées par le serveur (flash, erreurs) [tests/unit/components/authors_index_page.spec.ts].
+- [x] [Review][Defer] Noms accessibles identiques des boutons d'action par ligne (« Confirmer le consentement » ×20), comme « Modifier » / « Supprimer » depuis 9.2 — deferred : à traiter pour toutes les actions de ligne.
+- [x] [Review][Defer] Case désactivée hors de l'ordre de tabulation (raison lue seulement en mode lecture) ; `role="alertdialog"` sur un `Dialog` Radix — deferred (même report qu'en 9.2).
+
+Écartés : perte des modifications non enregistrées au retrait depuis la fiche (faux positif : `router.post` d'Inertia 2 a `preserveState: true` par défaut, vérifié dans `@inertiajs/core`), badge « Public » répété dans la section (demandé par l'AC5), ordre des entrées de journal non testé (même horodatage dans la transaction globale des tests ; l'ordre d'écriture est séquentiel dans le contrôleur).
 
 ## Dev Notes
 
@@ -269,3 +286,4 @@ Claude Opus 5.5 (claude-opus-5-5), skill `bmad-dev-story`.
 |---|---|---|
 | 2026-11-18 | 0.1 | Story créée (bmad-create-story), statut ready-for-dev. |
 | 2026-11-18 | 1.0 | Implémentation (bmad-dev-story) : types de journal, case de consentement (D16, D27), actions confirmer / retirer (liste et fiche, D17), règles au validateur et au service, 33 tests ajoutés (621 verts). Statut review. |
+- 2026-11-18 : code review — 8 correctifs, 2 reports ; 623 tests verts, lint, typecheck et build verts.

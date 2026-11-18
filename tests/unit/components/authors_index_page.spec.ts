@@ -165,8 +165,16 @@ test.group('AuthorStatusBadges', () => {
 test.group('Authors pages | i18n', () => {
   test('toutes les clés authors.* utilisées existent en FR et EN', ({ assert }) => {
     const keys = new Set<string>()
-    for (const source of [indexPage, editPage, badges, dialog, consentDialog]) {
+    const form = read('inertia/components/admin/AuthorForm.tsx')
+    for (const source of [indexPage, editPage, badges, dialog, consentDialog, form]) {
       for (const match of source.matchAll(/t\('(authors\.[a-z_.]+)'/g)) keys.add(match[1])
+    }
+    // Keys sent as strings by the server (flash messages, validation errors).
+    for (const path of [
+      'app/controllers/admin/authors_controller.ts',
+      'app/validators/admin/author_validator.ts',
+    ]) {
+      for (const match of read(path).matchAll(/'(authors\.[a-z_]+\.[a-z_.]+)'/g)) keys.add(match[1])
     }
     assert.isAbove(keys.size, 15)
     for (const key of keys) {

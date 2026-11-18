@@ -80,6 +80,17 @@ export function affiliationRequiredError() {
   ])
 }
 
+/** D27 error on the `consent` field (validator and service). */
+export function consentRequiresAffiliationError() {
+  return new errors.E_VALIDATION_ERROR([
+    {
+      field: 'consent',
+      message: 'authors.form.errors.consent_requires_affiliation',
+      rule: 'consent',
+    },
+  ])
+}
+
 /**
  * FR52: a card created in the panel keeps at least one affiliation; a migrated card
  * (`migration_key` not NULL) may stay without one until it is completed, unless its profile

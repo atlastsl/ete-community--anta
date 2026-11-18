@@ -109,6 +109,13 @@ export default function AuthorForm({
   const affiliations = data.affiliations
   const count = affiliations.length
 
+  // A ticked box that becomes unavailable (last affiliation removed) is unticked: it would
+  // otherwise block the save from behind a disabled box, or come back ticked on retyping.
+  const consentAvailable = hasEnteredAffiliation(affiliations)
+  useEffect(() => {
+    if (!consentAvailable && data.consent) setData('consent', false)
+  }, [consentAvailable, data.consent, setData])
+
   // Keep the focus on the moved affiliation; fall back to the opposite arrow at the ends.
   useEffect(() => {
     if (!focusTarget) return
@@ -339,7 +346,7 @@ export default function AuthorForm({
         <ConsentField
           isPublic={isPublic}
           checked={data.consent}
-          available={hasEnteredAffiliation(affiliations)}
+          available={consentAvailable}
           error={message('consent')}
           onChange={(checked) => setData('consent', checked)}
           onWithdraw={onWithdrawConsent}

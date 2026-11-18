@@ -393,6 +393,51 @@ test.group('AuthorService | consent (Story 9.4)', (group) => {
     assert.isNull(other.consentConfirmedAt)
   })
 
+  test('create with consent and no affiliation → refused in the service too (D27)', async ({
+    assert,
+  }) => {
+    const a = await admin()
+    await assert.rejects(
+      () => AuthorService.create({ ...PAYLOAD, affiliations: [], consent: true }, a.id),
+      vineErrors.E_VALIDATION_ERROR
+    )
+    assert.isNull(await Author.findBy('lastNames', 'Fictif'))
+  })
+
+  test('update: affiliations removed meanwhile (stale form) → consent refused under the lock', async ({
+    assert,
+  }) => {
+    const a = await admin()
+    const author = await Author.create({
+      firstNames: 'Jean',
+      lastNames: 'Fictif',
+      migrationKey: 'jean-fictif-stale',
+    })
+    await AuthorAffiliation.create({ authorId: author.id, position: 1, institution: 'U' })
+    const stale = await Author.findOrFail(author.id)
+    // Another save removes the affiliation (allowed: migrated, not public) right after
+    // `update` has read them, before its lock.
+    const load = stale.load.bind(stale) as (relation: 'affiliations') => Promise<void>
+    Object.assign(stale, {
+      load: async (relation: 'affiliations') => {
+        await load(relation)
+        await AuthorAffiliation.query().where('authorId', author.id).delete()
+      },
+    })
+
+    await assert.rejects(
+      () =>
+        AuthorService.update(
+          stale,
+          { ...PAYLOAD, affiliations: [{ institution: 'U' }], consent: true },
+          { adminId: a.id }
+        ),
+      vineErrors.E_VALIDATION_ERROR
+    )
+    const saved = await Author.findOrFail(author.id)
+    assert.isNull(saved.consentConfirmedAt)
+  })
+
   test('confirmConsent → confirmed, then unchanged (same timestamp, same admin)', async ({
     assert,
   }) => {

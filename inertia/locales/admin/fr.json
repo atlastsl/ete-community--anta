@@ -305,7 +305,9 @@
       "flash": {
         "confirmed": "Consentement confirmé.",
         "withdrawn": "Consentement retiré.",
-        "refused": "Confirmation impossible : complétez d'abord une affiliation."
+        "refused": "Confirmation impossible : complétez d'abord une affiliation.",
+        "already_public": "Le profil était déjà public.",
+        "already_private": "Le profil n'était déjà plus public."
       }
     }
   },

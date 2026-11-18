@@ -10,7 +10,10 @@ import AuthorAffiliation from '#models/author_affiliation'
 import { normalizeKey } from '#helpers/normalize'
 import FileStorageService from '#services/file_storage_service'
 import { AUTHOR_PHOTO_VARIANTS, type ImageVariant } from '#services/image_service'
-import { affiliationRequiredError } from '#validators/admin/author_validator'
+import {
+  affiliationRequiredError,
+  consentRequiresAffiliationError,
+} from '#validators/admin/author_validator'
 
 export type AffiliationInput = { institution: string; department?: string | null }
 
@@ -134,8 +137,9 @@ export default class AuthorService {
       author.lastNames = payload.lastNames.trim()
       author.googleScholarUrl = emptyToNull(payload.googleScholarUrl)
       author.createdById = adminId
-      // The controller has checked D27 (consent needs an affiliation) beforehand.
+      // D27 again here: other callers (9.8 dialog, imports) do not go through the controller.
       const consent = payload.consent === true
+      if (consent && payload.affiliations.length === 0) throw consentRequiresAffiliationError()
       author.consentConfirmedAt = consent ? DateTime.now() : null
       author.consentConfirmedById = consent ? adminId : null
       await author.save()
@@ -176,11 +180,11 @@ export default class AuthorService {
     const photo = options.photo && options.photo.length > 0 ? options.photo : null
     const photoChange = photo ? 'replace' : options.removePhoto && author.photoKey ? 'remove' : null
     if (photoChange) fields.push('photo')
-    const wantsConsent = payload.consent === true && author.consentConfirmedAt === null
-    if (fields.length === 0 && !wantsConsent) return { author, fields, consentConfirmed: false }
-    const affiliationsAfter = fields.includes('affiliations')
-      ? payload.affiliations.length
-      : author.affiliations.length
+    // Decided on the locked row below; the loaded instance only allows the early return.
+    const wantsConsent = payload.consent === true
+    if (fields.length === 0 && !(wantsConsent && author.consentConfirmedAt === null)) {
+      return { author, fields, consentConfirmed: false }
+    }
 
     const newPrefix = photo ? await this.uploadPhoto(author.id, photo) : null
     let oldPrefix: string | null = null
@@ -195,9 +199,12 @@ export default class AuthorService {
           .forUpdate()
           .firstOrFail()
         const isPublic = locked.consentConfirmedAt !== null
-        if ((isPublic || wantsConsent) && affiliationsAfter === 0) {
-          throw affiliationRequiredError()
-        }
+        // Counted under the lock: another save may have removed them since the form loaded.
+        const affiliationsAfter = fields.includes('affiliations')
+          ? payload.affiliations.length
+          : await this.affiliationsCount(author.id, trx)
+        if (affiliationsAfter === 0 && isPublic) throw affiliationRequiredError()
+        if (affiliationsAfter === 0 && wantsConsent) throw consentRequiresAffiliationError()
         author.useTransaction(trx)
         author.lastNames = after.lastNames
         author.firstNames = after.firstNames
@@ -242,11 +249,7 @@ export default class AuthorService {
         .forUpdate()
         .firstOrFail()
       if (locked.consentConfirmedAt !== null) return 'unchanged'
-      const row = await AuthorAffiliation.query({ client: trx })
-        .where('authorId', author.id)
-        .count('* as total')
-        .first()
-      if (Number(row?.$extras.total ?? 0) === 0) return 'no_affiliation'
+      if ((await this.affiliationsCount(author.id, trx)) === 0) return 'no_affiliation'
       locked.useTransaction(trx)
       locked.consentConfirmedAt = DateTime.now()
       locked.consentConfirmedById = adminId
@@ -255,6 +258,17 @@ export default class AuthorService {
       author.consentConfirmedById = locked.consentConfirmedById
       return 'confirmed'
     })
+  }
+
+  private static async affiliationsCount(
+    authorId: string,
+    client: TransactionClientContract
+  ): Promise<number> {
+    const row = await AuthorAffiliation.query({ client })
+      .where('authorId', authorId)
+      .count('* as total')
+      .first()
+    return Number(row?.$extras.total ?? 0)
   }
 
   /**
