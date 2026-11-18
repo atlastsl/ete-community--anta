@@ -1,5 +1,6 @@
 import { test } from '@japa/runner'
 import db from '@adonisjs/lucid/services/db'
+import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 import Author from '#models/author'
 import Production from '#models/production'
 import ProductionAuthorService from '#services/production_author_service'
@@ -103,8 +104,66 @@ test.group('ProductionAuthorService | fullyAttachedProductionIds (Story 9.6)', (
     await link(full, [card])
     await link(partial, [card])
 
-    const ids = await ProductionAuthorService.fullyAttachedProductionIds(card.id)
+    const ids = await db.transaction((trx) =>
+      ProductionAuthorService.fullyAttachedProductionIds(card.id, trx)
+    )
     assert.deepEqual(ids, [full.id])
     assert.notInclude(ids, other.id)
+  })
+
+  test('non-text values, non-array value or no usable name → never fully attached', async ({
+    assert,
+  }) => {
+    const card = await Author.create({ firstNames: 'Moussa', lastNames: 'Fictif' })
+    const mixed = await createProduction(['Moussa Fictif'])
+    const scalar = await createProduction(['Moussa Fictif'])
+    const empty = await createProduction(['  '])
+    await db
+      .from('productions')
+      .where('id', mixed.id)
+      .update({ authors: '["Moussa Fictif", {"x": 1}]' })
+    await db
+      .from('productions')
+      .where('id', scalar.id)
+      .update({ authors: '{"name": "Moussa Fictif"}' })
+    for (const production of [mixed, scalar, empty]) await link(production, [card])
+
+    const ids = await db.transaction((trx) =>
+      ProductionAuthorService.fullyAttachedProductionIds(card.id, trx)
+    )
+    assert.deepEqual(ids, [])
+  })
+
+  test('candidate productions locked (FOR UPDATE, by id) before the attachment check', async ({
+    assert,
+  }) => {
+    const card = await Author.create({ firstNames: 'Moussa', lastNames: 'Fictif' })
+    const production = await createProduction(['Moussa Fictif'])
+    await link(production, [card])
+
+    const sql: string[] = []
+    await db.transaction(async (trx) => {
+      const spy = new Proxy(trx, {
+        get(target, property) {
+          if (property === 'rawQuery') {
+            return (query: string, bindings?: any) => {
+              sql.push(query)
+              return target.rawQuery(query, bindings)
+            }
+          }
+          const value = Reflect.get(target, property, target)
+          return typeof value === 'function' ? value.bind(target) : value
+        },
+      }) as TransactionClientContract
+      assert.deepEqual(await ProductionAuthorService.fullyAttachedProductionIds(card.id, spy), [
+        production.id,
+      ])
+    })
+
+    const lock = sql.findIndex((query) => /FROM productions[\s\S]*FOR UPDATE/.test(query))
+    const read = sql.findIndex((query) => /p\.authors/.test(query))
+    assert.isAtLeast(lock, 0)
+    assert.match(sql[lock], /ORDER BY p\.id/)
+    assert.isBelow(lock, read)
   })
 })

@@ -595,4 +595,49 @@ test.group('AuthorService | renaming refreshes productions (Story 9.6)', (group)
 
     assert.deepEqual(await namesOf(linked.id), ['FICTIF Jean'])
   })
+
+  test('rename: productions with non-text values or no usable name are never rewritten', async ({
+    assert,
+  }) => {
+    const author = await AuthorService.create(PAYLOAD, null)
+    const mixed = await production(['Jean Fictif'])
+    const empty = await production([])
+    const scalar = await production(['Jean Fictif'])
+    await db.from('productions').where('id', mixed.id).update({ authors: '["Jean Fictif", 7]' })
+    await db.from('productions').where('id', scalar.id).update({ authors: '"Jean Fictif"' })
+    await db.table('production_authors').multiInsert(
+      [mixed, empty, scalar].map((p) => ({
+        production_id: p.id,
+        author_id: author.id,
+        position: 1,
+      }))
+    )
+
+    await AuthorService.update(author, { ...PAYLOAD, lastNames: 'FICTIVO' })
+
+    assert.deepEqual(await namesOf(mixed.id), ['Jean Fictif', 7] as any)
+    assert.deepEqual(await namesOf(empty.id), [])
+    assert.deepEqual(await namesOf(scalar.id), 'Jean Fictif' as any)
+  })
+
+  test('rename decided on the locked row: names already in place (stale form) → no refresh', async ({
+    assert,
+  }) => {
+    const author = await AuthorService.create(PAYLOAD, null)
+    const stale = await Author.findOrFail(author.id)
+    // Renamed meanwhile outside AuthorService (no refresh): the production, attached by
+    // matchKey, keeps its free-text spelling.
+    const other = await Author.findOrFail(author.id)
+    other.lastNames = 'Fictivo'
+    await other.save()
+    const linked = await production(['FICTIVO Jean'])
+    await db
+      .table('production_authors')
+      .insert({ production_id: linked.id, author_id: author.id, position: 1 })
+
+    const { fields } = await AuthorService.update(stale, { ...PAYLOAD, lastNames: 'Fictivo' })
+
+    assert.include(fields, 'lastNames') // différent de l'instance chargée…
+    assert.deepEqual(await namesOf(linked.id), ['FICTIVO Jean']) // …mais pas de la ligne verrouillée
+  })
 })

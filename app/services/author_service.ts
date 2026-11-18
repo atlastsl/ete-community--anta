@@ -224,8 +224,13 @@ export default class AuthorService {
           author.consentConfirmedById = locked.consentConfirmedById
         }
         // Renaming refreshes `productions.authors` (Story 9.6, P2.1): the productions to
-        // rewrite are chosen with the names still in place (fully attached ones only).
-        const renamed = fields.includes('lastNames') || fields.includes('firstNames')
+        // rewrite are locked, then chosen with the names still in place (fully attached
+        // ones only). "Renamed" is decided against the locked row: a column is written only
+        // when it differs from the loaded instance (Lucid dirty check), and then changes
+        // only if it also differs from the row in the database.
+        const renamed =
+          (fields.includes('lastNames') && after.lastNames !== locked.lastNames) ||
+          (fields.includes('firstNames') && after.firstNames !== locked.firstNames)
         const toRefresh = renamed
           ? await ProductionAuthorService.fullyAttachedProductionIds(author.id, trx)
           : []

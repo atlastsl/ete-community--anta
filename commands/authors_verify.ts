@@ -3,8 +3,8 @@ import type { CommandOptions } from '@adonisjs/core/types/ace'
 
 /**
  * `authors:verify` (Story 9.6, P2.2): checks that every name of `productions.authors` is
- * attached to a card. Read-only; exit code 1 below 100 % or on inconsistent positions /
- * desynchronised names.
+ * attached to a card. Read-only; exit code 1 below 100 %, on non-text values, inconsistent
+ * positions, a pivot order other than the jsonb order or desynchronised names.
  */
 export default class AuthorsVerify extends BaseCommand {
   static commandName = 'authors:verify'
@@ -28,6 +28,17 @@ export default class AuthorsVerify extends BaseCommand {
         `${item.production} : positions incohérentes (${item.positions.join(', ')})`
       )
     }
+    for (const item of report.order) {
+      this.logger.error(
+        `${item.production} : ordre incohérent (pivot ${item.actual.join(', ')} ; ` +
+          `attendu ${item.expected.join(', ')})`
+      )
+    }
+    for (const item of report.nonText) {
+      this.logger.error(
+        `${item.production} : valeurs non textuelles conservées (${item.reason}) : à corriger à la main`
+      )
+    }
     for (const item of report.desync) {
       this.logger.error(
         `${item.production} : auteur(s) lié(s) absent(s) de productions.authors (${item.authors.join(', ')})`
@@ -43,12 +54,13 @@ export default class AuthorsVerify extends BaseCommand {
     )
     this.logger.info(
       `Productions non rattachées : ${report.unattached.length} · positions incohérentes : ` +
-        `${report.positions.length} · désynchronisées : ${report.desync.length}`
+        `${report.positions.length} · ordre incohérent : ${report.order.length} · ` +
+        `désynchronisées : ${report.desync.length} · valeurs non textuelles : ${report.nonText.length}`
     )
     this.logger.info(
       `Fiches orphelines : ${report.orphans.migrated.length} (conversion) · ` +
         `${report.orphans.panel} (panel) · noms vides ignorés : ${report.blank} · ` +
-        `éléments non textuels ignorés : ${report.nonString}`
+        `éléments non textuels : ${report.nonString}`
     )
     this.logger.info('Aucune écriture en base.')
 

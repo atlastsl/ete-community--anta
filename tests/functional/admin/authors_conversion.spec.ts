@@ -11,7 +11,7 @@ import AuthorsPropose from '../../../commands/authors_propose.js'
 import AuthorsValidate from '../../../commands/authors_validate.js'
 import AuthorsApply from '../../../commands/authors_apply.js'
 import AuthorsVerify from '../../../commands/authors_verify.js'
-import { CSV_COLUMNS } from '#services/author_conversion_service'
+import AuthorConversionService, { CSV_COLUMNS } from '#services/author_conversion_service'
 
 // Fictitious names only (public repository). Les CSV vont dans un sous-dossier
 // unique de tmp/ (ignoré par git), supprimé à la fin de chaque test.
@@ -377,6 +377,10 @@ test.group('authors:apply / authors:verify (Story 9.6)', (group) => {
 
     third.assertSucceeded()
     third.assertLogMatches(/Fiches créées : 1 · fiches existantes utilisées : 1 · liens créés : 2/)
+    third.assertLogMatches(/« Jean-Paul Exemplaire ».*n'est plus à rattacher \(ignorée\)/)
+    const thirdReport = await readFile(app.makePath(dir, '3.txt'), 'utf8')
+    assert.match(thirdReport, /## Avertissements du contrôle/)
+    assert.match(thirdReport, /« Jean-Paul Exemplaire ».*n'est plus à rattacher \(ignorée\)/)
     assert.deepEqual(await linksOf(first), linksBefore)
     assert.deepEqual(await linksOf(added), ['1:nouveau-fictif', '2:aminata-fictiva'])
     const [authors] = await db.from('authors').count('* as total')
@@ -441,5 +445,236 @@ test.group('authors:apply / authors:verify (Story 9.6)', (group) => {
     const positions = await verify()
     positions.assertFailed()
     positions.assertLogMatches(/positions incohérentes \(2\)/)
+  })
+
+  /** Rapport sans la ligne de libellé ni la date (seules différences permises). */
+  async function reportBody(name: string): Promise<string> {
+    const text = await readFile(app.makePath(dir, name), 'utf8')
+    return text
+      .split('\n')
+      .filter(
+        (line) => !line.startsWith('Conversion des auteurs — ') && !line.startsWith('Date : ')
+      )
+      .join('\n')
+  }
+
+  test('apply --dry-run: report identical to the real run except the label', async ({ assert }) => {
+    await Author.create({ firstNames: 'Éloïse', lastNames: 'Fictive' })
+    await createProduction(['FICTIVA Aminata', 'E. Fictive', 'Aminata Fictiva'])
+    await createProduction([])
+    const file = await writeCsv('ok.csv', [
+      row('FICTIVA Aminata', 'fictiva-aminata', 'Aminata', 'FICTIVA'),
+      row('Aminata Fictiva', 'fictiva-aminata', 'Aminata', 'FICTIVA'),
+      row('E. Fictive', '', '', '', 'eloise-fictive'),
+      row('Ancien Nom', 'ancien-nom', 'Ancien', 'Nom'),
+    ])
+
+    const dry = await apply(file, '--dry-run', '--report', `${dir}/dry.txt`)
+    dry.assertSucceeded()
+    const real = await apply(file, '--report', `${dir}/real.txt`)
+    real.assertSucceeded()
+
+    assert.match(
+      await readFile(app.makePath(dir, 'dry.txt'), 'utf8'),
+      /^Conversion des auteurs — SIMULATION/
+    )
+    assert.match(
+      await readFile(app.makePath(dir, 'real.txt'), 'utf8'),
+      /^Conversion des auteurs — APPLICATION/
+    )
+    assert.equal(await reportBody('dry.txt'), await reportBody('real.txt'))
+    assert.include(await reportBody('real.txt'), "n'est plus à rattacher")
+  })
+
+  test('apply: non-text values kept, never refreshed, reported; verify lists them, exit ≠ 0', async ({
+    assert,
+  }) => {
+    const mixed = await createProduction(['Moussa Fictif'])
+    const scalar = await createProduction(['Nom Libre'])
+    await db.from('productions').where('id', mixed.id).update({ authors: '["Moussa Fictif", 42]' })
+    await db.from('productions').where('id', scalar.id).update({ authors: '"Nom Libre"' })
+    const file = await writeCsv('nt.csv', [
+      row('Moussa Fictif', 'fictif-moussa', 'Moussa', 'Fictif'),
+    ])
+
+    const command = await apply(file, '--report', `${dir}/r.txt`)
+
+    command.assertSucceeded()
+    command.assertLogMatches(/valeurs non textuelles conservées : 2 .*authors:verify/)
+    assert.deepEqual(await linksOf(mixed), ['1:moussa-fictif'])
+    assert.deepEqual(await namesOf(mixed), ['Moussa Fictif', 42] as any)
+    assert.deepEqual(await namesOf(scalar), 'Nom Libre' as any)
+    const report = await readFile(app.makePath(dir, 'r.txt'), 'utf8')
+    assert.include(report, `- ${mixed.slug} : 1 élément(s) non textuel(s)`)
+    assert.include(report, `- ${scalar.slug} : valeur non tableau`)
+    assert.include(report, 'productions.authors réécrits : 0')
+
+    const check = await verify()
+    check.assertFailed()
+    check.assertLogMatches(new RegExp(`${mixed.slug} : valeurs non textuelles conservées`))
+    check.assertLogMatches(new RegExp(`${scalar.slug} : valeurs non textuelles conservées`))
+  })
+
+  test('apply: linked card absent from the jsonb → production untouched, reported désynchronisée', async ({
+    assert,
+  }) => {
+    const stray = await Author.create({ firstNames: 'Awa', lastNames: 'Exemple' })
+    const production = await createProduction(['Moussa Fictif'])
+    await db
+      .table('production_authors')
+      .insert({ production_id: production.id, author_id: stray.id, position: 1 })
+    const file = await writeCsv('ds.csv', [
+      row('Moussa Fictif', 'fictif-moussa', 'Moussa', 'Fictif'),
+    ])
+
+    const command = await apply(file, '--report', `${dir}/r.txt`)
+
+    command.assertSucceeded()
+    command.assertLogMatches(
+      /Fiches créées : 0 · fiches existantes utilisées : 0 · liens créés : 0/
+    )
+    command.assertLogMatches(/désynchronisées : 1 .*authors:verify/)
+    assert.deepEqual(await linksOf(production), ['1:awa-exemple'])
+    assert.deepEqual(await namesOf(production), ['Moussa Fictif'])
+    const report = await readFile(app.makePath(dir, 'r.txt'), 'utf8')
+    assert.include(report, `- ${production.slug} : awa-exemple`)
+  })
+
+  test('apply re-validates inside its transaction: stale validation → errors, rollback, no throw', async ({
+    assert,
+    cleanup,
+  }) => {
+    await createProduction(['E. Fictive', 'Nom Ajouté'])
+    const file = await writeCsv('stale.csv', [row('E. Fictive', '', '', '', 'eloise-fictive')])
+    // Validation antérieure périmée (carte supprimée, nom ajouté depuis) : seul le contrôle
+    // dans la transaction d'apply peut les voir.
+    const original = AuthorConversionService.validate
+    AuthorConversionService.validate = async () => ({
+      errors: [],
+      warnings: [],
+      plan: { toCreate: 0, toAttach: 0, sourceNames: 0, links: 0, productions: 0 },
+    })
+    cleanup(() => {
+      AuthorConversionService.validate = original
+    })
+    const before = await snapshot()
+
+    const command = await apply(file, '--report', `${dir}/r.txt`)
+
+    command.assertFailed()
+    command.assertLogMatches(/existing_author_slug « eloise-fictive » introuvable/)
+    command.assertLogMatches(/absent du CSV : « Nom Ajouté »/)
+    command.assertLogMatches(/aucune écriture en base/)
+    assert.deepEqual(await snapshot(), before)
+    assert.isFalse(existsSync(app.makePath(dir, 'r.txt')))
+  })
+
+  test('apply: report that cannot be written → rollback, exit 1', async ({ assert }) => {
+    await createProduction(['FICTIVA Aminata'])
+    const file = await writeCsv('ok.csv', [
+      row('FICTIVA Aminata', 'fictiva-aminata', 'Aminata', 'FICTIVA'),
+    ])
+    await writeFile(app.makePath(dir, 'blocker'), 'x') // un fichier là où le dossier est attendu
+    const before = await snapshot()
+
+    const command = await apply(file, '--report', `${dir}/blocker/report.txt`)
+
+    command.assertFailed()
+    command.assertLogMatches(/rapport non écrit .*aucune écriture en base/)
+    assert.deepEqual(await snapshot(), before)
+  })
+
+  test('apply: links not all inserted (ON CONFLICT DO NOTHING) → anomaly, no refresh', async ({
+    assert,
+  }) => {
+    const production = await createProduction(['FICTIVA Aminata', 'Jean-Paul Exemplaire'])
+    // Trigger de test (annulé avec la transaction) : la 2e ligne n'est pas insérée.
+    await db.rawQuery(
+      `CREATE FUNCTION test_skip_second_link() RETURNS trigger LANGUAGE plpgsql AS $$
+       BEGIN IF NEW.position = 2 THEN RETURN NULL; END IF; RETURN NEW; END $$`
+    )
+    await db.rawQuery(
+      `CREATE TRIGGER test_skip_second_link BEFORE INSERT ON production_authors
+       FOR EACH ROW EXECUTE FUNCTION test_skip_second_link()`
+    )
+    const file = await writeCsv('ok.csv', [
+      row('FICTIVA Aminata', 'fictiva-aminata', 'Aminata', 'FICTIVA'),
+      row('Jean-Paul Exemplaire', 'exemplaire-jean-paul', 'Jean-Paul', 'Exemplaire'),
+    ])
+
+    const command = await apply(file, '--report', `${dir}/r.txt`)
+
+    command.assertSucceeded()
+    command.assertLogMatches(/liens créés : 1/)
+    command.assertLogMatches(/anomalies : 1/)
+    assert.deepEqual(await namesOf(production), ['FICTIVA Aminata', 'Jean-Paul Exemplaire'])
+    const report = await readFile(app.makePath(dir, 'r.txt'), 'utf8')
+    assert.include(report, `- ${production.slug} : 1 lien(s) inséré(s) sur 2 attendu(s)`)
+  })
+
+  test('apply: fully attached production with gaps or another order → recompacted', async ({
+    assert,
+  }) => {
+    const moussa = await Author.create({ firstNames: 'Moussa', lastNames: 'Fictif' })
+    const awa = await Author.create({ firstNames: 'Awa', lastNames: 'Exemple' })
+    const gaps = await createProduction(['FICTIF Moussa'])
+    const swapped = await createProduction(['Awa Exemple', 'Moussa Fictif'])
+    await db.table('production_authors').multiInsert([
+      { production_id: gaps.id, author_id: moussa.id, position: 3 },
+      { production_id: swapped.id, author_id: moussa.id, position: 1 },
+      { production_id: swapped.id, author_id: awa.id, position: 2 },
+    ])
+    const ordering = await verify()
+    ordering.assertFailed()
+    ordering.assertLogMatches(/positions incohérentes \(3\)/)
+    ordering.assertLogMatches(
+      new RegExp(
+        `${swapped.slug} : ordre incohérent \\(pivot moussa-fictif, awa-exemple ; attendu awa-exemple, moussa-fictif\\)`
+      )
+    )
+    // Aucun nom à rattacher : un CSV sans ligne utile suffit.
+    const file = await writeCsv('none.csv', [row('Ancien Nom', 'ancien-nom', 'Ancien', 'Nom')])
+
+    const command = await apply(file, '--report', `${dir}/r.txt`)
+
+    command.assertSucceeded()
+    command.assertLogMatches(/réordonnées : 2/)
+    assert.deepEqual(await linksOf(gaps), ['1:moussa-fictif'])
+    assert.deepEqual(await linksOf(swapped), ['1:awa-exemple', '2:moussa-fictif'])
+    assert.deepEqual(await namesOf(gaps), ['Moussa Fictif'])
+    await verifySucceeds()
+  })
+
+  test('apply report: empty productions bucketed, totals add up, card listed once', async ({
+    assert,
+  }) => {
+    const card = await Author.create({
+      firstNames: 'Moussa',
+      lastNames: 'Fictif',
+      migrationKey: 'fictif-moussa',
+    })
+    await createProduction(['Moussa Fictif'])
+    await createProduction(['M. FICTIF'])
+    await createProduction([])
+    await createProduction(['  '])
+    const file = await writeCsv('both.csv', [
+      row('Moussa Fictif', '', '', '', card.slug),
+      row('M. FICTIF', 'fictif-moussa', 'Moussa', 'Fictif'),
+    ])
+
+    const command = await apply(file, '--report', `${dir}/r.txt`)
+
+    command.assertSucceeded()
+    command.assertLogMatches(/fiches existantes utilisées : 1 · liens créés : 2/)
+    const report = await readFile(app.makePath(dir, 'r.txt'), 'utf8')
+    assert.include(report, `- ${card.slug} (par existing_author_slug, migration_key)`)
+    assert.include(report, '- ignorées (aucun nom exploitable) : 2')
+    const total = Number(/Productions examinées : (\d+)/.exec(report)![1])
+    const buckets = [...report.matchAll(/^- [^:\n]+ : (\d+)$/gm)].map((m) => Number(m[1]))
+    assert.equal(total, 4)
+    assert.equal(
+      buckets.reduce((sum, n) => sum + n, 0),
+      total
+    )
   })
 })

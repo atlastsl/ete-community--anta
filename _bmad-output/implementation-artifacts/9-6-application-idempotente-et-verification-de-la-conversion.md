@@ -4,7 +4,7 @@ baseline_commit: e35d7fd
 
 # Story 9.6 : Application idempotente et vérification de la conversion
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -76,6 +76,32 @@ afin que **chaque production existante conserve tous ses auteurs, dans leur ordr
   - [x] 7.2 Story : cases, Dev Agent Record, File List, Change Log, Status → review.
 - [ ] **T8 — Porte manuelle** (AC 9) : résultat de l'exécution sur la base partagée consigné dans la story (date, comptages, code de `verify`, sans nom) — **porte manuelle — en attente d'Aurélien** (validation écrite du CSV, puis procédure des Dev Notes ; hors session de dev).
 
+### Review Findings
+
+- [x] [Review][Patch] Éléments jsonb non textuels et valeur non tableau [author_conversion_service.ts, production_author_service.ts, authors_verify.ts] — `inspectAuthors` : une production avec un élément non textuel ou une valeur non tableau n'est jamais « entièrement rattachée » ni convertie : liens écrits le cas échéant, aucun rafraîchissement, compartiment « valeurs non textuelles conservées » du rapport ; `verify` la liste et échoue ; le renommage l'ignore, ainsi que toute production sans nom exploitable (plus de « every » vide) (amende D-9.6-h).
+- [x] [Review][Patch] Renommage : verrou et décision sur la ligne verrouillée [production_author_service.ts, author_service.ts] — `fullyAttachedProductionIds(authorId, trx)` verrouille les productions candidates (`SELECT … FOR UPDATE`, ordre par id) avant d'évaluer « entièrement rattachée », dans la transaction du renommage ; « renommé » = colonne modifiée par rapport à l'instance chargée **et** différente de la ligne verrouillée.
+- [x] [Review][Patch] Liens absents du jsonb republiés par le rafraîchissement [author_conversion_service.ts] — une production dont une fiche liée ne correspond à aucun nom du jsonb n'est plus modifiée (ni pivot ni jsonb, aucune fiche créée pour elle) : section « désynchronisées » du rapport (`verify` la signale déjà) ; amende D-9.6-g. Couvre aussi deux fiches homonymes liées à une même production (aucun lien perdu).
+- [x] [Review][Patch] Revalidation dans la transaction d'apply [author_conversion_service.ts] — `checkRecords` (contrôle partagé avec `validate`) tourne sur la transaction d'`apply`, après le verrou des productions (`REPEATABLE READ` hors tests) ; toute erreur → rollback, erreurs retournées sans exception ; fiche `existing_author_slug` introuvable = erreur de validation (plus de `throw new Error`) ; conflit de sérialisation / interblocage (40001, 40P01) → message clair, rollback.
+- [x] [Review][Patch] Rapport écrit avant le commit [author_conversion_service.ts, authors_apply.ts] — texte construit dans la transaction, écrit (`wx`, 0600, sous `tmp/`) avant le commit ; échec d'écriture → rollback, code 1 « rapport non écrit … aucune écriture en base » ; échec du commit après écriture → rapport supprimé, code 1 ; `--dry-run` produit le même rapport au libellé près, puis annule.
+- [x] [Review][Patch] Liens réellement insérés [author_conversion_service.ts] — `ON CONFLICT DO NOTHING … RETURNING` : le rapport liste les lignes insérées ; un écart avec le nombre attendu est une anomalie et la production n'est pas rafraîchie (pivot incomplet jamais publié).
+- [x] [Review][Patch] Positions à trous ou ordre différent du jsonb [author_conversion_service.ts] — une production entièrement rattachée dont les positions ne sont pas 1..n ou dont l'ordre diffère de l'ordre du jsonb est recompactée (`DELETE` + `INSERT` dans l'ordre du jsonb) puis rafraîchie : compartiment « réordonnées ».
+- [x] [Review][Patch] Ordre du pivot non vérifié [author_conversion_service.ts, authors_verify.ts] — pour chaque production complète, `verify` compare l'ordre du pivot à la suite des fiches correspondant aux noms du jsonb (première occurrence) : « ordre incohérent », code 1.
+- [x] [Review][Patch] Hygiène du rapport [author_conversion_service.ts] — « Productions examinées » = somme des compartiments (converties, réordonnées, déjà rattachées, aucun nom exploitable, partielles, non textuelles, désynchronisées, anomalies) ; une fiche atteinte par slug et par `migration_key` est listée une fois (par id, « par existing_author_slug, migration_key »).
+- [x] [Review][Patch] Avertissement sur les productions laissées en l'état [authors_apply.ts] — avertissement explicite recommandant `node ace authors:verify` ; code de sortie 0 une fois la transaction validée (documenté dans la commande), `verify` reste la porte de complétude.
+- [x] [Review][Patch] Tests ajoutés [authors_conversion.spec.ts, production_author_service.spec.ts, author_service.spec.ts] — un test par correctif (11, tous en échec sans le correctif), plus : CSV complété relancé → « n'est plus à rattacher » dans la sortie et le rapport ; rapport `--dry-run` identique au rapport réel au libellé et à la date près. Le chemin « production partielle » (nom ajouté après le CSV) n'est plus atteignable : la revalidation dans la transaction refuse le CSV (« absent du CSV », rien d'écrit), ce que couvrent le test de revalidation et le test « CSV invalide » ; le compartiment « partiellement rattachées » reste en garde-fou.
+
+Écartés :
+- Noms NULL dans la concaténation : colonnes `first_names` / `last_names` NOT NULL.
+- Colonnes de pivot perdues au `DELETE` + `INSERT` : le pivot n'a que `production_id`, `author_id`, `position`.
+- Slug hors transaction : le hook de slug utilise `author.$trx`.
+- Homonymes co-auteurs d'une même production confondus : cas extrême, contrôlé sur le CSV (aucun lien n'est plus perdu : voir « désynchronisées »).
+
+Reportés :
+- [x] [Review][Defer] Interblocage possible entre `apply` et un renommage concurrent — procédure : geler les modifications admin pendant `apply`, relancer `verify` juste après (l'interblocage éventuel est annulé proprement, message « modification concurrente ») — voir `deferred-work.md`.
+- [x] [Review][Defer] Renommage d'une fiche liée à une production partiellement rattachée : ancien nom conservé jusqu'au prochain `propose` / `apply` (question ouverte à Aurélien) — voir `deferred-work.md`.
+
+Revue de code close : la porte manuelle T8 (exécution sur la base partagée) reste non cochée, en attente d'Aurélien ; elle ne bloque pas le statut `done` de la revue de code.
+
 ## Dev Notes
 
 ### Contraintes non négociables
@@ -93,8 +119,8 @@ afin que **chaque production existante conserve tous ses auteurs, dans leur ordr
 - **D-9.6-d — `updated_at` des productions inchangé** par le rafraîchissement (donnée dérivée, pas une modification éditoriale) ; seules les lignes dont le jsonb change sont mises à jour (le trigger de recherche ne tourne que pour elles).
 - **D-9.6-e — `apply` revalide le CSV** et refuse toute erreur (« Given un CSV validé ») ; une production qui garde un nom sans ligne CSV n'est jamais rafraîchie (sinon le nom libre serait effacé du jsonb) : elle est « partiellement rattachée » dans le rapport et fait échouer `verify`.
 - **D-9.6-f — Renommage : seules les productions entièrement rattachées sont rafraîchies** (même raison ; d'ici la bascule 9.7, l'ancien formulaire peut encore ajouter un nom libre à une production convertie). Une production partielle garde l'ancien nom ; un `propose` / `apply` ultérieur la traite.
-- **D-9.6-g — Liens existants conservés** : liste finale = cibles des noms dans l'ordre jsonb, puis liens existants dont le nom n'est pas dans le jsonb (cas impossible avant 9.7, conservés en fin par prudence) ; réécriture `DELETE` + `INSERT` (P2.1).
-- **D-9.6-h — `verify` échoue aussi** sur positions incohérentes et désynchronisation pivot/jsonb (intégrité) ; les fiches orphelines ne font jamais échouer (une fiche du panel peut ne pas avoir de production) ; vides / non textuels : comptés, sans échec (le rafraîchissement les retire).
+- **D-9.6-g — Liens existants conservés** : liste finale = cibles des noms dans l'ordre jsonb ; réécriture `DELETE` + `INSERT` (P2.1). *Amendé en revue* : une production ayant un lien dont la fiche ne correspond à aucun nom du jsonb n'est plus touchée (rapport « désynchronisées ») au lieu d'ajouter ce lien en fin.
+- **D-9.6-h — `verify` échoue aussi** sur positions incohérentes et désynchronisation pivot/jsonb (intégrité) ; les fiches orphelines ne font jamais échouer (une fiche du panel peut ne pas avoir de production) ; vides : comptés, sans échec (le rafraîchissement les retire). *Amendé en revue* : valeurs non textuelles (élément non chaîne, valeur non tableau) jamais rafraîchies, donc listées et en échec ; échec aussi sur un ordre du pivot différent de l'ordre du jsonb.
 - **D-9.6-i — Rapport horodaté à la seconde** (`<date>` de l'AC = `AAAA-MM-JJTHH-MM-SS`, UTC) pour ne jamais écraser le rapport d'un dry-run ; `--report` pour les tests.
 - **D-9.6-j — Verrou** : `SELECT … FROM productions … FOR UPDATE` dans la transaction d'`apply` (quelques centaines de lignes) : une édition concurrente par l'ancien formulaire attend la fin de la conversion.
 
@@ -197,3 +223,4 @@ Claude Opus 5.5 (claude-opus-5-5)
 
 - 2026-11-18 : création de la story (bmad-create-story), Status ready-for-dev.
 - 2026-11-18 : implémentation (bmad-dev-story) — `ProductionAuthorService`, rafraîchissement au renommage, `authors:apply` / `authors:verify`, tests ; lint, typecheck, build verts ; `npm run test:local` complet : 683 tests verts (668 avant). Porte manuelle en attente d'Aurélien. Status → review.
+- 2026-11-18 : revue de code (bmad-code-review) — 11 correctifs (valeurs non textuelles, verrou du renommage, désynchronisées intouchées, revalidation dans la transaction, rapport avant commit, liens insérés comptés, recompactage, ordre vérifié, hygiène du rapport, avertissement), 2 reports, 4 écartés ; `npm run test:local` complet : 695 tests verts (683 avant) ; lint, typecheck, build verts. Status → done (porte manuelle T8 toujours en attente d'Aurélien).

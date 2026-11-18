@@ -100,3 +100,8 @@
 ## Deferred from: code review of 9-5-proposition-et-validation-de-la-table-de-conversion-des-auteurs (2026-11-18)
 
 - ~~**Liens comptés approximativement dans le rapport de `authors:validate`**~~ — traité en 9.6 : le rapport d'`authors:apply` (et son `--dry-run`) compte les liens réellement insérés ; le plan de `validate` reste indicatif. Ancien texte : quand la fiche cible est déjà liée à la production (par un autre nom), le plan compte quand même un lien. Exact en 9.6 (`ON CONFLICT DO NOTHING`, rapport d'`apply` sur les lignes réellement insérées).
+
+## Deferred from: code review of 9-6-application-idempotente-et-verification-de-la-conversion (2026-11-18)
+
+- **Interblocage possible entre `authors:apply` et un renommage concurrent** — `apply` verrouille toutes les productions puis insère des liens (verrou `KEY SHARE` sur les fiches) ; un renommage verrouille la fiche puis ses productions. Postgres annule l'une des deux (l'`apply` renvoie « modification concurrente », rien d'écrit). Procédure : geler les modifications admin pendant `apply`, relancer `authors:verify` juste après.
+- **Renommage d'une fiche liée à une production partiellement rattachée** — la production garde l'ancien nom dans `productions.authors` jusqu'au prochain `propose` / `apply` (D-9.6-f). Question ouverte à Aurélien : acceptable jusqu'à la bascule 9.7 ?

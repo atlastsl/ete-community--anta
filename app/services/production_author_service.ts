@@ -1,11 +1,14 @@
 import db from '@adonisjs/lucid/services/db'
-import type { QueryClientContract } from '@adonisjs/lucid/types/database'
+import type { QueryClientContract, TransactionClientContract } from '@adonisjs/lucid/types/database'
 import AuthorConversionService from '#services/author_conversion_service'
 
 /** Attachment state of one production (rule of `AuthorConversionService.matchKey`). */
 export type AttachmentState = {
   productionId: string
-  /** Every non-blank jsonb name has a linked author with the same `matchKey`. */
+  /**
+   * At least one usable name, no non-text value (non-array, non-string element) and every
+   * non-blank jsonb name has a linked author with the same `matchKey`.
+   */
   fullyAttached: boolean
 }
 
@@ -55,7 +58,9 @@ export default class ProductionAuthorService {
 
   /**
    * Attachment state of the given productions (unknown ids are absent from the result).
-   * Blank and non-string jsonb elements are not names and are ignored.
+   * Blank strings are ignored; a non-text value (non-array, non-string element) or an
+   * empty name list is never fully attached (no vacuous "every"): the refresh would drop
+   * those values.
    */
   static async attachmentStates(
     productionIds: string[],
@@ -85,29 +90,38 @@ export default class ProductionAuthorService {
     }
     return (productions.rows as { id: string; authors: unknown }[]).map((row) => {
       const keys = linked.get(row.id) ?? new Set<string>()
-      const names = AuthorConversionService.namesOf(row.authors)
+      const { names, nonText } = AuthorConversionService.inspectAuthors(row.authors)
       return {
         productionId: row.id,
-        fullyAttached: names.every((name) => keys.has(AuthorConversionService.matchKey(name))),
+        fullyAttached:
+          !nonText &&
+          names.length > 0 &&
+          names.every((name) => keys.has(AuthorConversionService.matchKey(name))),
       }
     })
   }
 
   /**
    * Productions linked to the author whose names are all attached (evaluated with the
-   * current names: call it before renaming). The others keep their jsonb, so a free-text
-   * name added by the old production form is never erased (D-9.6-f).
+   * current names: call it before renaming). The candidate rows are locked first
+   * (`SELECT … FOR UPDATE`, by id, in the caller's transaction): an edit through the old
+   * form cannot add a free-text name between this check and the refresh. The others keep
+   * their jsonb, so a free-text name is never erased (D-9.6-f).
    */
   static async fullyAttachedProductionIds(
     authorId: string,
-    client: QueryClientContract = db.connection()
+    trx: TransactionClientContract
   ): Promise<string[]> {
-    const result = await client.rawQuery(
-      'SELECT production_id FROM production_authors WHERE author_id = ?',
+    const result = await trx.rawQuery(
+      `SELECT p.id
+         FROM productions p
+        WHERE p.id IN (SELECT production_id FROM production_authors WHERE author_id = ?)
+        ORDER BY p.id
+          FOR UPDATE`,
       [authorId]
     )
-    const ids = (result.rows as { production_id: string }[]).map((row) => row.production_id)
-    const states = await this.attachmentStates(ids, client)
+    const ids = (result.rows as { id: string }[]).map((row) => row.id)
+    const states = await this.attachmentStates(ids, trx)
     return states.filter((state) => state.fullyAttached).map((state) => state.productionId)
   }
 }
