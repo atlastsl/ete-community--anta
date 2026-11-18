@@ -192,6 +192,12 @@ const routes = {
     tokens: [{"old":"/admin/authors/search","type":0,"val":"admin","end":""},{"old":"/admin/authors/search","type":0,"val":"authors","end":""},{"old":"/admin/authors/search","type":0,"val":"search","end":""}],
     types: placeholder as Registry['admin.authors.search']['types'],
   },
+  'admin.authors.quick-store': {
+    methods: ["POST"],
+    pattern: '/admin/authors/quick',
+    tokens: [{"old":"/admin/authors/quick","type":0,"val":"admin","end":""},{"old":"/admin/authors/quick","type":0,"val":"authors","end":""},{"old":"/admin/authors/quick","type":0,"val":"quick","end":""}],
+    types: placeholder as Registry['admin.authors.quick-store']['types'],
+  },
   'admin.authors.edit': {
     methods: ["GET","HEAD"],
     pattern: '/admin/authors/:id/edit',

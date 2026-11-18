@@ -166,7 +166,18 @@ test.group('Authors pages | i18n', () => {
   test('toutes les clés authors.* utilisées existent en FR et EN', ({ assert }) => {
     const keys = new Set<string>()
     const form = read('inertia/components/admin/AuthorForm.tsx')
-    for (const source of [indexPage, editPage, badges, dialog, consentDialog, form]) {
+    const formDialog = read('inertia/components/admin/AuthorFormDialog.tsx')
+    const combobox = read('inertia/components/admin/AuthorCombobox.tsx')
+    for (const source of [
+      indexPage,
+      editPage,
+      badges,
+      dialog,
+      consentDialog,
+      form,
+      formDialog,
+      combobox,
+    ]) {
       for (const match of source.matchAll(/t\('(authors\.[a-z_.]+)'/g)) keys.add(match[1])
     }
     // Keys sent as strings by the server (flash messages, validation errors).
@@ -177,9 +188,12 @@ test.group('Authors pages | i18n', () => {
       for (const match of read(path).matchAll(/'(authors\.[a-z_]+\.[a-z_.]+)'/g)) keys.add(match[1])
     }
     assert.isAbove(keys.size, 15)
+    // i18next plurals: `key` resolves to `key_one` / `key_other`.
+    const resolveKey = (dict: Record<string, any>, key: string) =>
+      lookup(dict, key) ?? lookup(dict, `${key}_other`)
     for (const key of keys) {
-      assert.isString(lookup(fr, key), `fr: ${key}`)
-      assert.isString(lookup(en, key), `en: ${key}`)
+      assert.isString(resolveKey(fr, key), `fr: ${key}`)
+      assert.isString(resolveKey(en, key), `en: ${key}`)
     }
   })
 

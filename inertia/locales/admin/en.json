@@ -335,7 +335,15 @@
       "results_count_other": "{{count}} authors found.",
       "already_first": "Already in first position.",
       "already_last": "Already in last position.",
-      "legacy_non_text": "The stored author list contains non-text values; it is kept as long as the author selection is not changed."
+      "legacy_non_text": "The stored author list contains non-text values; it is kept as long as the author selection is not changed.",
+      "create_option": "Create author “{{query}}”"
+    },
+    "dialog": {
+      "description": "The new author will be added to the production.",
+      "submit": "Create and add",
+      "close": "Close",
+      "added": "{{name}} created and added to the authors.",
+      "error": "The author could not be created. Check your connection and try again."
     }
   },
   "users": {

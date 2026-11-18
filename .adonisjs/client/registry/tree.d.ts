@@ -52,6 +52,7 @@ export interface ApiDefinition {
     authors: typeof routes['admin.authors'] & {
       create: typeof routes['admin.authors.create']
       search: typeof routes['admin.authors.search']
+      quickStore: typeof routes['admin.authors.quick-store']
       edit: typeof routes['admin.authors.edit']
       store: typeof routes['admin.authors.store']
       update: typeof routes['admin.authors.update']

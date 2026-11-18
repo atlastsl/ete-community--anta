@@ -31,8 +31,8 @@ function strInput(value: unknown): string | null {
  * Authors referential in the admin panel (Stories 9.1 to 9.4, FR52, FR53, FR55) - admin and
  * super admin (`middleware.admin()` group, P2-15): list with search, filters and counters,
  * create, edit and delete (refused while the card is linked to a production), photo, and
- * consent confirmation / withdrawal (journaled `consent_confirm` / `consent_withdraw`), and
- * the JSON search of the production form picker (Story 9.7).
+ * consent confirmation / withdrawal (journaled `consent_confirm` / `consent_withdraw`), the
+ * JSON search of the production form picker (Story 9.7) and its JSON quick creation (9.8).
  */
 export default class AuthorsController {
   async index({ request, inertia }: HttpContext) {
@@ -148,7 +148,39 @@ export default class AuthorsController {
     }
   }
 
-  private async storeAuthor({ request, auth, response, session }: HttpContext) {
+  private async storeAuthor(ctx: HttpContext) {
+    const author = await this.createAuthor(ctx)
+    ctx.session.flash('success', 'authors.flash.created')
+    return ctx.response.redirect(`/admin/authors/${author.id}/edit`)
+  }
+
+  /**
+   * "Create an author" window of the production form (Story 9.8, FR54, P2-14): same chain as
+   * `store`, but JSON so the page never navigates (the unsaved production form is kept):
+   * 201 `{ author }` in the picker shape (appended to the selection as is), 422
+   * `{ errors: [{ field, message, rule }] }` (i18n keys) whatever the `Accept` header.
+   */
+  async quickStore(ctx: HttpContext) {
+    try {
+      const author = await this.createAuthor(ctx)
+      await author.load('affiliations')
+      const [picked] = await AuthorService.toPickerAuthors([author])
+      return ctx.response.created({ author: picked })
+    } catch (error) {
+      if (error instanceof vineErrors.E_VALIDATION_ERROR) {
+        return ctx.response.unprocessableEntity({ errors: error.messages })
+      }
+      throw error
+    } finally {
+      await this.discardUpload(ctx.request)
+    }
+  }
+
+  /**
+   * Validates, decodes the photo, creates the card and journals `create` (+ `consent_confirm`
+   * when the box was ticked). Shared by `store` and `quickStore`.
+   */
+  private async createAuthor({ request, auth }: HttpContext): Promise<Author> {
     const validated = await request.validateUsing(authorValidator)
     const data = { ...validated, affiliations: this.affiliationsOf(validated, request) }
     assertAffiliationRule(data, { isMigrated: false })
@@ -168,9 +200,7 @@ export default class AuthorsController {
     if (author.consentConfirmedAt !== null) {
       await this.logConsent(auth.user!.id, author, ActionType.CONSENT_CONFIRM)
     }
-
-    session.flash('success', 'authors.flash.created')
-    return response.redirect(`/admin/authors/${author.id}/edit`)
+    return author
   }
 
   async edit({ params, inertia }: HttpContext) {

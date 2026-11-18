@@ -379,6 +379,18 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/authors_controller').default['search']>>>
     }
   }
+  'admin.authors.quick-store': {
+    methods: ["POST"]
+    pattern: '/admin/authors/quick'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/authors_controller').default['quickStore']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/authors_controller').default['quickStore']>>>
+    }
+  }
   'admin.authors.edit': {
     methods: ["GET","HEAD"]
     pattern: '/admin/authors/:id/edit'

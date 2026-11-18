@@ -149,3 +149,36 @@ export function toAuthorPayload(data: AuthorFormData) {
     ...(data.consent && hasEnteredAffiliation(data.affiliations) ? { consent: true } : {}),
   }
 }
+
+/**
+ * Prefill of the « Create an author » window from the picker query (Story 9.8, D36): spaces
+ * collapsed, split at the last space — before = first names, last word = last names; a
+ * single word = last names; an empty query = empty fields.
+ */
+export function splitAuthorQuery(query: string): { firstNames: string; lastNames: string } {
+  const words = query.normalize('NFC').trim().split(/\s+/).filter(Boolean)
+  if (words.length === 0) return { firstNames: '', lastNames: '' }
+  const lastNames = words.pop()!
+  return { firstNames: words.join(' '), lastNames }
+}
+
+/**
+ * Multipart body of `toAuthorPayload` for a `fetch` request (Story 9.8): nested affiliations
+ * as `affiliations[0][institution]`, booleans as `'1'` (accepted by the validator). An empty
+ * affiliation list sends no field, which the server reads as « no affiliation » (multipart).
+ */
+export function toAuthorFormData(payload: ReturnType<typeof toAuthorPayload>): FormData {
+  const body = new FormData()
+  body.append('lastNames', payload.lastNames)
+  body.append('firstNames', payload.firstNames)
+  payload.affiliations.forEach((affiliation, index) => {
+    body.append(`affiliations[${index}][institution]`, affiliation.institution)
+    if ('department' in affiliation && affiliation.department) {
+      body.append(`affiliations[${index}][department]`, affiliation.department)
+    }
+  })
+  if (payload.googleScholarUrl) body.append('googleScholarUrl', payload.googleScholarUrl)
+  if (payload.photo) body.append('photo', payload.photo)
+  if (payload.consent) body.append('consent', '1')
+  return body
+}

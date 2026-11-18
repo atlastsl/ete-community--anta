@@ -335,7 +335,15 @@
       "results_count_other": "{{count}} auteurs trouvés.",
       "already_first": "Déjà en première position.",
       "already_last": "Déjà en dernière position.",
-      "legacy_non_text": "La liste d'auteurs enregistrée contient des valeurs non textuelles ; elle est conservée tant que la sélection d'auteurs n'est pas modifiée."
+      "legacy_non_text": "La liste d'auteurs enregistrée contient des valeurs non textuelles ; elle est conservée tant que la sélection d'auteurs n'est pas modifiée.",
+      "create_option": "Créer un auteur « {{query}} »"
+    },
+    "dialog": {
+      "description": "L'auteur créé sera ajouté à la production.",
+      "submit": "Créer et ajouter",
+      "close": "Fermer",
+      "added": "{{name}} créé et ajouté aux auteurs.",
+      "error": "La création a échoué. Vérifiez votre connexion puis réessayez."
     }
   },
   "users": {
