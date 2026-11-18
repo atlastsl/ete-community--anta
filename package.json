@@ -31,6 +31,7 @@
     "#transformers/*": "./app/transformers/*.js",
     "#enums/*": "./app/enums/*.js",
     "#constants/*": "./app/constants/*.js",
+    "#helpers/*": "./app/helpers/*.js",
     "#validators/*": "./app/validators/*.js",
     "#providers/*": "./providers/*.js",
     "#policies/*": "./app/policies/*.js",

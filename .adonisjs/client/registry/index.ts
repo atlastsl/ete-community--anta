@@ -36,6 +36,12 @@ const routes = {
     tokens: [{"old":"/privacy-policy","type":0,"val":"privacy-policy","end":""}],
     types: placeholder as Registry['privacy-policy']['types'],
   },
+  'health': {
+    methods: ["GET","HEAD"],
+    pattern: '/health',
+    tokens: [{"old":"/health","type":0,"val":"health","end":""}],
+    types: placeholder as Registry['health']['types'],
+  },
   'stats.view': {
     methods: ["POST"],
     pattern: '/stats/view',
@@ -173,6 +179,36 @@ const routes = {
     pattern: '/admin/productions/:productionId/links/:linkId',
     tokens: [{"old":"/admin/productions/:productionId/links/:linkId","type":0,"val":"admin","end":""},{"old":"/admin/productions/:productionId/links/:linkId","type":0,"val":"productions","end":""},{"old":"/admin/productions/:productionId/links/:linkId","type":1,"val":"productionId","end":""},{"old":"/admin/productions/:productionId/links/:linkId","type":0,"val":"links","end":""},{"old":"/admin/productions/:productionId/links/:linkId","type":1,"val":"linkId","end":""}],
     types: placeholder as Registry['admin.productions.links.destroy']['types'],
+  },
+  'admin.authors.create': {
+    methods: ["GET","HEAD"],
+    pattern: '/admin/authors/create',
+    tokens: [{"old":"/admin/authors/create","type":0,"val":"admin","end":""},{"old":"/admin/authors/create","type":0,"val":"authors","end":""},{"old":"/admin/authors/create","type":0,"val":"create","end":""}],
+    types: placeholder as Registry['admin.authors.create']['types'],
+  },
+  'admin.authors.edit': {
+    methods: ["GET","HEAD"],
+    pattern: '/admin/authors/:id/edit',
+    tokens: [{"old":"/admin/authors/:id/edit","type":0,"val":"admin","end":""},{"old":"/admin/authors/:id/edit","type":0,"val":"authors","end":""},{"old":"/admin/authors/:id/edit","type":1,"val":"id","end":""},{"old":"/admin/authors/:id/edit","type":0,"val":"edit","end":""}],
+    types: placeholder as Registry['admin.authors.edit']['types'],
+  },
+  'admin.authors': {
+    methods: ["GET","HEAD"],
+    pattern: '/admin/authors',
+    tokens: [{"old":"/admin/authors","type":0,"val":"admin","end":""},{"old":"/admin/authors","type":0,"val":"authors","end":""}],
+    types: placeholder as Registry['admin.authors']['types'],
+  },
+  'admin.authors.store': {
+    methods: ["POST"],
+    pattern: '/admin/authors',
+    tokens: [{"old":"/admin/authors","type":0,"val":"admin","end":""},{"old":"/admin/authors","type":0,"val":"authors","end":""}],
+    types: placeholder as Registry['admin.authors.store']['types'],
+  },
+  'admin.authors.update': {
+    methods: ["PUT"],
+    pattern: '/admin/authors/:id',
+    tokens: [{"old":"/admin/authors/:id","type":0,"val":"admin","end":""},{"old":"/admin/authors/:id","type":0,"val":"authors","end":""},{"old":"/admin/authors/:id","type":1,"val":"id","end":""}],
+    types: placeholder as Registry['admin.authors.update']['types'],
   },
   'admin.stats': {
     methods: ["GET","HEAD"],

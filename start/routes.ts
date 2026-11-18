@@ -103,6 +103,13 @@ router
         router
           .delete('productions/:productionId/links/:linkId', [controllers.admin.Links, 'destroy'])
           .as('admin.productions.links.destroy')
+        router
+          .get('authors/create', [controllers.admin.Authors, 'create'])
+          .as('admin.authors.create')
+        router.get('authors/:id/edit', [controllers.admin.Authors, 'edit']).as('admin.authors.edit')
+        router.get('authors', [controllers.admin.Authors, 'index']).as('admin.authors')
+        router.post('authors', [controllers.admin.Authors, 'store']).as('admin.authors.store')
+        router.put('authors/:id', [controllers.admin.Authors, 'update']).as('admin.authors.update')
         router.get('stats', [controllers.admin.Dashboard, 'stats']).as('admin.stats')
 
         // Sous-groupe super_admin uniquement

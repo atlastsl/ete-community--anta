@@ -8,7 +8,7 @@ import { BaseModel, column } from '@adonisjs/lucid/orm'
 import { DateTime } from 'luxon'
 
 export class AdminActivityLogSchema extends BaseModel {
-  static $columns = ['actionType', 'adminUserId', 'createdAt', 'id', 'resourceId', 'resourceType'] as const
+  static $columns = ['actionType', 'adminUserId', 'createdAt', 'id', 'metadata', 'resourceId', 'resourceType'] as const
   $columns = AdminActivityLogSchema.$columns
   @column()
   declare actionType: string
@@ -18,6 +18,8 @@ export class AdminActivityLogSchema extends BaseModel {
   declare createdAt: DateTime
   @column({ isPrimary: true })
   declare id: string
+  @column()
+  declare metadata: any | null
   @column()
   declare resourceId: string | null
   @column()
@@ -45,6 +47,58 @@ export class AdminUserSchema extends BaseModel {
   declare role: any
   @column()
   declare sessionVersion: number
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+}
+
+export class AuthorAffiliationSchema extends BaseModel {
+  static $columns = ['authorId', 'createdAt', 'department', 'id', 'institution', 'institutionKey', 'position', 'updatedAt'] as const
+  $columns = AuthorAffiliationSchema.$columns
+  @column()
+  declare authorId: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare department: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare institution: string
+  @column()
+  declare institutionKey: string
+  @column()
+  declare position: number
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+}
+
+export class AuthorSchema extends BaseModel {
+  static $columns = ['consentConfirmedAt', 'consentConfirmedById', 'createdAt', 'createdById', 'firstNames', 'googleScholarUrl', 'id', 'lastNames', 'migrationKey', 'photoKey', 'searchName', 'slug', 'updatedAt'] as const
+  $columns = AuthorSchema.$columns
+  @column.dateTime()
+  declare consentConfirmedAt: DateTime | null
+  @column()
+  declare consentConfirmedById: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdById: string | null
+  @column()
+  declare firstNames: string
+  @column()
+  declare googleScholarUrl: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare lastNames: string
+  @column()
+  declare migrationKey: string | null
+  @column()
+  declare photoKey: string | null
+  @column()
+  declare searchName: string
+  @column()
+  declare slug: string
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime | null
 }

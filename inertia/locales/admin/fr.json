@@ -1,6 +1,7 @@
 {
   "nav": {
     "productions": "Productions",
+    "authors": "Auteurs",
     "statistics": "Statistiques",
     "users": "Utilisateurs",
     "logout": "Se déconnecter",
@@ -189,6 +190,65 @@
       "delete": "Supprimer"
     }
   },
+  "authors": {
+    "heading": "Auteurs",
+    "create_button": "Créer un auteur",
+    "create_title": "Créer un auteur",
+    "edit_title": "Modifier l'auteur",
+    "table": {
+      "author": "Auteur",
+      "primary_affiliation": "Affiliation principale",
+      "updated_at": "Mise à jour",
+      "actions": "Actions"
+    },
+    "no_affiliation": "Aucune affiliation",
+    "actions": {
+      "edit": "Modifier"
+    },
+    "empty_title": "Aucun auteur",
+    "empty_description": "Créez la première fiche auteur pour l'associer à des productions.",
+    "form": {
+      "sections": {
+        "identity": "Identité",
+        "affiliations": "Affiliations",
+        "links": "Liens"
+      },
+      "fields": {
+        "last_names": "Nom(s)",
+        "first_names": "Prénom(s)",
+        "institution": "Institution",
+        "department": "Département",
+        "google_scholar_url": "Lien Google Scholar"
+      },
+      "affiliation_n": "Affiliation {{n}}",
+      "primary_hint": "La première affiliation est l'institution principale.",
+      "no_affiliation_yet": "Cette fiche n'a pas encore d'affiliation.",
+      "add_affiliation": "Ajouter une affiliation",
+      "move_up": "Monter l'affiliation {{n}}",
+      "move_down": "Descendre l'affiliation {{n}}",
+      "remove": "Retirer l'affiliation {{n}}",
+      "moved": "Affiliation déplacée en position {{n}}.",
+      "removed": "Affiliation retirée.",
+      "submit_create": "Créer l'auteur",
+      "scholar_placeholder": "https://scholar.google.com/citations?user=…",
+      "errors": {
+        "last_names_required": "Le nom est obligatoire.",
+        "last_names_too_long": "Le nom ne doit pas dépasser 120 caractères.",
+        "first_names_required": "Le prénom est obligatoire.",
+        "first_names_too_long": "Le prénom ne doit pas dépasser 120 caractères.",
+        "affiliation_required": "Ajoutez au moins une affiliation.",
+        "affiliations_too_many": "20 affiliations au maximum.",
+        "institution_required": "L'institution est obligatoire.",
+        "institution_too_long": "L'institution ne doit pas dépasser 255 caractères.",
+        "department_too_long": "Le département ne doit pas dépasser 255 caractères.",
+        "scholar_url_invalid": "Saisissez une adresse web valide commençant par http:// ou https:// (500 caractères au maximum)."
+      }
+    },
+    "flash": {
+      "created": "Auteur créé.",
+      "saved": "Auteur enregistré."
+    }
+  },
   "users": {
     "title": "Utilisateurs",
     "create_button": "Créer un administrateur",
@@ -323,6 +383,9 @@
       "unpublish": "Dépublication",
       "delete": "Suppression",
       "password_reset": "Réinit. mot de passe"
+    },
+    "resource": {
+      "author": "Auteur"
     }
   },
   "taxonomy": {

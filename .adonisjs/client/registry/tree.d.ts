@@ -9,6 +9,7 @@ export interface ApiDefinition {
     download: typeof routes['production.download']
   }
   privacyPolicy: typeof routes['privacy-policy']
+  health: typeof routes['health']
   stats: {
     view: typeof routes['stats.view']
   }
@@ -47,6 +48,12 @@ export interface ApiDefinition {
         store: typeof routes['admin.productions.links.store']
         destroy: typeof routes['admin.productions.links.destroy']
       }
+    }
+    authors: typeof routes['admin.authors'] & {
+      create: typeof routes['admin.authors.create']
+      edit: typeof routes['admin.authors.edit']
+      store: typeof routes['admin.authors.store']
+      update: typeof routes['admin.authors.update']
     }
     stats: typeof routes['admin.stats']
     users: typeof routes['admin.users'] & {

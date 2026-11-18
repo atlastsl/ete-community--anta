@@ -1,0 +1,145 @@
+import { test } from '@japa/runner'
+import type { Assert } from '@japa/assert'
+import { errors } from '@vinejs/vine'
+import { authorValidator, assertAffiliationRule } from '#validators/admin/author_validator'
+
+const VALID = {
+  lastNames: 'Fictif',
+  firstNames: 'Jean',
+  affiliations: [{ institution: 'Université Exemple', department: 'Physique' }],
+}
+
+/** Messages (clés i18n) indexés par champ, ou {} si valide. */
+async function messages(payload: unknown): Promise<Record<string, string>> {
+  try {
+    await authorValidator.validate(payload)
+    return {}
+  } catch (error) {
+    if (!(error instanceof errors.E_VALIDATION_ERROR)) throw error
+    return Object.fromEntries(
+      (error.messages as { field: string; message: string }[]).map((m) => [m.field, m.message])
+    )
+  }
+}
+
+function expectAffiliationError(fn: () => void, assert: Assert) {
+  try {
+    fn()
+    assert.fail('Expected assertAffiliationRule to throw')
+  } catch (error) {
+    assert.instanceOf(error, errors.E_VALIDATION_ERROR)
+    assert.deepEqual(
+      (error as InstanceType<typeof errors.E_VALIDATION_ERROR>).messages.map(
+        (m: { field: string; message: string }) => [m.field, m.message]
+      ),
+      [['affiliations', 'authors.form.errors.affiliation_required']]
+    )
+  }
+}
+
+test.group('AuthorValidator', () => {
+  test('fiche valide → trim, champs facultatifs absents', async ({ assert }) => {
+    const out = await authorValidator.validate({
+      lastNames: '  Fictif ',
+      firstNames: ' Jean ',
+      affiliations: [{ institution: ' Université Exemple ' }],
+    })
+    assert.equal(out.lastNames, 'Fictif')
+    assert.equal(out.firstNames, 'Jean')
+    assert.deepEqual(out.affiliations, [{ institution: 'Université Exemple' }])
+    assert.isUndefined(out.googleScholarUrl)
+  })
+
+  test('null (chaîne vide convertie par le bodyparser) pour URL et département → absents', async ({
+    assert,
+  }) => {
+    const out = await authorValidator.validate({
+      ...VALID,
+      affiliations: [{ institution: 'U', department: null }],
+      googleScholarUrl: null,
+    })
+    assert.isUndefined(out.googleScholarUrl)
+    assert.isUndefined(out.affiliations[0].department)
+  })
+
+  test('noms obligatoires et ≤ 120 caractères', async ({ assert }) => {
+    assert.deepInclude(await messages({ ...VALID, lastNames: null, firstNames: '   ' }), {
+      lastNames: 'authors.form.errors.last_names_required',
+      firstNames: 'authors.form.errors.first_names_required',
+    })
+    assert.deepInclude(
+      await messages({ ...VALID, lastNames: 'x'.repeat(121), firstNames: 'y'.repeat(121) }),
+      {
+        lastNames: 'authors.form.errors.last_names_too_long',
+        firstNames: 'authors.form.errors.first_names_too_long',
+      }
+    )
+    assert.deepEqual(await messages({ ...VALID, lastNames: 'x'.repeat(120) }), {})
+  })
+
+  test('institution obligatoire ≤ 255, département ≤ 255', async ({ assert }) => {
+    assert.deepEqual(
+      await messages({
+        ...VALID,
+        affiliations: [{ institution: null }, { institution: 'U', department: 'd'.repeat(256) }],
+      }),
+      {
+        'affiliations.0.institution': 'authors.form.errors.institution_required',
+        'affiliations.1.department': 'authors.form.errors.department_too_long',
+      }
+    )
+    assert.deepEqual(
+      await messages({ ...VALID, affiliations: [{ institution: 'i'.repeat(256) }] }),
+      { 'affiliations.0.institution': 'authors.form.errors.institution_too_long' }
+    )
+  })
+
+  test('au plus 20 affiliations', async ({ assert }) => {
+    const many = Array.from({ length: 21 }, (_, i) => ({ institution: `U${i}` }))
+    assert.deepEqual(await messages({ ...VALID, affiliations: many }), {
+      affiliations: 'authors.form.errors.affiliations_too_many',
+    })
+  })
+
+  test('URL Google Scholar http(s) ≤ 500', async ({ assert }) => {
+    const key = { googleScholarUrl: 'authors.form.errors.scholar_url_invalid' }
+    assert.deepEqual(await messages({ ...VALID, googleScholarUrl: 'ftp://scholar.test/x' }), key)
+    assert.deepEqual(await messages({ ...VALID, googleScholarUrl: 'scholar.google.com' }), key)
+    assert.deepEqual(
+      await messages({
+        ...VALID,
+        googleScholarUrl: `https://scholar.google.com/${'a'.repeat(480)}`,
+      }),
+      key
+    )
+    assert.deepEqual(
+      await messages({ ...VALID, googleScholarUrl: 'https://scholar.google.com/citations?user=x' }),
+      {}
+    )
+  })
+
+  test('affiliations manquantes → refus', async ({ assert }) => {
+    assert.deepEqual(await messages({ lastNames: 'A', firstNames: 'B' }), {
+      affiliations: 'authors.form.errors.affiliation_required',
+    })
+  })
+})
+
+test.group('AuthorValidator | assertAffiliationRule', () => {
+  test('fiche du panel sans affiliation → refus', ({ assert }) => {
+    expectAffiliationError(
+      () => assertAffiliationRule({ affiliations: [] }, { isMigrated: false }),
+      assert
+    )
+  })
+
+  test('fiche migrée sans affiliation → acceptée (FR52)', ({ assert }) => {
+    assert.doesNotThrow(() => assertAffiliationRule({ affiliations: [] }, { isMigrated: true }))
+  })
+
+  test('fiche du panel avec affiliation → acceptée', ({ assert }) => {
+    assert.doesNotThrow(() =>
+      assertAffiliationRule({ affiliations: [{ institution: 'U' }] }, { isMigrated: false })
+    )
+  })
+})

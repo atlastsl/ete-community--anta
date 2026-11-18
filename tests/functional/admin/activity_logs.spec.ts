@@ -44,6 +44,37 @@ test.group('Admin activity logs (7.3)', (group) => {
     assert.lengthOf(props.actionTypes, 7)
   })
 
+  test('entrée auteur → resourceName issu de metadata ; null sans metadata', async ({
+    client,
+    assert,
+  }) => {
+    const su = await createUser('super_admin')
+    await AdminActivityLog.create({
+      adminUserId: su.id,
+      actionType: 'create',
+      resourceType: 'author',
+      resourceId: 'author-id',
+      metadata: { name: 'Jean Fictif' },
+    })
+    await AdminActivityLog.create({
+      adminUserId: su.id,
+      actionType: 'publish',
+      resourceType: 'production',
+      resourceId: 'prod-id',
+    })
+
+    const response = await client.get('/admin/activity').loginAs(su)
+    const props = extractProps(response.text())
+    const byType = Object.fromEntries(
+      props.logs.map((l: { resourceType: string; resourceName: string | null }) => [
+        l.resourceType,
+        l.resourceName,
+      ])
+    )
+    assert.equal(byType.author, 'Jean Fictif')
+    assert.isNull(byType.production)
+  })
+
   test('filtre par administrateur', async ({ client, assert }) => {
     const su = await createUser('super_admin')
     const a = await createUser('admin')
