@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Auteurs — Anta (maquette Phase 2)</title>
+<!-- Maquette UX Phase 2 — FR57, FR60, FR53 ; D3, D5, D13, D14 (24/page, filtres dans l'URL)
+     Référence visuelle : design actuel (inertia/css/app.css, PublicLayout, ProductionCard, AdminLayout).
+     Tailwind CDN + Google Fonts à la demande du workflow (rendu plus fidèle au site réel). -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = { theme: { extend: { fontFamily: {
+  sans: ['Inter', 'system-ui', 'sans-serif'],
+  display: ['"Playfair Display"', 'Georgia', 'serif'] } } } };
+</script>
+<style>
+  h1, h2 { font-family: "Playfair Display", Georgia, serif; font-weight: 600; }
+  :focus-visible { outline: 2px solid #15803d; outline-offset: 2px; }
+  .mock-note { font-family: Inter, system-ui, sans-serif; }
+</style>
+</head>
+<body class="flex min-h-screen flex-col bg-[#fafaf9] font-sans text-stone-900 antialiased">
+<a href="#contenu" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-full focus:bg-green-700 focus:px-4 focus:py-2 focus:text-white">Aller au contenu</a>
+<header class="sticky top-0 z-20 border-b border-stone-200 bg-[#fafaf9]/95 backdrop-blur">
+  <div class="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+    <a href="home.html" class="inline-flex items-center"><img src="../../../../../public/images/logo_anta.png" alt="Anta — accueil" class="h-10 w-10"></a>
+    <div class="flex items-center text-sm" role="group" aria-label="Langue">
+      <button class="min-h-11 px-2 font-semibold text-green-700" aria-pressed="true">FR</button>
+      <span class="text-stone-300" aria-hidden="true">|</span>
+      <button class="min-h-11 px-2 text-stone-600 hover:text-green-700" aria-pressed="false">EN</button>
+    </div>
+  </div>
+</header><main id="contenu" class="mx-auto w-full max-w-7xl flex-1 px-6 py-8">
+<h1 class="font-display text-3xl leading-tight">Auteurs</h1>
+<p class="mt-1 mb-6 text-stone-600">Les auteurs des productions publiées sur Anta.</p>
+<div class="mb-6 rounded-lg border border-stone-200 bg-white p-4">
+  <form class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:items-end" role="search" aria-label="Filtrer les auteurs">
+    <div><label for="qa" class="mb-1 block text-xs font-medium uppercase tracking-wide text-stone-500">Nom</label>
+      <div class="relative"><span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span>
+      <input id="qa" type="search" placeholder="Rechercher un auteur" class="h-9 w-full rounded-md border border-stone-300 bg-white pl-9 pr-3 text-sm shadow-sm focus:border-green-700 focus:outline-none focus:ring-[3px] focus:ring-green-700/30"></div></div>
+    <div class="w-full"><label for="inst" class="mb-1 block text-xs font-medium uppercase tracking-wide text-stone-500">Institution</label>
+  <div class="relative"><select id="inst" class="h-9 w-full appearance-none rounded-md border border-stone-300 bg-white pl-3 pr-9 text-sm text-stone-800 shadow-sm focus:border-green-700 focus:outline-none focus:ring-[3px] focus:ring-green-700/30"><option selected>Toutes les institutions</option><option>Université Cheikh Anta Diop</option><option>Université de Dschang</option><option>Université de Lomé</option><option>Université Laval</option><option>Université de Yaoundé I</option></select>
+  <span class="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span></div></div>
+    <div class="w-full"><label for="dom" class="mb-1 block text-xs font-medium uppercase tracking-wide text-stone-500">Domaine des productions</label>
+  <div class="relative"><select id="dom" class="h-9 w-full appearance-none rounded-md border border-stone-300 bg-white pl-3 pr-9 text-sm text-stone-800 shadow-sm focus:border-green-700 focus:outline-none focus:ring-[3px] focus:ring-green-700/30"><option selected>Tous les domaines</option><option>Agronomie</option><option>Droit</option><option>Économie</option><option>Informatique</option><option>Lettres</option><option>Santé publique</option></select>
+  <span class="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span></div></div>
+    <div class="w-full"><label for="sorta" class="mb-1 block text-xs font-medium uppercase tracking-wide text-stone-500">Trier par</label>
+  <div class="relative"><select id="sorta" class="h-9 w-full appearance-none rounded-md border border-stone-300 bg-white pl-3 pr-9 text-sm text-stone-800 shadow-sm focus:border-green-700 focus:outline-none focus:ring-[3px] focus:ring-green-700/30"><option selected>Plus consultés (12 derniers mois)</option><option>Nom (A → Z)</option><option>Nombre de productions</option></select>
+  <span class="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span></div></div>
+  </form>
+</div>
+<p class="mb-4 text-sm text-stone-600" aria-live="polite">86 auteurs · 1–24</p>
+<div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"><article class="relative flex items-center gap-4 rounded-lg border border-stone-200 bg-white p-5 transition-colors hover:border-green-700">
+  <div class="size-14 shrink-0 overflow-hidden rounded-full border border-stone-200" aria-hidden="true" style="background:radial-gradient(circle at 50% 38%,#d6b08c 0 22%,transparent 23%),radial-gradient(ellipse at 50% 100%,#57534e 0 45%,transparent 46%),linear-gradient(#e7e5e4,#d6d3d1)"></div>
+  <div class="min-w-0">
+    <h3 class="font-display text-lg leading-snug"><a href="author-profile.html" class="after:absolute after:inset-0 hover:text-green-700">Jean-Paul TCHOFFO</a></h3>
+    <p class="mt-0.5 truncate text-sm text-stone-600">Université de Dschang</p>
+    <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-stone-500">
+      <span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>14 productions</span>
+      <span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>8 432 vues</span>
+    </div>
+  </div>
+</article><article class="relative flex items-center gap-4 rounded-lg border border-stone-200 bg-white p-5 transition-colors hover:border-green-700">
+  <div class="size-14 text-base bg-green-100 text-green-800 flex shrink-0 items-center justify-center rounded-full font-semibold" aria-hidden="true">FN</div>
+  <div class="min-w-0">
+    <h3 class="font-display text-lg leading-snug"><a href="author-profile.html" class="after:absolute after:inset-0 hover:text-green-700">Fatou NDIAYE</a></h3>
+    <p class="mt-0.5 truncate text-sm text-stone-600">Université Cheikh Anta Diop</p>
+    <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-stone-500">
+      <span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>6 productions</span>
+      <span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>5 107 vues</span>
+    </div>
+  </div>
+</article><article class="relative flex items-center gap-4 rounded-lg border border-stone-200 bg-white p-5 transition-colors hover:border-green-700">
+  <div class="size-14 text-base bg-green-100 text-green-800 flex shrink-0 items-center justify-center rounded-full font-semibold" aria-hidden="true">SK</div>
+  <div class="min-w-0">
+    <h3 class="font-display text-lg leading-snug"><a href="author-profile.html" class="after:absolute after:inset-0 hover:text-green-700">Serge KAMDEM</a></h3>
+    <p class="mt-0.5 truncate text-sm text-stone-600">Université de Dschang</p>
+    <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-stone-500">
+      <span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>9 productions</span>
+      <span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>4 238 vues</span>
+    </div>
+  </div>
+</article><article class="relative flex items-center gap-4 rounded-lg border border-stone-200 bg-white p-5 transition-colors hover:border-green-700">
+  <div class="size-14 shrink-0 overflow-hidden rounded-full border border-stone-200" aria-hidden="true" style="background:radial-gradient(circle at 50% 38%,#d6b08c 0 22%,transparent 23%),radial-gradient(ellipse at 50% 100%,#57534e 0 45%,transparent 46%),linear-gradient(#e7e5e4,#d6d3d1)"></div>
+  <div class="min-w-0">
+    <h3 class="font-display text-lg leading-snug"><a href="author-profile.html" class="after:absolute after:inset-0 hover:text-green-700">Clarisse FOTSO</a></h3>
+    <p class="mt-0.5 truncate text-sm text-stone-600">Université de Dschang</p>
+    <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-stone-500">
+      <span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>5 productions</span>
+      <span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>3 901 vues</span>
+    </div>
+  </div>
+</article><article class="relative flex items-center gap-4 rounded-lg border border-stone-200 bg-white p-5 transition-colors hover:border-green-700">
+  <div class="size-14 text-base bg-green-100 text-green-800 flex shrink-0 items-center justify-center rounded-full font-semibold" aria-hidden="true">AM</div>
+  <div class="min-w-0">
+    <h3 class="font-display text-lg leading-snug"><a href="author-profile.html" class="after:absolute after:inset-0 hover:text-green-700">Aïcha MBARGA</a></h3>
+    <p class="mt-0.5 truncate text-sm text-stone-600">Université de Yaoundé I</p>
+    <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-stone-500">
+      <span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>7 productions</span>
+      <span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>3 512 vues</span>
+    </div>
+  </div>
+</article><article class="relative flex items-center gap-4 rounded-lg border border-stone-200 bg-white p-5 transition-colors hover:border-green-700">
+  <div class="size-14 text-base bg-green-100 text-green-800 flex shrink-0 items-center justify-center rounded-full font-semibold" aria-hidden="true">KA</div>
+  <div class="min-w-0">
+    <h3 class="font-display text-lg leading-snug"><a href="author-profile.html" class="after:absolute after:inset-0 hover:text-green-700">Koffi AGBODJAN</a></h3>
+    <p class="mt-0.5 truncate text-sm text-stone-600">Université de Lomé</p>
+    <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-stone-500">
+      <span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>4 productions</span>
+      <span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>2 977 vues</span>
+    </div>
+  </div>
+</article><article class="relative flex items-center gap-4 rounded-lg border border-stone-200 bg-white p-5 transition-colors hover:border-green-700">
+  <div class="size-14 text-base bg-green-100 text-green-800 flex shrink-0 items-center justify-center rounded-full font-semibold" aria-hidden="true">IO</div>
+  <div class="min-w-0">
+    <h3 class="font-display text-lg leading-snug"><a href="author-profile.html" class="after:absolute after:inset-0 hover:text-green-700">Idrissa OUÉDRAOGO</a></h3>
+    <p class="mt-0.5 truncate text-sm text-stone-600">Université Joseph Ki-Zerbo</p>
+    <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-stone-500">
+      <span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>3 productions</span>
+      <span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>2 640 vues</span>
+    </div>
+  </div>
+</article><article class="relative flex items-center gap-4 rounded-lg border border-stone-200 bg-white p-5 transition-colors hover:border-green-700">
+  <div class="size-14 text-base bg-green-100 text-green-800 flex shrink-0 items-center justify-center rounded-full font-semibold" aria-hidden="true">MT</div>
+  <div class="min-w-0">
+    <h3 class="font-display text-lg leading-snug"><a href="author-profile.html" class="after:absolute after:inset-0 hover:text-green-700">Marie-Ève TREMBLAY</a></h3>
+    <p class="mt-0.5 truncate text-sm text-stone-600">Université Laval</p>
+    <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-stone-500">
+      <span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>8 productions</span>
+      <span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>2 415 vues</span>
+    </div>
+  </div>
+</article><article class="relative flex items-center gap-4 rounded-lg border border-stone-200 bg-white p-5 transition-colors hover:border-green-700">
+  <div class="flex size-14 shrink-0 items-center justify-center rounded-full bg-green-100 text-base font-semibold text-green-800" aria-hidden="true">OB</div>
+  <div class="min-w-0"><h3 class="font-display text-lg leading-snug"><a href="author-profile.html" class="after:absolute after:inset-0 hover:text-green-700">Ousmane BARRY</a></h3>
+  <p class="mt-0.5 truncate text-sm text-stone-600">Université Gamal Abdel Nasser de Conakry</p>
+  <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-stone-500"><span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>1 production</span><span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>2 230 vues</span></div></div>
+</article><article class="relative flex items-center gap-4 rounded-lg border border-stone-200 bg-white p-5 transition-colors hover:border-green-700">
+  <div class="flex size-14 shrink-0 items-center justify-center rounded-full bg-green-100 text-base font-semibold text-green-800" aria-hidden="true">NA</div>
+  <div class="min-w-0"><h3 class="font-display text-lg leading-snug"><a href="author-profile.html" class="after:absolute after:inset-0 hover:text-green-700">Nadège ATANGANA</a></h3>
+  <p class="mt-0.5 truncate text-sm text-stone-600">Université de Yaoundé II</p>
+  <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-stone-500"><span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>8 productions</span><span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>2 154 vues</span></div></div>
+</article><article class="relative flex items-center gap-4 rounded-lg border border-stone-200 bg-white p-5 transition-colors hover:border-green-700">
+  <div class="flex size-14 shrink-0 items-center justify-center rounded-full bg-green-100 text-base font-semibold text-green-800" aria-hidden="true">HS</div>
+  <div class="min-w-0"><h3 class="font-display text-lg leading-snug"><a href="author-profile.html" class="after:absolute after:inset-0 hover:text-green-700">Hamidou SAWADOGO</a></h3>
+  <p class="mt-0.5 truncate text-sm text-stone-600">Université Joseph Ki-Zerbo</p>
+  <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-stone-500"><span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>6 productions</span><span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>2 072 vues</span></div></div>
+</article><article class="relative flex items-center gap-4 rounded-lg border border-stone-200 bg-white p-5 transition-colors hover:border-green-700">
+  <div class="flex size-14 shrink-0 items-center justify-center rounded-full bg-green-100 text-base font-semibold text-green-800" aria-hidden="true">GB</div>
+  <div class="min-w-0"><h3 class="font-display text-lg leading-snug"><a href="author-profile.html" class="after:absolute after:inset-0 hover:text-green-700">Geneviève BOUCHARD</a></h3>
+  <p class="mt-0.5 truncate text-sm text-stone-600">Université Laval</p>
+  <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-stone-500"><span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>4 productions</span><span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>1 984 vues</span></div></div>
+</article><article class="relative flex items-center gap-4 rounded-lg border border-stone-200 bg-white p-5 transition-colors hover:border-green-700">
+  <div class="flex size-14 shrink-0 items-center justify-center rounded-full bg-green-100 text-base font-semibold text-green-800" aria-hidden="true">MT</div>
+  <div class="min-w-0"><h3 class="font-display text-lg leading-snug"><a href="author-profile.html" class="after:absolute after:inset-0 hover:text-green-700">Moussa TRAORÉ</a></h3>
+  <p class="mt-0.5 truncate text-sm text-stone-600">Université des sciences sociales et de gestion de Bamako</p>
+  <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-stone-500"><span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>2 productions</span><span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>1 890 vues</span></div></div>
+</article><article class="relative flex items-center gap-4 rounded-lg border border-stone-200 bg-white p-5 transition-colors hover:border-green-700">
+  <div class="flex size-14 shrink-0 items-center justify-center rounded-full bg-green-100 text-base font-semibold text-green-800" aria-hidden="true">EN</div>
+  <div class="min-w-0"><h3 class="font-display text-lg leading-snug"><a href="author-profile.html" class="after:absolute after:inset-0 hover:text-green-700">Esther NGO BIYONG</a></h3>
+  <p class="mt-0.5 truncate text-sm text-stone-600">Université de Douala</p>
+  <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-stone-500"><span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>9 productions</span><span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>1 790 vues</span></div></div>
+</article><article class="relative flex items-center gap-4 rounded-lg border border-stone-200 bg-white p-5 transition-colors hover:border-green-700">
+  <div class="flex size-14 shrink-0 items-center justify-center rounded-full bg-green-100 text-base font-semibold text-green-800" aria-hidden="true">YK</div>
+  <div class="min-w-0"><h3 class="font-display text-lg leading-snug"><a href="author-profile.html" class="after:absolute after:inset-0 hover:text-green-700">Yaovi KPODAR</a></h3>
+  <p class="mt-0.5 truncate text-sm text-stone-600">Université de Kara</p>
+  <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-stone-500"><span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>7 productions</span><span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>1 684 vues</span></div></div>
+</article><article class="relative flex items-center gap-4 rounded-lg border border-stone-200 bg-white p-5 transition-colors hover:border-green-700">
+  <div class="flex size-14 shrink-0 items-center justify-center rounded-full bg-green-100 text-base font-semibold text-green-800" aria-hidden="true">RS</div>
+  <div class="min-w-0"><h3 class="font-display text-lg leading-snug"><a href="author-profile.html" class="after:absolute after:inset-0 hover:text-green-700">Rokhaya SECK</a></h3>
+  <p class="mt-0.5 truncate text-sm text-stone-600">Université Cheikh Anta Diop</p>
+  <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-stone-500"><span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>5 productions</span><span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>1 572 vues</span></div></div>
+</article><article class="relative flex items-center gap-4 rounded-lg border border-stone-200 bg-white p-5 transition-colors hover:border-green-700">
+  <div class="flex size-14 shrink-0 items-center justify-center rounded-full bg-green-100 text-base font-semibold text-green-800" aria-hidden="true">CN</div>
+  <div class="min-w-0"><h3 class="font-display text-lg leading-snug"><a href="author-profile.html" class="after:absolute after:inset-0 hover:text-green-700">Christian NANA</a></h3>
+  <p class="mt-0.5 truncate text-sm text-stone-600">Université de Dschang</p>
+  <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-stone-500"><span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>3 productions</span><span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>1 454 vues</span></div></div>
+</article><article class="relative flex items-center gap-4 rounded-lg border border-stone-200 bg-white p-5 transition-colors hover:border-green-700">
+  <div class="flex size-14 shrink-0 items-center justify-center rounded-full bg-green-100 text-base font-semibold text-green-800" aria-hidden="true">MZ</div>
+  <div class="min-w-0"><h3 class="font-display text-lg leading-snug"><a href="author-profile.html" class="after:absolute after:inset-0 hover:text-green-700">Mireille ZINSOU</a></h3>
+  <p class="mt-0.5 truncate text-sm text-stone-600">Université d'Abomey-Calavi</p>
+  <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-stone-500"><span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>1 production</span><span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>1 330 vues</span></div></div>
+</article><article class="relative flex items-center gap-4 rounded-lg border border-stone-200 bg-white p-5 transition-colors hover:border-green-700">
+  <div class="flex size-14 shrink-0 items-center justify-center rounded-full bg-green-100 text-base font-semibold text-green-800" aria-hidden="true">AC</div>
+  <div class="min-w-0"><h3 class="font-display text-lg leading-snug"><a href="author-profile.html" class="after:absolute after:inset-0 hover:text-green-700">Abdoulaye CISSÉ</a></h3>
+  <p class="mt-0.5 truncate text-sm text-stone-600">Université Gaston Berger</p>
+  <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-stone-500"><span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>8 productions</span><span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>1 200 vues</span></div></div>
+</article><article class="relative flex items-center gap-4 rounded-lg border border-stone-200 bg-white p-5 transition-colors hover:border-green-700">
+  <div class="flex size-14 shrink-0 items-center justify-center rounded-full bg-green-100 text-base font-semibold text-green-800" aria-hidden="true">JM</div>
+  <div class="min-w-0"><h3 class="font-display text-lg leading-snug"><a href="author-profile.html" class="after:absolute after:inset-0 hover:text-green-700">Josiane MBALLA</a></h3>
+  <p class="mt-0.5 truncate text-sm text-stone-600">Université de Ngaoundéré</p>
+  <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-stone-500"><span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>6 productions</span><span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>1 064 vues</span></div></div>
+</article><article class="relative flex items-center gap-4 rounded-lg border border-stone-200 bg-white p-5 transition-colors hover:border-green-700">
+  <div class="flex size-14 shrink-0 items-center justify-center rounded-full bg-green-100 text-base font-semibold text-green-800" aria-hidden="true">KM</div>
+  <div class="min-w-0"><h3 class="font-display text-lg leading-snug"><a href="author-profile.html" class="after:absolute after:inset-0 hover:text-green-700">Kodjo MENSAH</a></h3>
+  <p class="mt-0.5 truncate text-sm text-stone-600">Université de Lomé</p>
+  <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-stone-500"><span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>4 productions</span><span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>922 vues</span></div></div>
+</article><article class="relative flex items-center gap-4 rounded-lg border border-stone-200 bg-white p-5 transition-colors hover:border-green-700">
+  <div class="flex size-14 shrink-0 items-center justify-center rounded-full bg-green-100 text-base font-semibold text-green-800" aria-hidden="true">AS</div>
+  <div class="min-w-0"><h3 class="font-display text-lg leading-snug"><a href="author-profile.html" class="after:absolute after:inset-0 hover:text-green-700">Aminata SANGARÉ</a></h3>
+  <p class="mt-0.5 truncate text-sm text-stone-600">Université Félix Houphouët-Boigny</p>
+  <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-stone-500"><span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>2 productions</span><span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>774 vues</span></div></div>
+</article><article class="relative flex items-center gap-4 rounded-lg border border-stone-200 bg-white p-5 transition-colors hover:border-green-700">
+  <div class="flex size-14 shrink-0 items-center justify-center rounded-full bg-green-100 text-base font-semibold text-green-800" aria-hidden="true">PN</div>
+  <div class="min-w-0"><h3 class="font-display text-lg leading-snug"><a href="author-profile.html" class="after:absolute after:inset-0 hover:text-green-700">Patrice NDONGO</a></h3>
+  <p class="mt-0.5 truncate text-sm text-stone-600">Université de Yaoundé I</p>
+  <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-stone-500"><span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>9 productions</span><span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>620 vues</span></div></div>
+</article><article class="relative flex items-center gap-4 rounded-lg border border-stone-200 bg-white p-5 transition-colors hover:border-green-700">
+  <div class="flex size-14 shrink-0 items-center justify-center rounded-full bg-green-100 text-base font-semibold text-green-800" aria-hidden="true">SD</div>
+  <div class="min-w-0"><h3 class="font-display text-lg leading-snug"><a href="author-profile.html" class="after:absolute after:inset-0 hover:text-green-700">Salimata DIARRA</a></h3>
+  <p class="mt-0.5 truncate text-sm text-stone-600">Université de Ségou</p>
+  <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-stone-500"><span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>7 productions</span><span class="inline-flex items-center gap-1.5"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>460 vues</span></div></div>
+</article></div>
+<nav aria-label="Pagination des auteurs" class="mt-10 flex items-center justify-center gap-1.5"><a href="#" class="flex h-9 min-w-9 items-center justify-center rounded-md border border-stone-200 bg-white px-2 text-stone-600 pointer-events-none opacity-40" aria-label="Page précédente" aria-disabled="true"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></a><a href="#" aria-current="page" class="flex h-9 min-w-9 items-center justify-center rounded-md border border-green-700 bg-green-700 px-2 text-sm font-medium text-white">1</a><a href="#" class="flex h-9 min-w-9 items-center justify-center rounded-md border border-stone-200 bg-white px-2 text-sm text-stone-700 hover:border-green-700 hover:text-green-700">2</a><a href="#" class="flex h-9 min-w-9 items-center justify-center rounded-md border border-stone-200 bg-white px-2 text-sm text-stone-700 hover:border-green-700 hover:text-green-700">3</a><a href="#" class="flex h-9 min-w-9 items-center justify-center rounded-md border border-stone-200 bg-white px-2 text-sm text-stone-700 hover:border-green-700 hover:text-green-700">4</a><a href="#" class="flex h-9 min-w-9 items-center justify-center rounded-md border border-stone-200 bg-white px-2 text-stone-600 hover:border-green-700 hover:text-green-700" aria-label="Page suivante"><svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></a></nav>
+</main><footer class="mt-12 border-t border-stone-200 bg-stone-50">
+  <div class="mx-auto grid max-w-7xl gap-8 px-6 py-10 sm:grid-cols-3">
+    <div>
+      <img src="../../../../../public/images/logo_anta.png" alt="Anta" class="h-8 w-8">
+      <p class="mt-3 max-w-xs text-sm text-stone-600">Anta est la bibliothèque numérique académique de l'association ETEC Community : thèses, mémoires, articles et conférences en accès libre.</p>
+    </div>
+    <nav aria-labelledby="f-explorer">
+      <h2 id="f-explorer" class="text-sm font-semibold text-stone-900">Explorer</h2>
+      <ul class="mt-3 space-y-2 text-sm text-stone-600">
+        <li><a href="home.html" class="hover:text-green-700">Accueil</a></li>
+        <li><a href="#" class="hover:text-green-700">Recherche avancée</a></li>
+        <li><a href="authors-list.html" class="hover:text-green-700">Auteurs</a></li>
+        <li><a href="#" class="hover:text-green-700">Politique de confidentialité</a></li>
+      </ul>
+    </nav>
+    <div>
+      <h2 class="text-sm font-semibold text-stone-900">Contact</h2>
+      <p class="mt-3 text-sm text-stone-600"><a href="mailto:contact@anta.community" class="hover:text-green-700">contact@anta.community</a></p>
+    </div>
+  </div>
+  <div class="border-t border-stone-200"><p class="mx-auto max-w-7xl px-6 py-4 text-sm text-stone-600">© 2026 ETEC Community. Tous droits réservés.</p></div>
+</footer>
+</body>
+</html>

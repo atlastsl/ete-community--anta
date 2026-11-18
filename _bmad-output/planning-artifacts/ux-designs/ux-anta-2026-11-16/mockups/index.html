@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Index des maquettes — Anta (maquette Phase 2)</title>
+<!-- Maquette UX Phase 2 — index
+     Référence visuelle : design actuel (inertia/css/app.css, PublicLayout, ProductionCard, AdminLayout).
+     Tailwind CDN + Google Fonts à la demande du workflow (rendu plus fidèle au site réel). -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = { theme: { extend: { fontFamily: {
+  sans: ['Inter', 'system-ui', 'sans-serif'],
+  display: ['"Playfair Display"', 'Georgia', 'serif'] } } } };
+</script>
+<style>
+  h1, h2 { font-family: "Playfair Display", Georgia, serif; font-weight: 600; }
+  :focus-visible { outline: 2px solid #15803d; outline-offset: 2px; }
+  .mock-note { font-family: Inter, system-ui, sans-serif; }
+</style>
+</head>
+<body class="bg-[#fafaf9] font-sans text-stone-900 antialiased">
+<main class="mx-auto max-w-4xl px-6 py-10">
+<p class="text-sm font-medium uppercase tracking-widest text-green-700">UX Phase 2 · ux-anta-2026-11-16</p>
+<h1 class="mt-2 font-display text-3xl">Écrans clés — maquettes HTML</h1>
+<p class="mt-2 text-stone-600">Basées sur le design actuellement implémenté (fond stone, cartes blanches bordées, accent vert unique, Inter + Playfair Display). Décisions D1–D23 du journal. Vignettes et photos = dégradés de remplacement.</p>
+<p class="mt-4 text-sm text-stone-600">Références visuelles des spines <a class="text-green-700 underline" href="../DESIGN.md">DESIGN.md</a> et <a class="text-green-700 underline" href="../EXPERIENCE.md">EXPERIENCE.md</a> : en cas de conflit, les spines priment sur les maquettes.</p>
+<ul class="mt-8 grid gap-4 sm:grid-cols-2"><li><a href="home.html" class="block rounded-lg border border-stone-200 bg-white p-5 transition-colors hover:border-green-700">
+  <h2 class="text-lg text-stone-900">Accueil refondu</h2><p class="mt-1 text-sm text-stone-700">Recherche + « Recherche avancée », bannière à la une (3 éléments), 4 blocs dont « Auteurs les plus consultés », carte texte seule, lien « Auteurs » en pied de page.</p><p class="mt-2 text-xs uppercase tracking-wide text-stone-500">FR9, FR44–FR49, FR59, FR60 · D1–D9</p></a></li><li><a href="author-profile.html" class="block rounded-lg border border-stone-200 bg-white p-5 transition-colors hover:border-green-700">
+  <h2 class="text-lg text-stone-900">Profil d'auteur</h2><p class="mt-1 text-sm text-stone-700">Avatar, affiliations, Google Scholar (nouvel onglet), totaux, productions triables, 12/page.</p><p class="mt-2 text-xs uppercase tracking-wide text-stone-500">FR58, FR59 · D11, D13–D15</p></a></li><li><a href="authors-list.html" class="block rounded-lg border border-stone-200 bg-white p-5 transition-colors hover:border-green-700">
+  <h2 class="text-lg text-stone-900">Liste des auteurs</h2><p class="mt-1 text-sm text-stone-700">Recherche par nom, filtres institution / domaine, tri, grille de cartes auteur, 24/page.</p><p class="mt-2 text-xs uppercase tracking-wide text-stone-500">FR57, FR60 · D3, D13, D14</p></a></li><li><a href="production-detail-suggestions.html" class="block rounded-lg border border-stone-200 bg-white p-5 transition-colors hover:border-green-700">
+  <h2 class="text-lg text-stone-900">Détail : auteurs et suggestions</h2><p class="mt-1 text-sm text-stone-700">Noms liés (un sans profil public en texte simple), « Productions similaires » 4 cartes + état squelette.</p><p class="mt-2 text-xs uppercase tracking-wide text-stone-500">FR59, FR61 · D12, D22</p></a></li><li><a href="admin-featured.html" class="block rounded-lg border border-stone-200 bg-white p-5 transition-colors hover:border-green-700">
+  <h2 class="text-lg text-stone-900">Admin : À la une</h2><p class="mt-1 text-sm text-stone-700">3 emplacements ordonnés, vignette manquante à téléverser sur place, aperçu en direct, sélecteur avec recherche.</p><p class="mt-2 text-xs uppercase tracking-wide text-stone-500">FR47–FR51 · D9, D10, D20, D21</p></a></li><li><a href="admin-author-picker.html" class="block rounded-lg border border-stone-200 bg-white p-5 transition-colors hover:border-green-700">
+  <h2 class="text-lg text-stone-900">Admin : sélecteur d'auteurs</h2><p class="mt-1 text-sm text-stone-700">Combobox (affiliation, badge « À compléter »), liste ordonnée ↑ ↓ ×, fenêtre « Créer un auteur » avec consentement facultatif.</p><p class="mt-2 text-xs uppercase tracking-wide text-stone-500">FR52–FR54 · D16, D18</p></a></li><li><a href="admin-authors-list.html" class="block rounded-lg border border-stone-200 bg-white p-5 transition-colors hover:border-green-700">
+  <h2 class="text-lg text-stone-900">Admin : liste des auteurs</h2><p class="mt-1 text-sm text-stone-700">Filtres « Consentement en attente » / « À compléter », badges de statut, retrait du consentement, suppression désactivée avec infobulle.</p><p class="mt-2 text-xs uppercase tracking-wide text-stone-500">FR52, FR53, FR55, FR56 · D17, D19</p></a></li></ul>
+</main></body></html>
