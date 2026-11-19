@@ -13,6 +13,7 @@ import FileStorageService from '#services/file_storage_service'
 import StatsService from '#services/stats_service'
 import env from '#start/env'
 import ProductionCardTransformer from '#transformers/production_card_transformer'
+import PublicBylineService from '#services/public_byline_service'
 
 /** Sérialisation complète pour la page détail (toutes métadonnées publiques + fichiers/liens). */
 function serializeDetail(p: Production) {
@@ -21,7 +22,8 @@ function serializeDetail(p: Production) {
     slug: p.slug,
     title: p.title,
     summary: p.summary,
-    authors: p.authorNames ?? [],
+    // Byline computed by `PublicBylineService.attach` (Story 10.4): `{ name, slug | null }[]`.
+    authors: PublicBylineService.of(p),
     tags: p.tags ?? [],
     category: p.category,
     domain: p.domain,
@@ -98,12 +100,14 @@ export default class ProductionsController {
     const meta = paginator.getMeta()
     const facets = await SearchService.facets()
 
+    await PublicBylineService.attach(paginator.all())
     // Résultats approchants : si la recherche exacte ne renvoie rien, proposer les plus proches.
     let results = ProductionCardTransformer.transform(paginator.all())
     let approximate = false
     if (meta.total === 0 && q) {
       const approx = await SearchService.approximate({ q, filters })
       if (approx.length) {
+        await PublicBylineService.attach(approx)
         results = ProductionCardTransformer.transform(approx)
         approximate = true
       }
@@ -149,6 +153,9 @@ export default class ProductionsController {
       return inertia.render('errors/not_found', { meta: SeoService.notFound(locale) })
     }
 
+    await PublicBylineService.attach([production])
+    const detail = serializeDetail(production)
+
     // URL signée R2 (TTL 1h) par fichier, générée serveur (jamais la clé brute exposée).
     // Repli par fichier : un échec R2 → url null (lecteur en "aperçu indisponible"), sans 500 (NFR12).
     const files = await Promise.all(
@@ -171,14 +178,15 @@ export default class ProductionsController {
     )
 
     return inertia.render('production', {
-      production: { ...serializeDetail(production), files },
+      production: { ...detail, files },
       meta: SeoService.forProduction(
         locale,
         {
           title: production.title,
           summary: production.summary,
           slug: production.slug,
-          authors: production.authorNames,
+          // Names shown on the page (byline), nothing else about the authors (P2.7).
+          authors: detail.authors.map((author) => author.name),
         },
         env.get('APP_URL')
       ),

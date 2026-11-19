@@ -15,3 +15,12 @@ export type SeoMeta = {
   ogUrl?: string
   locale: 'fr' | 'en'
 }
+
+/**
+ * Document title of a public page (Story 10.4): the server title (`meta.title`, already
+ * suffixed « — Anta ») escaped for Inertia's head manager, which inserts it as HTML; `''`
+ * without meta (the entry's default title then applies).
+ */
+export function documentTitle(title: string | null | undefined): string {
+  return (title ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;')
+}

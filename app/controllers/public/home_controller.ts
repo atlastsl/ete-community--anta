@@ -4,6 +4,7 @@ import ProductionStatus from '#enums/production_status'
 import SeoService from '#services/seo_service'
 import { PRODUCTION_CATEGORIES } from '#constants/production_taxonomy'
 import ProductionCardTransformer from '#transformers/production_card_transformer'
+import PublicBylineService from '#services/public_byline_service'
 
 const SECTION_SIZE = 6
 
@@ -28,6 +29,8 @@ export default class HomeController {
       .orderBy('antaPublishedAt', 'desc')
       .orderBy('id', 'asc')
       .limit(SECTION_SIZE)
+
+    await PublicBylineService.attach([...mostViewedRows, ...recentRows])
 
     return inertia.render('home', {
       mostViewed: ProductionCardTransformer.transform(mostViewedRows),

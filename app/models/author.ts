@@ -5,8 +5,11 @@ import {
   manyToMany,
   beforeSave,
   beforeCreate,
+  scope,
 } from '@adonisjs/lucid/orm'
 import type { HasMany, ManyToMany } from '@adonisjs/lucid/types/relations'
+import type { ModelQueryBuilderContract } from '@adonisjs/lucid/types/model'
+import ProductionStatus from '#enums/production_status'
 import { DateTime } from 'luxon'
 import AuthorAffiliation from '#models/author_affiliation'
 import Production from '#models/production'
@@ -71,6 +74,18 @@ export default class Author extends BaseModel {
   /** Productions linked through the pivot `production_authors` (Story 9.2, `withCount`). */
   @manyToMany(() => Production, { pivotTable: 'production_authors' })
   declare productions: ManyToMany<typeof Production>
+
+  /**
+   * Profile visible on the public site (P2.1, D11): consent confirmed **and** at least one
+   * published production linked. The single definition of the rule, used by the profile
+   * page (Story 10.3) and the bylines (Story 10.4); anything else stays invisible (404, no
+   * link, no slug exposed).
+   */
+  static visibleOnSite = scope((query: ModelQueryBuilderContract<typeof Author>) => {
+    query
+      .whereNotNull('consent_confirmed_at')
+      .whereHas('productions', (q) => q.where('status', ProductionStatus.PUBLISHED))
+  })
 
   @beforeSave()
   static normalizeSearchName(author: Author) {

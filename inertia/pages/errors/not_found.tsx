@@ -9,8 +9,8 @@ const LINK_BASE =
  * d'exceptions (URL inconnue) et par les contrôleurs publics (production ou profil non visible).
  * `meta` (titre traduit) est injecté côté serveur dans le <head> par l'edge, non utilisé ici.
  * Liens `<a href>` (chargement complet), pas le composant Link d'Inertia : la page est aussi rendue par le
- * bundle admin (URL `/admin/*` inconnue, sans PublicLayout ni locales publiques) et le titre
- * serveur de la 404 resterait affiché après une navigation SPA (pas de <Head> public).
+ * bundle admin (URL `/admin/*` inconnue, sans PublicLayout ni locales publiques) dont le titre
+ * ne suivrait pas une navigation SPA (le <Head> de titre est celui de PublicLayout, Story 10.4).
  */
 export default function NotFound(_props: { meta?: SeoMeta }) {
   const { t } = useTranslation()

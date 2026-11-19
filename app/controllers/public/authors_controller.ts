@@ -3,6 +3,7 @@ import PublicAuthorService from '#services/public_author_service'
 import MediaService from '#services/media_service'
 import SeoService, { type Locale } from '#services/seo_service'
 import ProductionCardTransformer from '#transformers/production_card_transformer'
+import PublicBylineService from '#services/public_byline_service'
 import env from '#start/env'
 
 /**
@@ -34,6 +35,7 @@ export default class AuthorsController {
     }
 
     const stats = await PublicAuthorService.stats(author.id)
+    await PublicBylineService.attach(paginator.all())
 
     return inertia.render('author', {
       author: {

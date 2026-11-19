@@ -13,7 +13,8 @@ import { resolvePageComponent } from '@adonisjs/inertia/helpers'
 const appName = import.meta.env.VITE_APP_NAME || 'Anta'
 
 createInertiaApp({
-  title: (title) => (title ? `${title} - ${appName}` : appName),
+  // Public titles come complete from `SeoService` (« … — Anta ») through PublicLayout's <Head>.
+  title: (title) => title || appName,
   resolve: (name) => {
     return resolvePageComponent(
       `./pages/${name}.tsx`,

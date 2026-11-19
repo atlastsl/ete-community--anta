@@ -73,6 +73,7 @@
     "breadcrumb_home": "Home",
     "breadcrumb_productions": "Productions",
     "summary": "Summary",
+    "authors": "Authors",
     "files": "Files",
     "external_links": "External links",
     "category": "Category",
@@ -468,6 +469,10 @@
         "downloads": "Most downloaded",
         "title": "Title (A → Z)"
       }
+    },
+    "byline": {
+      "others_one": "and {{count}} other",
+      "others_other": "and {{count}} others"
     }
   }
 }

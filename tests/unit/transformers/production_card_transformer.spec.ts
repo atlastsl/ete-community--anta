@@ -3,7 +3,8 @@ import { DateTime } from 'luxon'
 import Production from '#models/production'
 import ProductionCardTransformer from '#transformers/production_card_transformer'
 
-// Story 10.3 — transformer unique des cartes (accueil, listing, profil) ; props inchangées.
+// Story 10.3 — transformer unique des cartes (accueil, listing, profil).
+// Story 10.4 — `authors` : `{ name, slug | null }[]` calculés par `PublicBylineService` ($extras.byline).
 test.group('ProductionCardTransformer', () => {
   function production() {
     const p = new Production()
@@ -15,7 +16,14 @@ test.group('ProductionCardTransformer', () => {
     p.domain = 'Informatique'
     p.summary = 'Résumé.'
     p.antaPublishedAt = DateTime.fromISO('2026-01-02T03:04:05.000Z', { zone: 'utc' })
-    p.$extras = { viewsCount: '4', downloadsCount: 2 }
+    p.$extras = {
+      viewsCount: '4',
+      downloadsCount: 2,
+      byline: [
+        { name: 'Jeanne EXEMPLE', slug: 'jeanne-exemple' },
+        { name: 'Paul Fictif', slug: null },
+      ],
+    }
     return p
   }
 
@@ -24,7 +32,10 @@ test.group('ProductionCardTransformer', () => {
       id: '7c6f1d3e-3f7a-4c55-9a51-0d2a3b4c5d6e',
       slug: 'oeuvre-test',
       title: 'Oeuvre test',
-      authors: ['Jeanne Exemple', 'Paul Fictif'],
+      authors: [
+        { name: 'Jeanne EXEMPLE', slug: 'jeanne-exemple' },
+        { name: 'Paul Fictif', slug: null },
+      ],
       category: 'Livre',
       domain: 'Informatique',
       summary: 'Résumé.',
@@ -44,5 +55,15 @@ test.group('ProductionCardTransformer', () => {
     assert.equal(card.downloadsCount, 0)
     assert.isNull(card.publishedAt)
     assert.deepEqual(card.authors, [])
+  })
+
+  test('byline non calculée → noms jsonb sans lien (jamais de slug)', ({ assert }) => {
+    const p = production()
+    p.$extras = {}
+    p.authorNames = ['Jeanne Exemple', ' ', 'Paul Fictif']
+    assert.deepEqual(new ProductionCardTransformer(p).toObject().authors, [
+      { name: 'Jeanne Exemple', slug: null },
+      { name: 'Paul Fictif', slug: null },
+    ])
   })
 })

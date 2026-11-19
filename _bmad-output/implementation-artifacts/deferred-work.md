@@ -12,7 +12,7 @@
 
 ## Deferred from: code review of Epic 5 (stories 5.1-5.7) (2026-06-01)
 
-- **`<title>`/meta non rafraîchis en navigation SPA — Story 5.5** : les meta SEO vivent uniquement dans l'edge (serveur, `ssr:false`). Objectif SEO crawlers (premier chargement) atteint, mais lors d'un `router.visit` client le titre d'onglet et les og:* restent ceux de la page initiale. Action éventuelle : ajouter `<Head>` Inertia côté pages publiques pour synchroniser titre/meta client-side (amélioration, hors AC 5.5).
+- **`<title>`/meta non rafraîchis en navigation SPA — Story 5.5** — *titre traité en 10.4 (2026-11-19) : `<Head>` de `PublicLayout` ; og:* client non synchronisés (sans effet pour les robots)* : les meta SEO vivent uniquement dans l'edge (serveur, `ssr:false`). Objectif SEO crawlers (premier chargement) atteint, mais lors d'un `router.visit` client le titre d'onglet et les og:* restent ceux de la page initiale. Action éventuelle : ajouter `<Head>` Inertia côté pages publiques pour synchroniser titre/meta client-side (amélioration, hors AC 5.5).
 - **`<title>` de `/privacy-policy` générique « Anta » — Story 5.5** : conforme à la story (meta privacy = bonus). Amélioration mineure : donner un titre/description dédiés à la page de confidentialité.
 - **`Pagination` sans fenêtrage (rappel) — Story 5.4** : déjà listé ci-dessus (revue Epic 4). Exposé désormais sur la page publique `/productions` ; ajouter fenêtrage + ellipses (`1 … 4 5 6 … N`) quand le volume croît. Impacte aussi l'admin.
 
@@ -130,5 +130,5 @@
 ## Deferred from: code review of 10-3-page-de-profil-d-un-auteur (2026-11-19)
 
 - **Tri « Titre (A → Z) » sensible aux accents** : `lower(title)` suit la collation de la base (un titre en « É » peut se ranger après « Z »). L'extension `unaccent` n'est pas installée (aucune migration) et n'est pas ajoutée (base partagée, P2.1 « normalisation applicative ») : à traiter avec le tri par titre de la liste (12.1), par une clé normalisée (`normalizeKey`) ou une collation ICU.
-- **Titre d'onglet non rafraîchi en navigation interne** (rappel du report Epic 5) : pas de `<Head>` public, le titre du profil n'est juste qu'au premier chargement ; une navigation Inertia vers ou depuis un profil garde l'ancien titre. À traiter avec 10.4 (liens d'auteurs) / 10.7 (SEO).
+- ~~**Titre d'onglet non rafraîchi en navigation interne**~~ — traité en 10.4 (le titre devenait même « Anta » après hydratation sur toutes les pages publiques). Ancien texte (rappel du report Epic 5) : pas de `<Head>` public, le titre du profil n'est juste qu'au premier chargement ; une navigation Inertia vers ou depuis un profil garde l'ancien titre. À traiter avec 10.4 (liens d'auteurs) / 10.7 (SEO).
 - **Slug en majuscules → 404** : `/authors/Jeanne-Exemple` ne retrouve pas `jeanne-exemple` (comparaison exacte), comme `/productions/:slug`. Accepté (slugs générés en minuscules) ; une redirection 301 vers le slug canonique reste possible.

@@ -293,7 +293,11 @@ test.group('Public | profil d’auteur — contenu', (group) => {
     ])
     assert.equal(props.productions[0].workPublishedAt, '2019-03-07')
     assert.equal(props.productions[0].viewsCount, 2)
-    assert.deepEqual(props.productions[0].authors, ['Jeanne Exemple'])
+    // Story 10.4: byline `{ name, slug }` — the linked author, then the jsonb name it does not match.
+    assert.deepEqual(props.productions[0].authors, [
+      { name: `Jeanne ${author.lastNames.toUpperCase()}`, slug: author.slug },
+      { name: 'Jeanne Exemple', slug: null },
+    ])
   })
 
   test('URL Google Scholar non http(s) en base (javascript:) → null', async ({

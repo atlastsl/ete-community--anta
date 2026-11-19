@@ -24,7 +24,7 @@ const SECTION_ID = 'author-productions'
 /**
  * Public profile of a visible author (Story 10.3, maquette `author-profile.html`, D35): header
  * + statistics aside, then its published productions, 12 per page, sortable. The title and
- * meta come from the server (`SeoService.forAuthor`), no <Head> on public pages.
+ * meta come from the server (`SeoService.forAuthor`); the tab title follows through PublicLayout's <Head>.
  */
 export default function AuthorPage({ author, stats, productions, pagination, sort }: Props) {
   const { t } = useTranslation()
@@ -76,6 +76,7 @@ export default function AuthorPage({ author, stats, productions, pagination, sor
               production={production}
               variant="grid"
               dateField="work"
+              currentAuthorSlug={author.slug}
             />
           ))}
         </div>

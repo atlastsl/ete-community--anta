@@ -18,12 +18,25 @@ export type AuthorProfileStats = { views: number; downloads: number; productions
  * unpublishing of the last production hides the profile on the next request (D17).
  */
 export default class PublicAuthorService {
+  /**
+   * Slugs of the given authors that are visible on the site (`Author.visibleOnSite`), by id.
+   * Only visible authors' slugs are ever read: the others stay unlinked (D12, P2.7).
+   */
+  static async visibleSlugs(authorIds: string[]): Promise<Map<string, string>> {
+    const ids = [...new Set(authorIds)]
+    if (ids.length === 0) return new Map()
+    const rows = await Author.query()
+      .whereIn('id', ids)
+      .withScopes((scopes) => scopes.visibleOnSite())
+      .select('id', 'slug')
+    return new Map(rows.map((author) => [author.id, author.slug]))
+  }
+
   /** Visible author by slug, affiliations preloaded in their `position` order; else `null`. */
   static findVisibleBySlug(slug: string): Promise<Author | null> {
     return Author.query()
       .where('slug', slug)
-      .whereNotNull('consent_confirmed_at')
-      .whereHas('productions', (q) => q.where('status', ProductionStatus.PUBLISHED))
+      .withScopes((scopes) => scopes.visibleOnSite())
       .preload('affiliations')
       .first()
   }
