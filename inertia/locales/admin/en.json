@@ -766,6 +766,7 @@
     "message": "This page does not exist or is no longer available.",
     "nav_label": "Useful links",
     "home": "Home",
-    "search": "Advanced search"
+    "search": "Advanced search",
+    "authors": "Authors"
   }
 }

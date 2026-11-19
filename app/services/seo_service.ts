@@ -96,6 +96,27 @@ export default class SeoService {
     }
   }
 
+  /**
+   * Meta de la liste des auteurs (Story 10.5, forme minimale : titre et description = phrase
+   * d'introduction de la page ; complétée en 10.7).
+   */
+  static authorsList(locale: Locale): MetaTags {
+    const { name } = SITE[locale]
+    const title = `${locale === 'fr' ? 'Auteurs' : 'Authors'} — ${name}`
+    const description =
+      locale === 'fr'
+        ? 'Les auteurs des productions publiées sur Anta.'
+        : 'The authors of the productions published on Anta.'
+    return {
+      title,
+      description,
+      ogTitle: title,
+      ogDescription: description,
+      ogType: 'website',
+      locale,
+    }
+  }
+
   /** Meta du listing (avec ou sans terme de recherche). */
   static listing(locale: Locale, q?: string | null): MetaTags {
     const { name, description } = SITE[locale]

@@ -7,10 +7,60 @@ import PublicBylineService from '#services/public_byline_service'
 import env from '#start/env'
 
 /**
- * Public author pages (Epic 10). `show`: profile of a visible author (P2.1, D11) with the
+ * Public author pages (Epic 10). `index`: list of the visible authors, searchable, filterable
+ * and sortable, 24 per page (Story 10.5, FR57, P2.6). `show`: profile of a visible author (P2.1, D11) with the
  * totals of its published productions and its productions, 12 per page (P2.6, FR58).
  */
 export default class AuthorsController {
+  async index({ request, response, inertia }: HttpContext) {
+    const locale = SeoService.localeFromCookieHeader(request.header('cookie'))
+    const requested = PublicAuthorService.parseListFilters(request.qs())
+    const sort = PublicAuthorService.parseListSort(request.input('sort'))
+    const page = PublicAuthorService.parsePage(request.input('page'))
+
+    const paginator = await PublicAuthorService.list(requested, sort, page)
+    const pagination = paginator.getMeta()
+    if (page > pagination.lastPage) {
+      // Out of range (D36): last page, known parameters kept.
+      return response
+        .redirect()
+        .toPath(PublicAuthorService.authorsListPath(requested, sort, pagination.lastPage))
+    }
+
+    const filtered = Boolean(requested.q || requested.institution || requested.domain)
+    const [institutionOptions, domainOptions, hasAuthors] = await Promise.all([
+      PublicAuthorService.institutionOptions(),
+      PublicAuthorService.domainOptions(),
+      pagination.total > 0 ? true : filtered ? PublicAuthorService.hasVisibleAuthors() : false,
+    ])
+
+    return inertia.render('authors', {
+      authors: paginator.all().map((author) => ({
+        ...PublicAuthorService.listCard(author),
+        photoBase: MediaService.authorPhotoUrl(author),
+      })),
+      pagination: {
+        currentPage: pagination.currentPage,
+        lastPage: pagination.lastPage,
+        total: pagination.total,
+        perPage: pagination.perPage,
+      },
+      filters: {
+        q: requested.q,
+        institution: PublicAuthorService.canonicalInstitution(
+          requested.institution,
+          institutionOptions
+        ),
+        domain: requested.domain,
+      },
+      sort,
+      institutionOptions,
+      domainOptions,
+      hasAuthors,
+      meta: SeoService.authorsList(locale),
+    })
+  }
+
   async show(ctx: HttpContext) {
     const { params, request, response, inertia } = ctx
     const locale = SeoService.localeFromCookieHeader(request.header('cookie'))

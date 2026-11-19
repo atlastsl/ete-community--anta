@@ -19,7 +19,8 @@ router.get('/productions/:slug', [controllers.public.Productions, 'show']).as('p
 router
   .get('/productions/:slug/files/:fileId/download', [controllers.public.Productions, 'download'])
   .as('production.download')
-// Profil public d'un auteur visible (P2.6, D11) ; 404 sinon. La liste `/authors` : Story 10.5.
+// Liste des auteurs visibles (P2.6, Story 10.5) puis profil public d'un auteur visible (D11) ; 404 sinon.
+router.get('/authors', [controllers.public.Authors, 'index']).as('authors.index')
 router.get('/authors/:slug', [controllers.public.Authors, 'show']).as('authors.show')
 router.get('/privacy-policy', [controllers.public.Pages, 'privacy']).as('privacy-policy')
 // Images publiques adossées à R2 (P2.5) : photos d'auteurs à profil public. Les fichiers

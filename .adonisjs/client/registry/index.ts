@@ -30,6 +30,12 @@ const routes = {
     tokens: [{"old":"/productions/:slug/files/:fileId/download","type":0,"val":"productions","end":""},{"old":"/productions/:slug/files/:fileId/download","type":1,"val":"slug","end":""},{"old":"/productions/:slug/files/:fileId/download","type":0,"val":"files","end":""},{"old":"/productions/:slug/files/:fileId/download","type":1,"val":"fileId","end":""},{"old":"/productions/:slug/files/:fileId/download","type":0,"val":"download","end":""}],
     types: placeholder as Registry['production.download']['types'],
   },
+  'authors.index': {
+    methods: ["GET","HEAD"],
+    pattern: '/authors',
+    tokens: [{"old":"/authors","type":0,"val":"authors","end":""}],
+    types: placeholder as Registry['authors.index']['types'],
+  },
   'authors.show': {
     methods: ["GET","HEAD"],
     pattern: '/authors/:slug',

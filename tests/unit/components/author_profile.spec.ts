@@ -45,6 +45,12 @@ test.group('AuthorProfileHeader', () => {
     assert.include(header, "<nav aria-label={t('authors.profile.breadcrumb_label')}")
     assert.include(header, 'aria-current="page"')
     assert.include(header, "{t('authors.profile.breadcrumb_home')}")
+    // Story 10.5 : niveau « Auteurs » vers la liste, entre l'accueil et la page courante.
+    assert.include(header, "href={urlFor('authors.index')}")
+    const home = header.indexOf("{t('authors.profile.breadcrumb_home')}")
+    const authors = header.indexOf("{t('authors.profile.breadcrumb_authors')}")
+    const current = header.indexOf('aria-current="page"')
+    assert.isTrue(home < authors && authors < current)
   })
 
   test('affiliations ordonnées, département seulement s’il existe', ({ assert }) => {

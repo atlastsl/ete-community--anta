@@ -9,7 +9,8 @@
   },
   "nav": {
     "home": "Home",
-    "search": "Search",
+    "advanced_search": "Advanced search",
+    "authors": "Authors",
     "privacy_policy": "Privacy Policy"
   },
   "actions": {
@@ -443,12 +444,14 @@
     "message": "This page does not exist or is no longer available.",
     "nav_label": "Useful links",
     "home": "Home",
-    "search": "Advanced search"
+    "search": "Advanced search",
+    "authors": "Authors"
   },
   "authors": {
     "profile": {
       "breadcrumb_label": "Breadcrumb",
       "breadcrumb_home": "Home",
+      "breadcrumb_authors": "Authors",
       "photo_alt": "Photo of {{name}}",
       "affiliations_label": "Affiliations",
       "scholar": "Google Scholar",
@@ -473,6 +476,34 @@
     "byline": {
       "others_one": "and {{count}} other",
       "others_other": "and {{count}} others"
+    },
+    "list": {
+      "title": "Authors",
+      "intro": "The authors of the productions published on Anta.",
+      "filters_label": "Filter authors",
+      "search_label": "Name",
+      "search_placeholder": "Search for an author",
+      "search_submit": "Search",
+      "institution_label": "Institution",
+      "institution_all": "All institutions",
+      "domain_label": "Field of the productions",
+      "domain_all": "All fields",
+      "count_one": "{{count}} author · {{from}}–{{to}}",
+      "count_other": "{{count}} authors · {{from}}–{{to}}",
+      "sort": {
+        "views": "Most viewed (last 12 months)",
+        "name": "Name (A → Z)",
+        "productions": "Number of productions"
+      },
+      "card": {
+        "productions_one": "{{formattedCount}} production",
+        "productions_other": "{{formattedCount}} productions",
+        "views_one": "{{formattedCount}} view",
+        "views_other": "{{formattedCount}} views"
+      },
+      "empty": "No authors yet.",
+      "no_results": "No author matches your search.",
+      "clear_filters": "Clear filters"
     }
   }
 }

@@ -2,12 +2,32 @@ import db from '@adonisjs/lucid/services/db'
 import Author from '#models/author'
 import Production from '#models/production'
 import ProductionStatus from '#enums/production_status'
+import AuthorService from '#services/author_service'
+import { normalizeKey } from '#helpers/normalize'
 
 /** Sorts of the profile's productions (P2.6); `date` is the default, omitted from the URL. */
 export const AUTHOR_PROFILE_SORTS = ['date', 'views', 'downloads', 'title'] as const
 export type AuthorProfileSort = (typeof AUTHOR_PROFILE_SORTS)[number]
 export const DEFAULT_AUTHOR_PROFILE_SORT: AuthorProfileSort = 'date'
 export const AUTHOR_PROFILE_PER_PAGE = 12
+
+/** Sorts of the authors list (P2.3, P2.6); `views` (365-day window) is the default. */
+export const AUTHORS_LIST_SORTS = ['views', 'name', 'productions'] as const
+export type AuthorsListSort = (typeof AUTHORS_LIST_SORTS)[number]
+export const DEFAULT_AUTHORS_LIST_SORT: AuthorsListSort = 'views'
+export const AUTHORS_LIST_PER_PAGE = 24
+/** Longest search term kept (longer input is truncated, D-10.5-8). */
+const MAX_QUERY_LENGTH = 100
+
+/** Filters of `/authors`, raw strings from the URL (`institution` = label, normalized here). */
+export type AuthorsListFilters = {
+  q: string | null
+  institution: string | null
+  domain: string | null
+}
+
+/** Rolling 365-day window of the rankings (P2.3), computed by Postgres. */
+const WINDOW = "now() - interval '365 days'"
 
 export type AuthorProfileStats = { views: number; downloads: number; productions: number }
 
@@ -99,6 +119,180 @@ export default class PublicAuthorService {
     query.orderBy('id', 'asc')
 
     return query.paginate(page, AUTHOR_PROFILE_PER_PAGE)
+  }
+
+  /**
+   * One page of the visible authors (Story 10.5, FR57) with the card aggregates in correlated
+   * sub-queries (no N+1): published productions, total views of the published productions (D3),
+   * 365-day views (default sort, P2.3 without `HAVING`: 0-view authors come last) and the
+   * primary institution (affiliation position 1). Search and institution reuse the admin
+   * filters (normalized `search_name`, any affiliation's `institution_key`).
+   */
+  static list(filters: AuthorsListFilters, sort: AuthorsListSort, page: number) {
+    const published = ProductionStatus.PUBLISHED
+    const publishedOfAuthor = `FROM production_authors pa
+         JOIN productions p ON p.id = pa.production_id AND p.status = ?
+        WHERE pa.author_id = authors.id`
+    const query = Author.query()
+      .withScopes((scopes) => scopes.visibleOnSite())
+      .select('authors.id', 'authors.slug', 'authors.first_names', 'authors.last_names')
+      .select('authors.photo_key', 'authors.consent_confirmed_at')
+      .select(
+        db.raw(`(SELECT count(*) ${publishedOfAuthor}) AS published_count`, [published]),
+        db.raw(
+          `(SELECT count(*) FROM stats_views v
+              JOIN production_authors pa ON pa.production_id = v.production_id
+              JOIN productions p ON p.id = pa.production_id AND p.status = ?
+             WHERE pa.author_id = authors.id) AS total_views`,
+          [published]
+        ),
+        db.raw(
+          `(SELECT count(*) FROM stats_views v
+              JOIN production_authors pa ON pa.production_id = v.production_id
+              JOIN productions p ON p.id = pa.production_id AND p.status = ?
+             WHERE pa.author_id = authors.id AND v.recorded_at >= ${WINDOW}) AS window_views`,
+          [published]
+        ),
+        db.raw(
+          `(SELECT aa.institution FROM author_affiliations aa
+             WHERE aa.author_id = authors.id ORDER BY aa.position ASC LIMIT 1) AS primary_institution`
+        )
+      )
+
+    AuthorService.applyListFilters(query, {
+      q: filters.q,
+      institution: filters.institution,
+      consent: null,
+      incomplete: false,
+    })
+    if (filters.domain) {
+      const domain = filters.domain
+      query.whereExists((sub) =>
+        sub
+          .from('production_authors')
+          .join('productions', 'productions.id', 'production_authors.production_id')
+          .whereColumn('production_authors.author_id', 'authors.id')
+          .where('productions.status', published)
+          .where('productions.domain', domain)
+      )
+    }
+
+    if (sort === 'views') query.orderBy('window_views', 'desc')
+    else if (sort === 'productions') query.orderBy('published_count', 'desc')
+    // Ties (and the `name` sort): last names, first names, then id (stable pagination).
+    query
+      .orderBy('authors.last_names', 'asc')
+      .orderBy('authors.first_names', 'asc')
+      .orderBy('authors.id', 'asc')
+
+    return query.paginate(page, AUTHORS_LIST_PER_PAGE)
+  }
+
+  /** Card of the list from a `list()` row (aggregates read from `$extras`). */
+  static listCard(author: Author) {
+    return {
+      slug: author.slug,
+      firstNames: author.firstNames,
+      lastNames: author.lastNames,
+      primaryInstitution: (author.$extras.primary_institution as string | null) ?? null,
+      productionsCount: Number(author.$extras.published_count ?? 0),
+      viewsCount: Number(author.$extras.total_views ?? 0),
+    }
+  }
+
+  /**
+   * Institution facet (D14): affiliations of the visible authors grouped by `institution_key`,
+   * labelled with the most frequent spelling. The value is the label (P2.6, normalized back to
+   * the key by the filter).
+   */
+  static async institutionOptions(): Promise<{ value: string; label: string }[]> {
+    const result = await db.rawQuery(
+      `SELECT mode() WITHIN GROUP (ORDER BY aa.institution) AS label
+         FROM author_affiliations aa
+         JOIN authors a ON a.id = aa.author_id AND a.consent_confirmed_at IS NOT NULL
+        WHERE aa.institution_key <> ''
+          AND EXISTS (SELECT 1 FROM production_authors pa
+                        JOIN productions p ON p.id = pa.production_id AND p.status = ?
+                       WHERE pa.author_id = a.id)
+        GROUP BY aa.institution_key
+        ORDER BY label`,
+      [ProductionStatus.PUBLISHED]
+    )
+    return (result.rows as { label: string }[]).map((r) => ({ value: r.label, label: r.label }))
+  }
+
+  /**
+   * Domain facet: domains of the published productions linked to a public author (such an
+   * author is visible through that very production, D11).
+   */
+  static async domainOptions(): Promise<string[]> {
+    const result = await db.rawQuery(
+      `SELECT DISTINCT p.domain AS value
+         FROM productions p
+         JOIN production_authors pa ON pa.production_id = p.id
+         JOIN authors a ON a.id = pa.author_id AND a.consent_confirmed_at IS NOT NULL
+        WHERE p.status = ? AND p.domain IS NOT NULL AND p.domain <> ''
+        ORDER BY value`,
+      [ProductionStatus.PUBLISHED]
+    )
+    return (result.rows as { value: string }[]).map((r) => r.value)
+  }
+
+  /** At least one visible author (empty state « Aucun auteur pour le moment. »). */
+  static async hasVisibleAuthors(): Promise<boolean> {
+    const row = await Author.query()
+      .withScopes((scopes) => scopes.visibleOnSite())
+      .select('id')
+      .first()
+    return row !== null
+  }
+
+  /** Whitelisted list sort, default `views`. */
+  static parseListSort(input: unknown): AuthorsListSort {
+    return (AUTHORS_LIST_SORTS as readonly unknown[]).includes(input)
+      ? (input as AuthorsListSort)
+      : DEFAULT_AUTHORS_LIST_SORT
+  }
+
+  /** Strings only (a repeated parameter is ignored), trimmed, empty → null; `q` truncated. */
+  static parseListFilters(input: {
+    q?: unknown
+    institution?: unknown
+    domain?: unknown
+  }): AuthorsListFilters {
+    const str = (value: unknown): string | null =>
+      typeof value === 'string' && value.trim() !== '' ? value.trim() : null
+    const q = str(input.q)
+    return {
+      q: q ? q.slice(0, MAX_QUERY_LENGTH).trim() : null,
+      institution: str(input.institution),
+      domain: str(input.domain),
+    }
+  }
+
+  /** The option whose key matches the requested institution (canonical label), else the input. */
+  static canonicalInstitution(
+    requested: string | null,
+    options: { value: string; label: string }[]
+  ): string | null {
+    if (!requested) return null
+    const key = normalizeKey(requested)
+    return options.find((o) => normalizeKey(o.value) === key)?.value ?? requested
+  }
+
+  /**
+   * List URL keeping the known parameters (defaults, empty filters and page 1 omitted). Same rules
+   * as the front builder `inertia/lib/authors_list_query.ts` (TS boundary: keep both in sync).
+   */
+  static authorsListPath(filters: AuthorsListFilters, sort: AuthorsListSort, page: number): string {
+    const params = new URLSearchParams()
+    if (filters.q) params.set('q', filters.q)
+    if (filters.institution) params.set('institution', filters.institution)
+    if (filters.domain) params.set('domain', filters.domain)
+    if (sort !== DEFAULT_AUTHORS_LIST_SORT) params.set('sort', sort)
+    if (page > 1) params.set('page', String(page))
+    const qs = params.toString()
+    return `/authors${qs ? `?${qs}` : ''}`
   }
 
   /** Whitelisted sort, default `date` (an unknown value is ignored, never an error). */

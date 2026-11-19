@@ -85,6 +85,7 @@ export default function AuthorPage({ author, stats, productions, pagination, sor
           currentPage={pagination.currentPage}
           lastPage={pagination.lastPage}
           buildHref={(p) => pageHref(author.slug, sort, p)}
+          size="touch"
         />
       </section>
     </div>

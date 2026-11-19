@@ -20,7 +20,7 @@ test.group('i18n instances | public', () => {
     })
     await i18n.changeLanguage('fr')
 
-    assert.equal(i18n.t('nav.search'), 'Rechercher')
+    assert.equal(i18n.t('nav.advanced_search'), 'Recherche avancée')
     assert.equal(i18n.t('actions.download'), 'Télécharger')
   })
 
@@ -31,7 +31,7 @@ test.group('i18n instances | public', () => {
     })
     await i18n.changeLanguage('en')
 
-    assert.equal(i18n.t('nav.search'), 'Search')
+    assert.equal(i18n.t('nav.advanced_search'), 'Advanced search')
     assert.equal(i18n.t('actions.clear_filters'), 'Clear filters')
   })
 

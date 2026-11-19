@@ -66,6 +66,22 @@ test.group('SeoService | listing', () => {
   })
 })
 
+test.group('SeoService | authorsList', () => {
+  test('titre « Auteurs — Anta », description = introduction de la liste, website', ({
+    assert,
+  }) => {
+    const fr = SeoService.authorsList('fr')
+    assert.equal(fr.title, 'Auteurs — Anta')
+    assert.equal(fr.ogTitle, fr.title)
+    assert.equal(fr.description, 'Les auteurs des productions publiées sur Anta.')
+    assert.equal(fr.ogType, 'website')
+    assert.equal(fr.locale, 'fr')
+    const en = SeoService.authorsList('en')
+    assert.equal(en.title, 'Authors — Anta')
+    assert.equal(en.description, 'The authors of the productions published on Anta.')
+  })
+})
+
 test.group('SeoService | forProduction', () => {
   test('ogType article + titre/description issus de la production', ({ assert }) => {
     const meta = SeoService.forProduction('fr', {

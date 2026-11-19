@@ -9,7 +9,8 @@
   },
   "nav": {
     "home": "Accueil",
-    "search": "Rechercher",
+    "advanced_search": "Recherche avancée",
+    "authors": "Auteurs",
     "privacy_policy": "Politique de confidentialité"
   },
   "actions": {
@@ -443,12 +444,14 @@
     "message": "Cette page n'existe pas ou n'est plus disponible.",
     "nav_label": "Liens utiles",
     "home": "Accueil",
-    "search": "Recherche avancée"
+    "search": "Recherche avancée",
+    "authors": "Auteurs"
   },
   "authors": {
     "profile": {
       "breadcrumb_label": "Fil d'Ariane",
       "breadcrumb_home": "Accueil",
+      "breadcrumb_authors": "Auteurs",
       "photo_alt": "Photo de {{name}}",
       "affiliations_label": "Affiliations",
       "scholar": "Google Scholar",
@@ -473,6 +476,34 @@
     "byline": {
       "others_one": "et {{count}} autre",
       "others_other": "et {{count}} autres"
+    },
+    "list": {
+      "title": "Auteurs",
+      "intro": "Les auteurs des productions publiées sur Anta.",
+      "filters_label": "Filtrer les auteurs",
+      "search_label": "Nom",
+      "search_placeholder": "Rechercher un auteur",
+      "search_submit": "Rechercher",
+      "institution_label": "Institution",
+      "institution_all": "Toutes les institutions",
+      "domain_label": "Domaine des productions",
+      "domain_all": "Tous les domaines",
+      "count_one": "{{count}} auteur · {{from}}–{{to}}",
+      "count_other": "{{count}} auteurs · {{from}}–{{to}}",
+      "sort": {
+        "views": "Les plus consultés (12 derniers mois)",
+        "name": "Nom (A → Z)",
+        "productions": "Nombre de productions"
+      },
+      "card": {
+        "productions_one": "{{formattedCount}} production",
+        "productions_other": "{{formattedCount}} productions",
+        "views_one": "{{formattedCount}} vue",
+        "views_other": "{{formattedCount}} vues"
+      },
+      "empty": "Aucun auteur pour le moment.",
+      "no_results": "Aucun auteur ne correspond à votre recherche.",
+      "clear_filters": "Effacer les filtres"
     }
   }
 }

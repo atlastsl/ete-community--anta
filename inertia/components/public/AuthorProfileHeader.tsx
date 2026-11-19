@@ -1,6 +1,7 @@
 import { Link } from '@adonisjs/inertia/react'
 import { useTranslation } from 'react-i18next'
 import { BookOpen, Building2, Download, ExternalLink, Eye, GraduationCap } from 'lucide-react'
+import { urlFor } from '~/client'
 import Avatar from '~/components/shared/Avatar'
 import { formatAuthorName } from '~/lib/author_form'
 
@@ -54,6 +55,14 @@ export default function AuthorProfileHeader({
           <li>
             <Link href="/" className="hover:text-green-700">
               {t('authors.profile.breadcrumb_home')}
+            </Link>
+          </li>
+          <li aria-hidden className="text-stone-300">
+            /
+          </li>
+          <li>
+            <Link href={urlFor('authors.index')} className="hover:text-green-700">
+              {t('authors.profile.breadcrumb_authors')}
             </Link>
           </li>
           <li aria-hidden className="text-stone-300">
