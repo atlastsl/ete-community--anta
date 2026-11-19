@@ -69,11 +69,31 @@ test.group('A11y | cibles tactiles >= 44px & scroll-snap', () => {
 })
 
 test.group('A11y | un seul <h1> par page publique', () => {
-  for (const page of ['home.tsx', 'productions.tsx', 'privacy-policy.tsx']) {
+  for (const page of [
+    'home.tsx',
+    'productions.tsx',
+    'privacy-policy.tsx',
+    'authors.tsx',
+    'errors/not_found.tsx',
+  ]) {
     test(`${page} contient exactement un <h1`, ({ assert }) => {
       const source = read(`inertia/pages/${page}`)
       const count = (source.match(/<h1[\s>]/g) ?? []).length
       assert.equal(count, 1, `${page} doit avoir exactement un <h1>`)
     })
   }
+})
+
+// Story 10.8 — le h1 du profil vit dans AuthorProfileHeader : un seul h1 pour page + en-tête,
+// et l'en-tête est bien rendu par la page.
+test.group('A11y | profil d’auteur (Story 10.8)', () => {
+  test('author.tsx + AuthorProfileHeader : exactement un <h1>, en-tête rendu par la page', ({
+    assert,
+  }) => {
+    const page = read('inertia/pages/author.tsx')
+    const header = read('inertia/components/public/AuthorProfileHeader.tsx')
+    const count = (source: string) => (source.match(/<h1[\s>]/g) ?? []).length
+    assert.equal(count(page) + count(header), 1)
+    assert.match(page, /<AuthorProfileHeader[\s>]/)
+  })
 })

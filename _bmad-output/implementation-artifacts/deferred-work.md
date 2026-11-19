@@ -136,3 +136,9 @@
 ## Deferred from: code review of 10-6-filtre-auteur-du-listing-par-profil-public (2026-11-19)
 
 - **Facette auteur non bornée** : `facets.author` liste tous les auteurs visibles à chaque `GET /productions` (une requête, toutes les lignes dans les props Inertia). Acceptable à quelques centaines d'auteurs ; au-delà, plafonner (auteurs les plus productifs + auteurs cochés) ou charger la facette à la demande (endpoint JSON paresseux à l'ouverture du groupe « Auteur »).
+
+## Deferred from: dev of 10-8-tests-auteurs-sur-le-site-public (2026-11-19)
+
+- **Lighthouse mobile 4G sur le staging (AC 3 de 10.8, NFR17)** : `/authors` et un profil, LCP < 3 s, à lancer par Aurélien après déploiement de l'Epic 10 et à consigner dans la story 10.8 (services distants hors des sessions de dev).
+- **Suite `browser` + axe (architecture P2.8)** : `tests/browser/` n'existe pas et `@axe-core/playwright` n'est pas une dépendance (Playwright et `@japa/browser-client` sont présents). Action (question PO) : ajouter la dépendance, une suite « 0 violation A/AA » sur accueil, listing, détail, `/authors`, profil, politique en FR/EN, et Chromium dans `ci.yml`.
+- **`/media` sert la photo d'un auteur consentant sans production publiée** (question PO 10.8) : conforme à 10.2 (public = consentement), clé jamais exposée tant que le profil n'est pas visible ; aligner sur `visibleOnSite` si le PO le souhaite (le test de matrice l'indique).
