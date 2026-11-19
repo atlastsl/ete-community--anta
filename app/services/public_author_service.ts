@@ -121,36 +121,42 @@ export default class PublicAuthorService {
     return query.paginate(page, AUTHOR_PROFILE_PER_PAGE)
   }
 
+  /** Ids of the visible authors (`Author.visibleOnSite`), as a sub-query of the facets. */
+  private static visibleAuthorIds() {
+    return Author.query()
+      .withScopes((scopes) => scopes.visibleOnSite())
+      .select('authors.id')
+  }
+
   /**
-   * One page of the visible authors (Story 10.5, FR57) with the card aggregates in correlated
-   * sub-queries (no N+1): published productions, total views of the published productions (D3),
-   * 365-day views (default sort, P2.3 without `HAVING`: 0-view authors come last) and the
-   * primary institution (affiliation position 1). Search and institution reuse the admin
-   * filters (normalized `search_name`, any affiliation's `institution_key`).
+   * One page of the visible authors (Story 10.5, FR57), aggregates computed in the same query
+   * (no N+1): published productions, primary institution (affiliation position 1), and one
+   * LATERAL pass over the views of the published productions giving the total (D3) and the
+   * 365-day window (default sort, P2.3 without `HAVING`: 0-view authors come last). Search and
+   * institution reuse the admin filters (normalized `search_name`, any affiliation's key).
    */
   static list(filters: AuthorsListFilters, sort: AuthorsListSort, page: number) {
     const published = ProductionStatus.PUBLISHED
-    const publishedOfAuthor = `FROM production_authors pa
-         JOIN productions p ON p.id = pa.production_id AND p.status = ?
-        WHERE pa.author_id = authors.id`
     const query = Author.query()
       .withScopes((scopes) => scopes.visibleOnSite())
+      .joinRaw(
+        `LEFT JOIN LATERAL (
+           SELECT count(*) AS total_views,
+                  count(*) FILTER (WHERE v.recorded_at >= ${WINDOW}) AS window_views
+             FROM stats_views v
+             JOIN production_authors pa ON pa.production_id = v.production_id
+             JOIN productions p ON p.id = pa.production_id AND p.status = ?
+            WHERE pa.author_id = authors.id) AS sv ON true`,
+        [published]
+      )
       .select('authors.id', 'authors.slug', 'authors.first_names', 'authors.last_names')
       .select('authors.photo_key', 'authors.consent_confirmed_at')
+      .select('sv.total_views', 'sv.window_views')
       .select(
-        db.raw(`(SELECT count(*) ${publishedOfAuthor}) AS published_count`, [published]),
         db.raw(
-          `(SELECT count(*) FROM stats_views v
-              JOIN production_authors pa ON pa.production_id = v.production_id
+          `(SELECT count(*) FROM production_authors pa
               JOIN productions p ON p.id = pa.production_id AND p.status = ?
-             WHERE pa.author_id = authors.id) AS total_views`,
-          [published]
-        ),
-        db.raw(
-          `(SELECT count(*) FROM stats_views v
-              JOIN production_authors pa ON pa.production_id = v.production_id
-              JOIN productions p ON p.id = pa.production_id AND p.status = ?
-             WHERE pa.author_id = authors.id AND v.recorded_at >= ${WINDOW}) AS window_views`,
+             WHERE pa.author_id = authors.id) AS published_count`,
           [published]
         ),
         db.raw(
@@ -177,7 +183,7 @@ export default class PublicAuthorService {
       )
     }
 
-    if (sort === 'views') query.orderBy('window_views', 'desc')
+    if (sort === 'views') query.orderBy('sv.window_views', 'desc')
     else if (sort === 'productions') query.orderBy('published_count', 'desc')
     // Ties (and the `name` sort): last names, first names, then id (stable pagination).
     query
@@ -201,49 +207,38 @@ export default class PublicAuthorService {
   }
 
   /**
-   * Institution facet (D14): affiliations of the visible authors grouped by `institution_key`,
-   * labelled with the most frequent spelling. The value is the label (P2.6, normalized back to
-   * the key by the filter).
+   * Institution facet (D14): affiliations of the visible authors (shared scope) grouped by
+   * `institution_key`, labelled with the most frequent spelling. The value is the label (P2.6,
+   * normalized back to the key by the filter).
    */
   static async institutionOptions(): Promise<{ value: string; label: string }[]> {
-    const result = await db.rawQuery(
-      `SELECT mode() WITHIN GROUP (ORDER BY aa.institution) AS label
-         FROM author_affiliations aa
-         JOIN authors a ON a.id = aa.author_id AND a.consent_confirmed_at IS NOT NULL
-        WHERE aa.institution_key <> ''
-          AND EXISTS (SELECT 1 FROM production_authors pa
-                        JOIN productions p ON p.id = pa.production_id AND p.status = ?
-                       WHERE pa.author_id = a.id)
-        GROUP BY aa.institution_key
-        ORDER BY label`,
-      [ProductionStatus.PUBLISHED]
-    )
-    return (result.rows as { label: string }[]).map((r) => ({ value: r.label, label: r.label }))
+    const rows = await db
+      .from('author_affiliations as aa')
+      .whereIn('aa.author_id', this.visibleAuthorIds())
+      .whereNot('aa.institution_key', '')
+      .groupBy('aa.institution_key')
+      .select(db.raw('mode() WITHIN GROUP (ORDER BY aa.institution) AS label'))
+      .orderBy('label', 'asc')
+    return (rows as { label: string }[]).map((r) => ({ value: r.label, label: r.label }))
   }
 
-  /**
-   * Domain facet: domains of the published productions linked to a public author (such an
-   * author is visible through that very production, D11).
-   */
+  /** Domain facet: domains of the published productions of the visible authors (shared scope). */
   static async domainOptions(): Promise<string[]> {
-    const result = await db.rawQuery(
-      `SELECT DISTINCT p.domain AS value
-         FROM productions p
-         JOIN production_authors pa ON pa.production_id = p.id
-         JOIN authors a ON a.id = pa.author_id AND a.consent_confirmed_at IS NOT NULL
-        WHERE p.status = ? AND p.domain IS NOT NULL AND p.domain <> ''
-        ORDER BY value`,
-      [ProductionStatus.PUBLISHED]
-    )
-    return (result.rows as { value: string }[]).map((r) => r.value)
+    const rows = await db
+      .from('productions as p')
+      .join('production_authors as pa', 'pa.production_id', 'p.id')
+      .whereIn('pa.author_id', this.visibleAuthorIds())
+      .where('p.status', ProductionStatus.PUBLISHED)
+      .whereNotNull('p.domain')
+      .whereNot('p.domain', '')
+      .distinct('p.domain')
+      .orderBy('p.domain', 'asc')
+    return (rows as { domain: string }[]).map((r) => r.domain)
   }
 
   /** At least one visible author (empty state « Aucun auteur pour le moment. »). */
   static async hasVisibleAuthors(): Promise<boolean> {
-    const row = await Author.query()
-      .withScopes((scopes) => scopes.visibleOnSite())
-      .select('id')
-      .first()
+    const row = await this.visibleAuthorIds().first()
     return row !== null
   }
 
@@ -254,7 +249,10 @@ export default class PublicAuthorService {
       : DEFAULT_AUTHORS_LIST_SORT
   }
 
-  /** Strings only (a repeated parameter is ignored), trimmed, empty → null; `q` truncated. */
+  /**
+   * Strings only (a repeated parameter is ignored), trimmed, empty → null; `q` truncated to 100
+   * code points (never a split surrogate pair).
+   */
   static parseListFilters(input: {
     q?: unknown
     institution?: unknown
@@ -264,20 +262,29 @@ export default class PublicAuthorService {
       typeof value === 'string' && value.trim() !== '' ? value.trim() : null
     const q = str(input.q)
     return {
-      q: q ? q.slice(0, MAX_QUERY_LENGTH).trim() : null,
+      q: q ? Array.from(q).slice(0, MAX_QUERY_LENGTH).join('').trim() : null,
       institution: str(input.institution),
       domain: str(input.domain),
     }
   }
 
-  /** The option whose key matches the requested institution (canonical label), else the input. */
-  static canonicalInstitution(
-    requested: string | null,
-    options: { value: string; label: string }[]
-  ): string | null {
-    if (!requested) return null
-    const key = normalizeKey(requested)
-    return options.find((o) => normalizeKey(o.value) === key)?.value ?? requested
+  /**
+   * Filters restricted to the offered facet values: an institution matching an option (by key)
+   * becomes its canonical label; an unknown institution or domain is dropped (`null`, no
+   * filtering), so the URL, the selects and the results always agree.
+   */
+  static knownFilters(
+    requested: AuthorsListFilters,
+    institutionOptions: { value: string; label: string }[],
+    domainOptions: string[]
+  ): AuthorsListFilters {
+    const key = requested.institution ? normalizeKey(requested.institution) : ''
+    const institution = key
+      ? (institutionOptions.find((o) => normalizeKey(o.value) === key)?.value ?? null)
+      : null
+    const domain =
+      requested.domain && domainOptions.includes(requested.domain) ? requested.domain : null
+    return { q: requested.q, institution, domain }
   }
 
   /**

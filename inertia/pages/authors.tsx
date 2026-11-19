@@ -8,6 +8,8 @@ import Pagination from '~/components/shared/Pagination'
 import { filtersHref, pageHref, type AuthorsListState } from '~/lib/authors_list_query'
 import type { SeoMeta } from '~/lib/seo'
 
+const RESULTS_ID = 'authors-results'
+
 type Props = {
   authors: AuthorCardData[]
   pagination: { currentPage: number; lastPage: number; total: number; perPage: number }
@@ -35,7 +37,8 @@ export default function AuthorsPage({
   domainOptions,
   hasAuthors,
 }: Props) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const format = (value: number) => value.toLocaleString(i18n.language)
   const base = urlFor('authors.index')
   const state: AuthorsListState = { ...filters, sort }
 
@@ -43,8 +46,17 @@ export default function AuthorsPage({
   const to = from + authors.length - 1
 
   function applyState(next: AuthorsListState) {
-    // Any change goes back to page 1 (D14).
-    router.visit(filtersHref(base, next), { preserveScroll: true })
+    // Any change goes back to page 1 (D14); the scroll is brought back to the top of the results
+    // when they start above the viewport (EXPERIENCE.md), otherwise kept.
+    router.visit(filtersHref(base, next), {
+      preserveScroll: true,
+      onSuccess: () => {
+        const results = document.getElementById(RESULTS_ID)
+        if (results && results.getBoundingClientRect().top < 0) {
+          results.scrollIntoView({ block: 'start' })
+        }
+      },
+    })
   }
 
   return (
@@ -65,9 +77,18 @@ export default function AuthorsPage({
             onChange={applyState}
           />
 
-          <p className="mb-4 text-sm text-stone-600" aria-live="polite">
+          <p
+            id={RESULTS_ID}
+            className="mb-4 scroll-mt-24 text-sm text-stone-600"
+            aria-live="polite"
+          >
             {pagination.total > 0
-              ? t('authors.list.count', { count: pagination.total, from, to })
+              ? t('authors.list.count', {
+                  count: pagination.total,
+                  formattedCount: format(pagination.total),
+                  from: format(from),
+                  to: format(to),
+                })
               : t('authors.list.no_results')}
           </p>
 

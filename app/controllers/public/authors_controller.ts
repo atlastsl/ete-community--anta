@@ -18,21 +18,25 @@ export default class AuthorsController {
     const sort = PublicAuthorService.parseListSort(request.input('sort'))
     const page = PublicAuthorService.parsePage(request.input('page'))
 
-    const paginator = await PublicAuthorService.list(requested, sort, page)
+    const [institutionOptions, domainOptions] = await Promise.all([
+      PublicAuthorService.institutionOptions(),
+      PublicAuthorService.domainOptions(),
+    ])
+    // Unknown institution / domain: dropped (no filtering, `null` in the props).
+    const filters = PublicAuthorService.knownFilters(requested, institutionOptions, domainOptions)
+
+    const paginator = await PublicAuthorService.list(filters, sort, page)
     const pagination = paginator.getMeta()
     if (page > pagination.lastPage) {
       // Out of range (D36): last page, known parameters kept.
       return response
         .redirect()
-        .toPath(PublicAuthorService.authorsListPath(requested, sort, pagination.lastPage))
+        .toPath(PublicAuthorService.authorsListPath(filters, sort, pagination.lastPage))
     }
 
-    const filtered = Boolean(requested.q || requested.institution || requested.domain)
-    const [institutionOptions, domainOptions, hasAuthors] = await Promise.all([
-      PublicAuthorService.institutionOptions(),
-      PublicAuthorService.domainOptions(),
-      pagination.total > 0 ? true : filtered ? PublicAuthorService.hasVisibleAuthors() : false,
-    ])
+    const filtered = Boolean(filters.q || filters.institution || filters.domain)
+    const hasAuthors =
+      pagination.total > 0 || (filtered && (await PublicAuthorService.hasVisibleAuthors()))
 
     return inertia.render('authors', {
       authors: paginator.all().map((author) => ({
@@ -45,14 +49,7 @@ export default class AuthorsController {
         total: pagination.total,
         perPage: pagination.perPage,
       },
-      filters: {
-        q: requested.q,
-        institution: PublicAuthorService.canonicalInstitution(
-          requested.institution,
-          institutionOptions
-        ),
-        domain: requested.domain,
-      },
+      filters,
       sort,
       institutionOptions,
       domainOptions,

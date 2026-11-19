@@ -38,9 +38,14 @@ export default function AuthorFilters({ state, institutionOptions, domainOptions
   // Server state wins after a navigation (clear filters, back button).
   useEffect(() => setQ(state.q ?? ''), [state.q])
 
+  /** Every change carries the typed search term (trimmed), not the last submitted one. */
+  function change(patch: Partial<AuthorsListState>) {
+    onChange({ ...state, q: q.trim() || null, ...patch })
+  }
+
   function submit(event: FormEvent) {
     event.preventDefault()
-    onChange({ ...state, q: q.trim() || null })
+    change({})
   }
 
   const institution = institutionOptions.some((o) => o.value === state.institution)
@@ -88,7 +93,7 @@ export default function AuthorFilters({ state, institutionOptions, domainOptions
           </label>
           <Select
             value={institution}
-            onValueChange={(v) => onChange({ ...state, institution: v === ALL_VALUE ? null : v })}
+            onValueChange={(v) => change({ institution: v === ALL_VALUE ? null : v })}
           >
             <SelectTrigger
               aria-labelledby="authors-institution-label"
@@ -113,7 +118,7 @@ export default function AuthorFilters({ state, institutionOptions, domainOptions
           </label>
           <Select
             value={domain}
-            onValueChange={(v) => onChange({ ...state, domain: v === ALL_VALUE ? null : v })}
+            onValueChange={(v) => change({ domain: v === ALL_VALUE ? null : v })}
           >
             <SelectTrigger aria-labelledby="authors-domain-label" className="min-h-11 w-full bg-white">
               <SelectValue />
@@ -132,7 +137,7 @@ export default function AuthorFilters({ state, institutionOptions, domainOptions
         <SortSelect
           id="authors-sort"
           value={state.sort}
-          onChange={(sort) => onChange({ ...state, sort })}
+          onChange={(sort) => change({ sort })}
           className="sm:w-full"
           options={AUTHORS_LIST_SORTS.map((value) => ({
             value,

@@ -102,6 +102,8 @@ const slugsOf = (props: any): string[] => props.authors.map((a: any) => a.slug)
 test.group('Public | liste des auteurs — visibilité et forme', (group) => {
   group.each.setup(async () => {
     await db.beginGlobalTransaction()
+    // Isolation : seuls les auteurs de ce test sont visibles (aucune ligne pivot préexistante).
+    await db.from('production_authors').delete()
     return () => db.rollbackGlobalTransaction()
   })
 
@@ -117,10 +119,7 @@ test.group('Public | liste des auteurs — visibilité et forme', (group) => {
     response.assertStatus(200)
     const page = extractPage(response.text())!
     assert.equal(page.component, 'authors')
-    const slugs = slugsOf(page.props)
-    assert.include(slugs, visible.slug)
-    assert.notInclude(slugs, noConsent.slug)
-    assert.notInclude(slugs, draftOnly.slug)
+    assert.deepEqual(slugsOf(page.props), [visible.slug])
     assert.notInclude(response.text(), noConsent.lastNames)
     assert.notInclude(response.text(), draftOnly.lastNames)
   })
@@ -177,6 +176,8 @@ test.group('Public | liste des auteurs — visibilité et forme', (group) => {
 test.group('Public | liste des auteurs — recherche et facettes', (group) => {
   group.each.setup(async () => {
     await db.beginGlobalTransaction()
+    // Isolation : seuls les auteurs de ce test sont visibles (aucune ligne pivot préexistante).
+    await db.from('production_authors').delete()
     return () => db.rollbackGlobalTransaction()
   })
 
@@ -207,9 +208,7 @@ test.group('Public | liste des auteurs — recherche et facettes', (group) => {
 
     const props = await propsOf(client, '/authors')
     const labels = props.institutionOptions.map((o: any) => o.label)
-    const matching = labels.filter((l: string) => l.toLowerCase().includes('fictive de test'))
-    assert.deepEqual(matching, ['Université Fictive de Test'])
-    assert.notInclude(labels, 'Institut Caché Exemple')
+    assert.deepEqual(labels, ['Université Fictive de Test'])
     for (const option of props.institutionOptions)
       assert.deepEqual(Object.keys(option), ['value', 'label'])
   })
@@ -229,6 +228,10 @@ test.group('Public | liste des auteurs — recherche et facettes', (group) => {
     )
     assert.deepEqual(slugsOf(props), [secondary.slug])
     assert.notInclude(slugsOf(props), other.slug)
+    assert.deepEqual(
+      props.institutionOptions.map((o: any) => o.label),
+      ['École Seconde Exemple', 'Institut Premier Exemple']
+    )
     // Libellé canonique renvoyé pour la sélection.
     assert.equal(props.filters.institution, 'École Seconde Exemple')
   })
@@ -240,26 +243,70 @@ test.group('Public | liste des auteurs — recherche et facettes', (group) => {
     await link(await createProduction({ domain: 'Domaine Caché Test' }), hidden)
 
     const all = await propsOf(client, '/authors')
-    assert.includeMembers(all.domainOptions, ['Agronomie', 'Informatique'])
-    assert.notInclude(all.domainOptions, 'Domaine Caché Test')
+    assert.deepEqual(all.domainOptions, ['Agronomie', 'Informatique'])
 
     const props = await propsOf(client, '/authors?domain=Agronomie')
-    assert.include(slugsOf(props), agro.slug)
+    assert.deepEqual(slugsOf(props), [agro.slug])
     assert.notInclude(slugsOf(props), info.slug)
     assert.equal(props.filters.domain, 'Agronomie')
   })
 
-  test('domaine d’un brouillon seulement → l’auteur n’est pas retenu', async ({
+  test('facettes : un auteur consentant dont la seule production est un brouillon n’y figure pas', async ({
+    client,
+    assert,
+  }) => {
+    const { author: visible } = await visibleAuthor({
+      domain: 'Agronomie',
+      institutions: ['Institut Visible Test'],
+    })
+    const draftOnly = await createAuthor({ institutions: ['Institut Brouillon Test'] })
+    await link(await createProduction({ status: 'draft', domain: 'Histoire' }), draftOnly)
+
+    const props = await propsOf(client, '/authors')
+    assert.deepEqual(slugsOf(props), [visible.slug])
+    assert.deepEqual(
+      props.institutionOptions.map((o: any) => o.label),
+      ['Institut Visible Test']
+    )
+    assert.deepEqual(props.domainOptions, ['Agronomie'])
+  })
+
+  test('facette domaine : le domaine d’un brouillon d’un auteur visible en est absent', async ({
     client,
     assert,
   }) => {
     const { author } = await visibleAuthor({ domain: 'Informatique' })
-    await link(await createProduction({ status: 'draft', domain: 'Histoire Brouillon' }), author, 1)
-    const props = await propsOf(
-      client,
-      `/authors?domain=${encodeURIComponent('Histoire Brouillon')}`
-    )
-    assert.notInclude(slugsOf(props), author.slug)
+    await link(await createProduction({ status: 'draft', domain: 'Histoire' }), author, 1)
+    const props = await propsOf(client, '/authors')
+    assert.deepEqual(props.domainOptions, ['Informatique'])
+  })
+
+  test('institution ou domaine inconnus → filtre ignoré, null dans les props', async ({
+    client,
+    assert,
+  }) => {
+    const { author: a } = await visibleAuthor({
+      domain: 'Agronomie',
+      institutions: ['Institut A Test'],
+    })
+    const { author: b } = await visibleAuthor({ domain: 'Informatique' })
+    const expected = [a.slug, b.slug].sort()
+
+    for (const qs of ['institution=Institut+Inconnu', 'domain=Histoire', 'domain=agronomie']) {
+      const props = await propsOf(client, `/authors?${qs}`)
+      assert.deepEqual(props.filters, { q: null, institution: null, domain: null }, qs)
+      assert.deepEqual([...slugsOf(props)].sort(), expected, qs)
+    }
+  })
+
+  test('page hors limites : un filtre inconnu disparaît de la redirection', async ({
+    client,
+    assert,
+  }) => {
+    await visibleAuthor({ domain: 'Agronomie' })
+    const response = await client.get('/authors?domain=Inconnu&sort=name&page=5').redirects(0)
+    response.assertStatus(302)
+    assert.equal(response.header('location'), '/authors?sort=name')
   })
 
   test('filtres combinés en ET, paramètres non chaînes ignorés', async ({ client, assert }) => {

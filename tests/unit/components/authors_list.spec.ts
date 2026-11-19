@@ -40,7 +40,14 @@ test.group('AuthorCard', () => {
     assert.notMatch(card, /<a\b/)
     assert.notInclude(card, 'onClick=')
     assert.match(card, /<article className="relative\b/)
-    assert.match(card, /<Link[\s\S]*?className="after:absolute after:inset-0/)
+    // La classe d'extension est portée par le lien lui-même (dans sa balise ouvrante), à
+    // l'intérieur de la carte `relative`.
+    const linkTag = card.match(/<Link\b[^>]*>/)?.[0] ?? ''
+    assert.match(linkTag, /className="after:absolute after:inset-0\b/)
+    const article = card.indexOf('<article')
+    assert.isTrue(
+      article < card.indexOf('<Link') && card.indexOf('</Link>') < card.indexOf('</article>')
+    )
     assert.include(card, "href={urlFor('authors.show', { slug: author.slug })}")
   })
 
@@ -80,6 +87,13 @@ test.group('AuthorFilters', () => {
     assert.include(filters, 'v === ALL_VALUE ? null : v')
   })
 
+  test('chaque changement transmet la saisie courante de q (pas l’état serveur)', ({ assert }) => {
+    assert.include(filters, 'onChange({ ...state, q: q.trim() || null, ...patch })')
+    // Un seul appel à onChange (dans `change`) ; sélections, tri et soumission passent par lui.
+    assert.lengthOf(filters.match(/\bonChange\(\{/g) ?? [], 1)
+    assert.lengthOf(filters.match(/\bchange\(\{/g) ?? [], 4)
+  })
+
   test('contrôles ≥ 44 px, grille empilée / 2 / 4 colonnes', ({ assert }) => {
     assert.lengthOf(filters.match(/min-h-11/g) ?? [], 3)
     assert.include(filters, 'grid gap-4 sm:grid-cols-2 lg:grid-cols-4')
@@ -98,8 +112,22 @@ test.group('Page authors', () => {
     assert.include(page, 'grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4')
   })
 
-  test('compteur en aria-live="polite"', ({ assert }) => {
-    assert.match(page, /aria-live="polite"[\s\S]{0,200}authors\.list\.count/)
+  test('compteur en aria-live="polite" (résultats et absence de résultat), nombres formatés', ({
+    assert,
+  }) => {
+    const live = page.match(/<p\b[^>]*aria-live="polite"[^>]*>([\s\S]*?)<\/p>/)
+    assert.isNotNull(live)
+    assert.include(live![1], "t('authors.list.count'")
+    assert.include(live![1], "t('authors.list.no_results')")
+    assert.include(live![1], 'formattedCount: format(pagination.total)')
+    assert.include(live![1], 'from: format(from)')
+    assert.include(page, 'value.toLocaleString(i18n.language)')
+  })
+
+  test('changement de filtre ou de tri : défilement ramené en haut des résultats', ({ assert }) => {
+    assert.include(page, "const RESULTS_ID = 'authors-results'")
+    assert.match(page, /<p\s+id=\{RESULTS_ID\}/)
+    assert.match(page, /onSuccess:[\s\S]*?getElementById\(RESULTS_ID\)[\s\S]*?scrollIntoView/)
   })
 
   test('états vides distincts : aucun profil / filtres sans résultat + Effacer les filtres', ({
@@ -161,18 +189,37 @@ test.group('Helpers d’URL (miroir serveur)', () => {
       }
     )
     assert.equal(PublicAuthorService.parseListFilters({ q: 'x'.repeat(150) }).q?.length, 100)
+    // Troncature par points de code : jamais de paire de substitution coupée.
+    const emoji = PublicAuthorService.parseListFilters({ q: '😀'.repeat(150) }).q!
+    assert.equal(Array.from(emoji).length, 100)
+    assert.equal(emoji, '😀'.repeat(100))
     assert.equal(PublicAuthorService.parseListSort('productions'), 'productions')
     assert.equal(PublicAuthorService.parseListSort('relevance'), 'views')
   })
 
-  test('serveur : libellé canonique de l’institution', ({ assert }) => {
-    const options = [{ value: 'École Exemple', label: 'École Exemple' }]
-    assert.equal(
-      PublicAuthorService.canonicalInstitution('ecole EXEMPLE', options),
-      'École Exemple'
+  test('serveur : facettes limitées par le scope partagé visibleOnSite (règle non réécrite)', ({
+    assert,
+  }) => {
+    const service = read('app/services/public_author_service.ts')
+    assert.notMatch(service, /consent_confirmed_at IS NOT NULL/i)
+    assert.notMatch(service, /whereNotNull\('(authors\.)?consent_confirmed_at'\)/)
+    assert.lengthOf(
+      service.match(/whereIn\('[a-z]+\.author_id', this\.visibleAuthorIds\(\)\)/g) ?? [],
+      2
     )
-    assert.equal(PublicAuthorService.canonicalInstitution('Autre', options), 'Autre')
-    assert.isNull(PublicAuthorService.canonicalInstitution(null, options))
+  })
+
+  test('serveur : knownFilters (libellé canonique, valeurs inconnues → null)', ({ assert }) => {
+    const options = [{ value: 'École Exemple', label: 'École Exemple' }]
+    const known = (institution: string | null, domain: string | null) =>
+      PublicAuthorService.knownFilters({ q: 'x', institution, domain }, options, ['law'])
+    assert.deepEqual(known('ecole EXEMPLE', 'law'), {
+      q: 'x',
+      institution: 'École Exemple',
+      domain: 'law',
+    })
+    assert.deepEqual(known('Autre', 'LAW'), { q: 'x', institution: null, domain: null })
+    assert.deepEqual(known(null, null), { q: 'x', institution: null, domain: null })
   })
 })
 
@@ -225,11 +272,11 @@ test.group('Liste des auteurs | i18n', () => {
     assert.equal(lookup(locales.en, 'authors.list.empty'), 'No authors yet.')
     assert.equal(
       lookup(locales.fr, 'authors.list.count_other'),
-      '{{count}} auteurs · {{from}}–{{to}}'
+      '{{formattedCount}} auteurs · {{from}}–{{to}}'
     )
     assert.equal(
       lookup(locales.en, 'authors.list.count_other'),
-      '{{count}} authors · {{from}}–{{to}}'
+      '{{formattedCount}} authors · {{from}}–{{to}}'
     )
   })
 })

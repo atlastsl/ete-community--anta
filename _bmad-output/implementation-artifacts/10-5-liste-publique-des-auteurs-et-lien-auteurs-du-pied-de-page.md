@@ -4,7 +4,7 @@ baseline_commit: 07e9990
 
 # Story 10.5 : Liste publique des auteurs et lien « Auteurs » du pied de page
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -95,6 +95,19 @@ afin de trouver un auteur et ses productions (FR57, FR60, FR44, D3, D13, D14, D3
 - **D-10.5-7** `Pagination` gagne `size="touch"` (44 px) pour les listes publiques auteurs et profil ; l'admin garde 36 px.
 - **D-10.5-8** `q` tronqué à 100 caractères ; paramètres non chaînes (tableaux) ignorés.
 
+### Review Findings
+
+- [x] [Review][Patch] Confidentialité des facettes non testée [tests/functional/public/authors_list.spec.ts] — auteur consentant dont la seule production est un brouillon (institution + domaine) absent de la liste et des facettes ; domaine d'un brouillon d'un auteur visible absent de `domainOptions`. Vérifié rouge en cassant temporairement le prédicat (scope remplacé par le seul consentement ; statut retiré de la facette domaine).
+- [x] [Review][Patch] Règle de visibilité réécrite en SQL brut dans les facettes [app/services/public_author_service.ts] — `institutionOptions`, `domainOptions` et `hasVisibleAuthors` filtrent par `whereIn(author_id, visibleAuthorIds())` (sous-requête du scope `Author.visibleOnSite`) ; test de source (aucun prédicat de consentement réécrit).
+- [x] [Review][Patch] Sélections et tri envoyaient le `q` du serveur [inertia/components/public/AuthorFilters.tsx] — `change(patch)` transmet la saisie courante (`trim` ou `null`) ; test de source.
+- [x] [Review][Patch] Isolation des tests [authors_list.spec.ts] — groupes visibilité et recherche vident le pivot comme le groupe des tris (assertions exactes) ; assertions de source renforcées (classe d'extension dans la balise du lien, contenu de l'élément `aria-live`, défilement).
+- [x] [Review][Patch] Défilement après un changement de filtre ou de tri [inertia/pages/authors.tsx] — retour en haut des résultats (`#authors-results`, `scroll-mt-24`) quand ils commencent au-dessus de la fenêtre ; le profil (10.3) le faisait déjà (D-10.3-4).
+- [x] [Review][Patch] Troncature de `q` par unités UTF-16 [public_author_service.ts] — `Array.from(q).slice(0, 100)` (points de code) ; test avec émojis.
+- [x] [Review][Patch] Institution ou domaine inconnus dans l'URL [authors_controller.ts, public_author_service.ts] — `knownFilters` : facettes chargées d'abord, valeur inconnue → `null` et aucun filtrage (props, sélections, résultats et redirection hors limites cohérents) ; tests.
+- [x] [Review][Patch] Compteur non formaté [authors.tsx, locales] — `toLocaleString` comme les cartes (`formattedCount`, `from`, `to`).
+- [x] [Review][Patch] Deux balayages des vues [public_author_service.ts] — un seul `LEFT JOIN LATERAL` (`count(*)` + `count(*) FILTER (fenêtre 365 j)`).
+- [x] [Review][Patch] Clé `authors.list.search_submit` inutilisée — retirée (FR/EN).
+
 ### Références
 
 - [Source: _bmad-output/planning-artifacts/epics.md#Story 10.5] ; en-tête Epic 10 (visibilité) ; 10.6/10.7/12.x hors périmètre.
@@ -169,3 +182,4 @@ Claude Opus 5.5 (claude-opus-5-5)
 
 - 2026-11-19 : story créée (contexte complet, statut ready-for-dev).
 - 2026-11-19 : implémentation (`GET /authors`, index des fenêtres de statistiques, `AuthorCard`, `AuthorFilters`, pied de page, 404, fil d'Ariane) ; 964 tests verts ; statut review.
+- 2026-11-19 : revue de code — 10 correctifs (facettes par le scope partagé et tests de confidentialité, `q` saisi transmis, isolation des tests, défilement, troncature par points de code, filtres inconnus ignorés, compteur formaté, LATERAL unique, clé inutilisée) ; statut done.
