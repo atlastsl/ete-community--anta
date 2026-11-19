@@ -17,6 +17,7 @@ export const controllers = {
   NewAccount: () => import('#controllers/new_account_controller'),
   public: {
     Home: () => import('#controllers/public/home_controller'),
+    Media: () => import('#controllers/public/media_controller'),
     Pages: () => import('#controllers/public/pages_controller'),
     Productions: () => import('#controllers/public/productions_controller'),
     Stats: () => import('#controllers/public/stats_controller'),

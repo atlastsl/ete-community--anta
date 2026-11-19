@@ -6,6 +6,7 @@ import { resolve } from 'node:path'
 const read = (path: string) => readFileSync(resolve(process.cwd(), path), 'utf-8')
 const avatar = read('inertia/components/shared/Avatar.tsx')
 const lib = read('inertia/lib/author_form.ts')
+const adminForm = read('inertia/components/admin/AuthorForm.tsx')
 
 test.group('Avatar', () => {
   test('photo : alt vide par défaut (D36), object-cover, bordure', ({ assert }) => {
@@ -34,7 +35,27 @@ test.group('Avatar', () => {
   test('tailles 32 / 56 / 96 px', ({ assert }) => {
     assert.include(avatar, "sm: { box: 'size-8'")
     assert.include(avatar, "md: { box: 'size-14'")
-    assert.include(avatar, "lg: { box: 'size-24'")
+    assert.match(avatar, /lg: \{\s*box: 'size-24 sm:size-28'/, '112 px dès sm (DESIGN.md)')
+  })
+
+  test('photo publique (Story 10.2) : srcSet w128/w384 via media.ts, width/height, lazy', ({
+    assert,
+  }) => {
+    assert.include(avatar, "import { authorPhotoImage } from '~/lib/media'")
+    assert.include(avatar, 'photoUrl?: string | null')
+    assert.include(avatar, 'authorPhotoImage(photoUrl, px, sizes)')
+    assert.include(avatar, 'srcSet={image.srcSet}')
+    assert.include(avatar, 'sizes={image.sizes}')
+    assert.include(avatar, 'width={image.width}')
+    assert.include(avatar, 'height={image.height}')
+    assert.include(avatar, "loading = 'lazy'")
+    assert.include(avatar, "sizes: '(min-width: 640px) 112px, 96px'")
+  })
+
+  test('URL signée de l’admin toujours acceptée par src (profils non publics)', ({ assert }) => {
+    assert.include(avatar, 'src: signedSrc')
+    assert.match(avatar, /: signedSrc\s*\?\s*\{ src: signedSrc, width: px, height: px \}/)
+    assert.match(adminForm, /<Avatar[^>]*src=/s)
   })
 
   test('authorInitials : 1re lettre (NFC, ponctuation ignorée, hors BMP), capitales fr-FR', ({

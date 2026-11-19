@@ -20,6 +20,9 @@ router
   .get('/productions/:slug/files/:fileId/download', [controllers.public.Productions, 'download'])
   .as('production.download')
 router.get('/privacy-policy', [controllers.public.Pages, 'privacy']).as('privacy-policy')
+// Images publiques adossées à R2 (P2.5) : photos d'auteurs à profil public. Les fichiers
+// sous licence (`productions/…`) ne passent jamais par ici (URL signées).
+router.get('/media/*', [controllers.public.Media, 'show']).as('media.show')
 
 // Health check (Docker / déploiement) — sans base de données ni rendu.
 // `revision` : commit de l'image, vérifié par le health check du déploiement (Story 8.4).

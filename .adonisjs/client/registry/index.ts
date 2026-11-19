@@ -36,6 +36,12 @@ const routes = {
     tokens: [{"old":"/privacy-policy","type":0,"val":"privacy-policy","end":""}],
     types: placeholder as Registry['privacy-policy']['types'],
   },
+  'media.show': {
+    methods: ["GET","HEAD"],
+    pattern: '/media/*',
+    tokens: [{"old":"/media/*","type":0,"val":"media","end":""},{"old":"/media/*","type":2,"val":"*","end":""}],
+    types: placeholder as Registry['media.show']['types'],
+  },
   'health': {
     methods: ["GET","HEAD"],
     pattern: '/health',

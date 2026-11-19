@@ -122,3 +122,8 @@
 
 - **Langue serveur / client divergente à la première visite** (préexistant) : sans cookie `i18n_lang`, le serveur rend les meta et `<html lang>` en français alors qu'i18next peut détecter l'anglais du navigateur et afficher la page en anglais (titre de la 404 et de la politique compris). Action : poser le cookie côté serveur depuis `Accept-Language`, ou aligner la détection client sur le cookie seul.
 - **Youch perdu sur les 404 en développement** (décision acceptée) : la NotFoundPage est rendue dans tous les environnements ; une 404 inattendue (`findOrFail`) n'affiche plus la pile en dev, seul l'avertissement journalisé par `report` subsiste.
+
+## Deferred from: dev of 10-2-photos-d-auteurs-publiques-et-composant-avatar (2026-11-19)
+
+- **`Set-Cookie` sur les réponses `/media`** : les middlewares routeur (session, shield `XSRF-TOKEN`) posent leurs cookies sur chaque réponse, y compris les images `Cache-Control: public`. Sans effet sur le cache navigateur ; à traiter (retrait des cookies ou route hors middlewares de session) avant de placer un cache partagé (nginx `proxy_cache`, CDN) devant `/media` (évolution P2.5).
+- **Avatars de l'admin toujours en URL signées** (suite de « URLs signées des avatars », 9.3) : non mis en cache navigateur ; les profils publics pourraient utiliser `/media` (question PO 10.2), les non publics doivent rester signés.
