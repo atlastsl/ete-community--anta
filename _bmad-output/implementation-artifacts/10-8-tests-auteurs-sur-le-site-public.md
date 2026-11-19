@@ -4,7 +4,7 @@ baseline_commit: 1cf4ed8
 
 # Story 10.8 : Tests auteurs sur le site public
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -186,6 +186,17 @@ Claude Opus 5.5 (claude-opus-5-5)
 - `_bmad-output/implementation-artifacts/10-8-tests-auteurs-sur-le-site-public.md` (nouveau)
 - `_bmad-output/implementation-artifacts/deferred-work.md` (modifié)
 
+### Review Findings
+
+Revue de code du 2026-11-19 : 6 constats, tous corrigés (tests seulement, aucun code produit modifié, aucune clé manquante révélée).
+
+- [x] [Review][Patch] Photo retirée : la 404 venait de l'objet supprimé, pas de la règle → variantes réécrites (`putVariants(newPrefix)`) avant le contrôle. Preuve : filtre `photo_key` de `MediaService.resolve` retiré → échec.
+- [x] [Review][Patch] `public_authors_keys.spec.ts` : `Avatar` retiré (aucun `t()`) ; chaque test par fichier exige ≥ 1 clé trouvée. Preuve : `Avatar` remis dans la liste → échec.
+- [x] [Review][Patch] Regex des clés `[A-Za-z0-9_.]`, guillemets doubles acceptés ; clés gabarit dépliées depuis les listes de valeurs lues dans la source (`AUTHORS_LIST_SORTS`, `PROFILE_SORTS`, `SECTIONS`, `AUTHOR_ITEMS`) ; tout gabarit non déplié fait échouer un test de couverture (`a11y.skip_to_content` est désormais vérifiée). Preuves : valeur `bogus` ajoutée à `PROFILE_SORTS`, gabarit inconnu ajouté, `t("a11y.skip_to_contentx")` → échecs.
+- [x] [Review][Patch] Détection de fuite uniquement sur des pages filtrées (`/authors?q=<nom>`, `/productions?q=<nom>`, `?q=<titre>`, détail, accueil quand la production hôte y est) ; carte d'accueil et carte de recherche absentes → erreur explicite. Preuves : scope retiré de `visibleSlugs` → fuites listées par page ; recherche de carte faussée → « host production missing from the home page ».
+- [x] [Review][Patch] Règle « un seul h1 » sur l'arbre complet (page + `PublicLayout` + composants locaux importés récursivement : `AuthorCard`, `AuthorFilters`, `Pagination`, `SortSelect`, `Avatar`, `ProductionCard`, `AuthorByline`…) pour `/authors` et le profil. Preuve : `<h1` ajouté dans `AuthorCard` → échec.
+- [x] [Review][Patch] Dossier d'images temporaires : `mkdtempSync` dans `group.setup`, supprimé au teardown.
+
 ### Lighthouse (AC 3)
 
 - À faire par Aurélien sur le staging (mobile, 4G simulée) : `/authors` et un profil ; LCP < 3 s. Résultat : —
@@ -203,3 +214,4 @@ Claude Opus 5.5 (claude-opus-5-5)
 - 2026-11-19 : création (bmad-create-story), inventaire de couverture.
 - 2026-11-19 : implémentation (bmad-dev-story, 1048 tests verts deux fois de suite, lint, typecheck, build) : matrice de confidentialité, transitions admin, i18n et a11y consolidés ;
   statut → review.
+- 2026-11-19 : revue de code, 6 constats corrigés (1048 tests verts deux fois, lint, typecheck, build) ; statut → done.

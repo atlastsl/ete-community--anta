@@ -32,25 +32,69 @@ const PUBLIC_FILES = [
   'inertia/components/public/AuthorCard.tsx',
   'inertia/components/public/AuthorFilters.tsx',
   'inertia/components/public/AuthorProfileHeader.tsx',
-  'inertia/components/shared/Avatar.tsx',
   'inertia/components/shared/SortSelect.tsx',
   'inertia/components/shared/Pagination.tsx',
 ]
 
-/** Shared files also rendered by the admin bundle (`inertia/admin.tsx`). */
+/**
+ * Shared files also rendered by the admin bundle (`inertia/admin.tsx`). `Avatar` (also shared)
+ * has no `t()` call: its alt text comes from the caller.
+ */
 const ADMIN_RENDERED_FILES = [
   'inertia/pages/errors/not_found.tsx',
-  'inertia/components/shared/Avatar.tsx',
   'inertia/components/shared/Pagination.tsx',
 ]
+
+/** Values of a `const NAME = [ 'a', 'b' ] as const` array declared in a source file. */
+function constArray(path: string, name: string): string[] {
+  const match = read(path).match(new RegExp(`const ${name} = \\[([^\\]]*)\\]`))
+  if (!match) throw new Error(`${name} not found in ${path}`)
+  return [...match[1].matchAll(/['"]([^'"]+)['"]/g)].map((m) => m[1])
+}
+
+const PRIVACY_SECTIONS = constArray('inertia/pages/privacy-policy.tsx', 'SECTIONS').filter(
+  (section) => section !== 'authors'
+)
+
+/**
+ * Template keys (`t(`…${x}…`)`) of the epic's files, expanded with the value lists they iterate
+ * over (read from the source, so a new value is checked too). Any template key not listed here
+ * fails the coverage test below: extend the table when adding one.
+ */
+const TEMPLATE_KEYS: Record<string, string[]> = {
+  'authors.list.sort.${value}': constArray(
+    'inertia/lib/authors_list_query.ts',
+    'AUTHORS_LIST_SORTS'
+  ).map((v) => `authors.list.sort.${v}`),
+  'authors.profile.sort.${value}': constArray(
+    'inertia/lib/author_profile_query.ts',
+    'PROFILE_SORTS'
+  ).map((v) => `authors.profile.sort.${v}`),
+  'privacy.${section}.heading': PRIVACY_SECTIONS.map((v) => `privacy.${v}.heading`),
+  'privacy.${section}.body': PRIVACY_SECTIONS.map((v) => `privacy.${v}.body`),
+  'privacy.authors.${item}': constArray('inertia/pages/privacy-policy.tsx', 'AUTHOR_ITEMS').map(
+    (v) => `privacy.authors.${v}`
+  ),
+}
+
+/** Template i18n keys used through `t(`…${…}…`)`, as written in the source. */
+function templateKeys(source: string): string[] {
+  return [...source.matchAll(/\bt\(\s*`([^`]*\$\{[^`]*)`/g)].map((m) => m[1])
+}
 
 function lookup(dict: Record<string, any>, key: string): unknown {
   return key.split('.').reduce<any>((node, part) => (node ? node[part] : undefined), dict)
 }
 
-/** Literal i18n keys used through `t('…')` (dynamic template keys are out of reach). */
+/**
+ * i18n keys used through `t('…')`, `t("…")` or a template without placeholder, plus the
+ * expansion of the known template keys (`TEMPLATE_KEYS`).
+ */
 function usedKeys(source: string): string[] {
-  return [...source.matchAll(/\bt\(\s*['`]([a-z_]+(?:\.[a-z_]+)+)['`]/g)].map((m) => m[1])
+  const literal = [...source.matchAll(/\bt\(\s*(['"`])([A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)+)\1/g)].map(
+    (m) => m[2]
+  )
+  return [...literal, ...templateKeys(source).flatMap((key) => TEMPLATE_KEYS[key] ?? [])]
 }
 
 /** A key resolves to a non-empty string, directly or through its i18next plural forms. */
@@ -68,9 +112,18 @@ test.group('i18n | clés de l’Epic 10 (Story 10.8)', () => {
     assert.isAbove(new Set(keys).size, 40)
   })
 
+  test('chaque clé gabarit des fichiers de l’epic est dépliée par TEMPLATE_KEYS', ({ assert }) => {
+    const found = new Set(PUBLIC_FILES.flatMap((file) => templateKeys(read(file))))
+    assert.isAbove(found.size, 0)
+    for (const key of found) assert.isTrue(key in TEMPLATE_KEYS, `gabarit non déplié : ${key}`)
+    for (const values of Object.values(TEMPLATE_KEYS)) assert.isAbove(values.length, 0)
+  })
+
   for (const file of PUBLIC_FILES) {
     test(`${file} : clés présentes en FR et EN (locales publiques)`, ({ assert }) => {
-      for (const key of usedKeys(read(file))) {
+      const keys = usedKeys(read(file))
+      assert.isAbove(keys.length, 0, `aucune clé trouvée dans ${file}`)
+      for (const key of keys) {
         for (const [lang, dict] of Object.entries(locales.public)) {
           assert.isTrue(resolves(dict, key), `public/${lang}.json : ${key} (${file})`)
         }
@@ -80,7 +133,9 @@ test.group('i18n | clés de l’Epic 10 (Story 10.8)', () => {
 
   for (const file of ADMIN_RENDERED_FILES) {
     test(`${file} : clés aussi présentes dans les locales admin`, ({ assert }) => {
-      for (const key of usedKeys(read(file))) {
+      const keys = usedKeys(read(file))
+      assert.isAbove(keys.length, 0, `aucune clé trouvée dans ${file}`)
+      for (const key of keys) {
         for (const [lang, dict] of Object.entries(locales.admin)) {
           assert.isTrue(resolves(dict, key), `admin/${lang}.json : ${key} (${file})`)
         }

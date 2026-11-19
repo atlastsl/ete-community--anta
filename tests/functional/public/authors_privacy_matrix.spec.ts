@@ -1,5 +1,5 @@
 import { test } from '@japa/runner'
-import { writeFileSync, mkdirSync } from 'node:fs'
+import { writeFileSync, mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { DateTime } from 'luxon'
@@ -164,17 +164,17 @@ async function surfacesOf(
   const profileProps = profile.status() === 200 ? extractPage(profile.text())!.props : null
   const profileHead = profile.status() === 200 ? headOf(profile.text()) : ''
 
-  const list = await getPage(client, `/authors?q=${encodeURIComponent(author.lastNames)}`)
-  bodies['/authors?q='] = list.body
-  const fullList = await getPage(client, '/authors')
-  bodies['/authors'] = fullList.body
+  // Leak scans only on pages filtered by the author's unique name or the host's title: page 1 of
+  // an unfiltered list would not necessarily contain the author (review of Story 10.8).
+  const nameQuery = encodeURIComponent(author.lastNames)
+  const list = await getPage(client, `/authors?q=${nameQuery}`)
+  bodies['/authors?q=<nom>'] = list.body
+  const byName = await getPage(client, `/productions?q=${nameQuery}`)
+  bodies['/productions?q=<nom>'] = byName.body
 
+  // Facet: the complete list of visible authors, read from the props (not a leak scan).
   const listing = await getPage(client, '/productions')
-  bodies['/productions'] = listing.body
   const filtered = await getPage(client, `/productions?author=${author.slug}`)
-
-  const home = await getPage(client, '/')
-  bodies['/'] = home.body
 
   const bylineSlugs: (string | null)[] = []
   if (host) {
@@ -182,12 +182,17 @@ async function surfacesOf(
     bodies['/productions/:slug'] = detail.body
     bylineSlugs.push(detail.props.production.authors[0].slug)
     const search = await getPage(client, `/productions?q=${host.title}`)
-    bodies['/productions?q='] = search.body
+    bodies['/productions?q=<titre>'] = search.body
     const card = search.props.results.find((r: { id: string }) => r.id === host.id)
+    if (!card) throw new Error(`host production missing from /productions?q=${host.title}`)
     bylineSlugs.push(card.authors[0].slug)
+    // The host is the newest published production: it must be among the recent cards.
+    const home = await getPage(client, '/')
     const homeCard = [...home.props.recent, ...home.props.mostViewed].find(
       (r: { id: string }) => r.id === host.id
     )
+    if (!homeCard) throw new Error('host production missing from the home page (recent cards)')
+    bodies['/'] = home.body
     bylineSlugs.push(homeCard.authors[0].slug)
   }
 
@@ -294,11 +299,11 @@ test.group('Public | matrice de confidentialité des auteurs (Story 10.8)', (gro
   }
 })
 
-const TMP = join(tmpdir(), 'anta-test-privacy-matrix')
-mkdirSync(TMP, { recursive: true })
+let tmpDir: string | null = null
 
 async function makeJpeg(name: string): Promise<string> {
-  const path = join(TMP, name)
+  if (!tmpDir) throw new Error('tmpDir is created by the group setup')
+  const path = join(tmpDir, name)
   const buffer = await sharp({
     create: { width: 480, height: 480, channels: 3, background: { r: 40, g: 120, b: 60 } },
   })
@@ -309,6 +314,13 @@ async function makeJpeg(name: string): Promise<string> {
 }
 
 test.group('Public | transitions pilotées par l’admin (Story 10.8)', (group) => {
+  group.setup(() => {
+    tmpDir = mkdtempSync(join(tmpdir(), 'anta-test-privacy-matrix-'))
+    return () => {
+      if (tmpDir) rmSync(tmpDir, { recursive: true, force: true })
+      tmpDir = null
+    }
+  })
   group.each.setup(async () => {
     await db.beginGlobalTransaction()
     drive.fake('r2')
@@ -454,6 +466,8 @@ test.group('Public | transitions pilotées par l’admin (Story 10.8)', (group) 
     remove.assertStatus(302)
     await author.refresh()
     assert.isNull(author.photoKey)
+    // Same as above: the rule refuses the removed key even if its objects are still stored.
+    await putVariants(newPrefix)
     assert.equal(await statusOf(client, `/media/${newPrefix}/w128.webp`), 404)
     profile = await client.get(`/authors/${author.slug}`)
     assert.isNull(extractPage(profile.text())!.props.author.photoBase)

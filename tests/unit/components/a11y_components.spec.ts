@@ -84,16 +84,59 @@ test.group('A11y | un seul <h1> par page publique', () => {
   }
 })
 
-// Story 10.8 — le h1 du profil vit dans AuthorProfileHeader : un seul h1 pour page + en-tête,
-// et l'en-tête est bien rendu par la page.
-test.group('A11y | profil d’auteur (Story 10.8)', () => {
-  test('author.tsx + AuthorProfileHeader : exactement un <h1>, en-tête rendu par la page', ({
-    assert,
-  }) => {
-    const page = read('inertia/pages/author.tsx')
-    const header = read('inertia/components/public/AuthorProfileHeader.tsx')
-    const count = (source: string) => (source.match(/<h1[\s>]/g) ?? []).length
-    assert.equal(count(page) + count(header), 1)
-    assert.match(page, /<AuthorProfileHeader[\s>]/)
-  })
+// Story 10.8 — un seul h1 sur tout l'arbre rendu : la page, PublicLayout (posé par
+// `inertia/app.tsx`) et tous les composants locaux importés, récursivement (le h1 du profil vit
+// dans AuthorProfileHeader ; aucun enfant — cartes, filtres, pagination — n'en ajoute un).
+function componentTree(entry: string): string[] {
+  const seen = new Set<string>()
+  const visit = (path: string) => {
+    if (seen.has(path)) return
+    seen.add(path)
+    const source = read(path)
+    for (const match of source.matchAll(/from '~\/((?:components|layouts)\/[^']+)'/g)) {
+      visit(`inertia/${match[1]}.tsx`)
+    }
+  }
+  visit(entry)
+  visit('inertia/layouts/PublicLayout.tsx')
+  return [...seen]
+}
+
+const h1Count = (source: string) => (source.match(/<h1[\s>]/g) ?? []).length
+
+test.group('A11y | un seul <h1> sur l’arbre des pages auteurs (Story 10.8)', () => {
+  const cases = {
+    'inertia/pages/authors.tsx': {
+      h1In: 'inertia/pages/authors.tsx',
+      children: [
+        'inertia/components/public/AuthorCard.tsx',
+        'inertia/components/public/AuthorFilters.tsx',
+        'inertia/components/shared/Pagination.tsx',
+        'inertia/components/shared/SortSelect.tsx',
+        'inertia/components/shared/Avatar.tsx',
+      ],
+    },
+    'inertia/pages/author.tsx': {
+      h1In: 'inertia/components/public/AuthorProfileHeader.tsx',
+      children: [
+        'inertia/components/public/AuthorProfileHeader.tsx',
+        'inertia/components/public/ProductionCard.tsx',
+        'inertia/components/public/AuthorByline.tsx',
+        'inertia/components/shared/Pagination.tsx',
+        'inertia/components/shared/SortSelect.tsx',
+        'inertia/components/shared/Avatar.tsx',
+      ],
+    },
+  }
+  for (const [page, { h1In, children }] of Object.entries(cases)) {
+    test(`${page} : exactement un <h1> (dans ${h1In}), aucun dans les autres fichiers`, ({
+      assert,
+    }) => {
+      const tree = componentTree(page)
+      for (const child of children) assert.include(tree, child, `${child} non résolu`)
+      for (const file of tree) {
+        assert.equal(h1Count(read(file)), file === h1In ? 1 : 0, `<h1> dans ${file}`)
+      }
+    })
+  }
 })
