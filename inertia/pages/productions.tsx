@@ -130,7 +130,7 @@ export default function Productions({
           ) : (
             <>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-sm text-stone-600">
+                <p className="text-sm text-stone-600" aria-live="polite">
                   {t('productions.results_count', { count: pagination.total })}
                 </p>
                 <div className="flex items-center gap-3">

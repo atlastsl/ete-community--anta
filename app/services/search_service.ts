@@ -1,10 +1,13 @@
 import db from '@adonisjs/lucid/services/db'
 import Production from '#models/production'
 import ProductionStatus from '#enums/production_status'
+import PublicAuthorService, { type AuthorFacetOption } from '#services/public_author_service'
 
 /**
  * Filtres multi-critères du site public (FR2–FR8). Chaque dimension est un tableau :
  * plusieurs valeurs d'une même dimension = OR ; dimensions différentes = AND.
+ * `author` = slugs d'auteurs **visibles** (Story 10.6), déjà validés par l'appelant contre
+ * `facets().author` (`PublicAuthorService.knownAuthorSlugs`).
  */
 export type ProductionFilters = {
   category: string[]
@@ -16,7 +19,8 @@ export type ProductionFilters = {
   license: string[]
 }
 
-export type Facets = ProductionFilters
+/** Facettes : valeurs brutes par dimension ; auteurs = `{ value: slug, label }` (D12). */
+export type Facets = Omit<ProductionFilters, 'author'> & { author: AuthorFacetOption[] }
 
 export const SORT_OPTIONS = ['relevance', 'date', 'views', 'downloads'] as const
 export type SortOption = (typeof SORT_OPTIONS)[number]
@@ -65,8 +69,17 @@ export default class SearchService {
     if (filters.language.length) query.whereIn('language', filters.language)
     if (filters.country.length) query.whereIn('publicationCountry', filters.country)
     if (filters.license.length) query.whereIn('licenseStatus', filters.license)
-    // Dimensions jsonb multi-valeurs (OR intra-dimension via containment).
-    this.applyJsonbFilter(query, 'authors', filters.author)
+    // Auteurs (Story 10.6) : productions liées (pivot) à au moins un des slugs (OR).
+    if (filters.author.length) {
+      query.whereExists((sub) =>
+        sub
+          .from('production_authors')
+          .join('authors', 'authors.id', 'production_authors.author_id')
+          .whereColumn('production_authors.production_id', 'productions.id')
+          .whereIn('authors.slug', filters.author)
+      )
+    }
+    // Dimension jsonb multi-valeurs (OR intra-dimension via containment).
     this.applyJsonbFilter(query, 'subdomain', filters.subdomain)
 
     return query
@@ -150,7 +163,10 @@ export default class SearchService {
       .limit(limit)
   }
 
-  /** Valeurs distinctes disponibles par dimension (productions publiées uniquement). */
+  /**
+   * Valeurs distinctes disponibles par dimension (productions publiées uniquement). Auteurs :
+   * profils visibles seulement (D12), plus jamais les noms libres de `productions.authors` (10.6).
+   */
   static async facets(): Promise<Facets> {
     const [category, domain, language, country, license, author, subdomain] = await Promise.all([
       this.distinctValues('category'),
@@ -158,14 +174,14 @@ export default class SearchService {
       this.distinctValues('language'),
       this.distinctValues('publicationCountry'),
       this.distinctValues('licenseStatus'),
-      this.distinctJsonbValues('authors'),
+      PublicAuthorService.facetOptions(),
       this.distinctJsonbValues('subdomain'),
     ])
 
     return { category, domain, subdomain, author, language, country, license }
   }
 
-  /** Valeurs distinctes d'une colonne jsonb tableau (auteurs, sous-domaines). */
+  /** Valeurs distinctes d'une colonne jsonb tableau (sous-domaines). */
   private static async distinctJsonbValues(column: string): Promise<string[]> {
     const res = await db.rawQuery(
       `select distinct jsonb_array_elements_text(${column}) as value

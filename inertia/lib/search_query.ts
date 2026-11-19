@@ -20,7 +20,43 @@ export const FILTER_DIMENSIONS = [
 
 export type FilterDimension = (typeof FILTER_DIMENSIONS)[number]
 export type ProductionFilters = Record<FilterDimension, string[]>
-export type Facets = Record<FilterDimension, string[]>
+/** Option d'une facette : valeur d'URL + libellé affiché. */
+export type FacetOption = { value: string; label: string }
+/**
+ * Facettes du listing : valeurs brutes par dimension, sauf `author` (Story 10.6, D12) =
+ * `{ value: slug, label: "Prénom NOM" }` des seuls auteurs visibles.
+ */
+export type Facets = Record<Exclude<FilterDimension, 'author'>, string[]> & {
+  author: FacetOption[]
+}
+
+/**
+ * Options d'une dimension sous une forme unique `{ value, label }` : les auteurs portent leur
+ * libellé (serveur) ; les autres valeurs passent par `labelOf` (traduction de taxonomie).
+ */
+export function facetOptions(
+  facets: Facets,
+  dimension: FilterDimension,
+  labelOf: (dimension: FilterDimension, value: string) => string
+): FacetOption[] {
+  if (dimension === 'author') return facets.author ?? []
+  return (facets[dimension] ?? []).map((value) => ({ value, label: labelOf(dimension, value) }))
+}
+
+/** Clé de comparaison insensible à la casse et aux accents (recherche de facette). */
+function foldText(text: string): string {
+  return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+}
+
+/** Vrai si `label` contient la saisie `query` (casse et accents ignorés ; saisie vide = vrai). */
+export function matchesFacetQuery(label: string, query: string): boolean {
+  const needle = foldText(query)
+  return needle === '' || foldText(label).includes(needle)
+}
 
 export const EMPTY_FILTERS_CLIENT: ProductionFilters = {
   category: [],

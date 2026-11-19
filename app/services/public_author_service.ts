@@ -4,6 +4,7 @@ import Production from '#models/production'
 import ProductionStatus from '#enums/production_status'
 import AuthorService from '#services/author_service'
 import { normalizeKey } from '#helpers/normalize'
+import { formatAuthorName } from '#helpers/author_name'
 
 /** Sorts of the profile's productions (P2.6); `date` is the default, omitted from the URL. */
 export const AUTHOR_PROFILE_SORTS = ['date', 'views', 'downloads', 'title'] as const
@@ -29,6 +30,9 @@ export type AuthorsListFilters = {
 /** Rolling 365-day window of the rankings (P2.3), computed by Postgres. */
 const WINDOW = "now() - interval '365 days'"
 
+/** Option of the listing's author facet (Story 10.6, D12): slug and "Prénom NOM". */
+export type AuthorFacetOption = { value: string; label: string }
+
 export type AuthorProfileStats = { views: number; downloads: number; productions: number }
 
 /**
@@ -50,6 +54,34 @@ export default class PublicAuthorService {
       .withScopes((scopes) => scopes.visibleOnSite())
       .select('id', 'slug')
     return new Map(rows.map((author) => [author.id, author.slug]))
+  }
+
+  /**
+   * Author facet of `/productions` (Story 10.6, FR5, D12): the visible authors only
+   * (`Author.visibleOnSite`), "Prénom NOM", ordered by last name, first names then `id`
+   * (like the `name` sort of `/authors`). One query; no internal field leaves the server.
+   */
+  static async facetOptions(): Promise<AuthorFacetOption[]> {
+    const rows = await Author.query()
+      .withScopes((scopes) => scopes.visibleOnSite())
+      .select('authors.id', 'authors.slug', 'authors.first_names', 'authors.last_names')
+      .orderBy('authors.last_names', 'asc')
+      .orderBy('authors.first_names', 'asc')
+      .orderBy('authors.id', 'asc')
+    return rows.map((author) => ({
+      value: author.slug,
+      label: formatAuthorName(author.firstNames, author.lastNames),
+    }))
+  }
+
+  /**
+   * Requested `author` slugs kept for the listing filter: those of the facet (visible
+   * authors), deduplicated, in the requested order. Unknown, non-public and unpublished
+   * slugs (or old free-text names) are dropped alike: nothing reveals that they exist.
+   */
+  static knownAuthorSlugs(requested: string[], options: AuthorFacetOption[]): string[] {
+    const known = new Set(options.map((option) => option.value))
+    return [...new Set(requested)].filter((slug) => known.has(slug))
   }
 
   /** Visible author by slug, affiliations preloaded in their `position` order; else `null`. */

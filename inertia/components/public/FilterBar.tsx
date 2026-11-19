@@ -4,6 +4,7 @@ import { Link } from '@adonisjs/inertia/react'
 import FilterChip from './FilterChip'
 import {
   FILTER_DIMENSIONS,
+  facetOptions,
   toggleFilter,
   clearFilters,
   hasActiveFilters,
@@ -49,12 +50,12 @@ export default function FilterBar({
             <span className="text-xs font-medium uppercase tracking-wide text-stone-600">
               {t(`filters.dimensions.${dim}`)}
             </span>
-            {facets[dim].map((value) => (
+            {facetOptions(facets, dim, (d, value) => facetValueLabel(t, d, value)).map((option) => (
               <FilterChip
-                key={value}
-                label={facetValueLabel(t, dim, value)}
-                href={`/productions${toggleFilter(search, dim, value)}`}
-                active={isFilterActive(activeFilters, dim, value)}
+                key={option.value}
+                label={option.label}
+                href={`/productions${toggleFilter(search, dim, option.value)}`}
+                active={isFilterActive(activeFilters, dim, option.value)}
               />
             ))}
           </div>

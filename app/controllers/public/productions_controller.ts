@@ -14,6 +14,7 @@ import StatsService from '#services/stats_service'
 import env from '#start/env'
 import ProductionCardTransformer from '#transformers/production_card_transformer'
 import PublicBylineService from '#services/public_byline_service'
+import PublicAuthorService from '#services/public_author_service'
 
 /** Sérialisation complète pour la page détail (toutes métadonnées publiques + fichiers/liens). */
 function serializeDetail(p: Production) {
@@ -89,16 +90,23 @@ export default class ProductionsController {
       category: asArray(request.input('category')),
       domain: asArray(request.input('domain')),
       subdomain: asArray(request.input('subdomain')),
-      author: asArray(request.input('author')),
+      author: [], // résolu ci-dessous contre la facette (slugs visibles seulement, 10.6)
       language: asArray(request.input('language')),
       country: asArray(request.input('country')),
       // license validé contre l'enum (pas de valeur arbitraire dans le WHERE)
       license: asArray(request.input('license')).filter((v) => LICENSE_VALUES.includes(v)),
     }
 
+    // Facettes d'abord : `author=<slug>` n'est retenu que pour un auteur visible de la facette
+    // (Story 10.6, D12) ; slug inconnu, non public ou ancien nom libre → ignoré, sans erreur.
+    const facets = await SearchService.facets()
+    filters.author = PublicAuthorService.knownAuthorSlugs(
+      asArray(request.input('author')),
+      facets.author
+    )
+
     const paginator = await SearchService.search({ q, filters, sort, page, perPage: PER_PAGE })
     const meta = paginator.getMeta()
-    const facets = await SearchService.facets()
 
     await PublicBylineService.attach(paginator.all())
     // Résultats approchants : si la recherche exacte ne renvoie rien, proposer les plus proches.
