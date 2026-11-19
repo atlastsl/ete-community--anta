@@ -9,6 +9,7 @@ import {
   clearFilters,
   hasActiveFilters,
   isFilterActive,
+  withActiveAuthors,
   type Facets,
   type ProductionFilters,
 } from '~/lib/search_query'
@@ -35,6 +36,8 @@ export default function FilterBar({
 
   // --- Mode listing (/productions) : multi-dimensions + toggle + effacer ---
   if (facets && activeFilters) {
+    // Slugs d'auteurs ignorés par le serveur non recopiés dans les liens (10.6).
+    const listingSearch = withActiveAuthors(search, activeFilters.author)
     const dimensions = FILTER_DIMENSIONS.filter((dim) => (facets[dim]?.length ?? 0) > 0)
     if (dimensions.length === 0) return null
 
@@ -54,8 +57,9 @@ export default function FilterBar({
               <FilterChip
                 key={option.value}
                 label={option.label}
-                href={`/productions${toggleFilter(search, dim, option.value)}`}
+                href={`/productions${toggleFilter(listingSearch, dim, option.value)}`}
                 active={isFilterActive(activeFilters, dim, option.value)}
+                preserveState
               />
             ))}
           </div>
@@ -63,7 +67,9 @@ export default function FilterBar({
 
         {hasActiveFilters(activeFilters) && (
           <Link
-            href={`/productions${clearFilters(search)}`}
+            href={`/productions${clearFilters(listingSearch)}`}
+            preserveState
+            preserveScroll
             className="text-sm text-green-700 hover:underline"
           >
             {t('actions.clear_filters')}

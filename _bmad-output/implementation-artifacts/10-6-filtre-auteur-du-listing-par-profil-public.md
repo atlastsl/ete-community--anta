@@ -4,7 +4,7 @@ baseline_commit: 144d424
 
 # Story 10.6 : Filtre auteur du listing par profil public
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -86,6 +86,22 @@ afin de retrouver toutes les productions d'un auteur (FR5, D12, D28, flux 5).
 - **D-10.6-5** Pas de repli sur le jsonb pour les productions non converties : seules les productions liées par le pivot sont filtrées (après la bascule 9.7, toutes le sont).
 - **D-10.6-6** `aria-live="polite"` ajouté au compteur de résultats (flux 5 « le nombre de résultats est lu »).
 
+### Porte de déploiement
+
+- **10.6 (comme 9.7) ne se déploie qu'après `authors:apply` + `authors:verify` à 100 %** : le filtre et la facette ne lisent que le pivot ; avant la conversion, une production non liée ne serait plus trouvable par auteur.
+
+### Review Findings
+
+- [x] [Review][Patch] Remontage de la page à chaque bascule [FilterSidebar.tsx, FilterChip.tsx, FilterBar.tsx] — visite GET d'Inertia sans `preserveState` = nouvelle clé (vérifié dans `@inertiajs/core` : `preserveState ?? method !== 'get'`) → recherche de facette, groupe déplié et `aria-live` perdus. `preserveState` + `preserveScroll` sur les bascules et « Effacer filtres » du panneau ; `<details>` piloté par un état local (`onToggle`), reste ouvert ; région `role="status"` `aria-live` toujours montée hors des branches résultats / aucun / approchants (« N résultat(s) », « Aucune production… », avis approchant) ; compteur visible `aria-hidden`.
+- [x] [Review][Patch] Plus de 20 auteurs [FilterSidebar.tsx, public_author_service.ts] — à 20 auteurs actifs, lignes non cochées inertes (`aria-disabled`) + aide `filters.author_limit` (FR/EN) ; serveur : `parseAuthorParam` garde les valeurs de l'objet `qs` (au-delà de `arrayLimit` ou `author[x]=`), 20 premières ; `knownAuthorSlugs` borne aussi à 20. Tests : 21 auteurs visibles → 20 retenus ; `author[x]=<slug>` retenu.
+- [x] [Review][Patch] Défense en profondeur [search_service.ts] — la sous-requête auteur se limite à `PublicAuthorService.visibleAuthorIds()` (scope unique `Author.visibleOnSite`) ; test unitaire : appel direct avec un slug non public → aucun résultat (rouge vérifié).
+- [x] [Review][Patch] Recherche de facette [search_query.ts, FilterSidebar.tsx] — auteurs cochés toujours affichés ; chaque mot saisi cherché indépendamment, dans n'importe quel ordre ; œ/æ/ø/ß/ł/đ repliés.
+- [x] [Review][Patch] Tests renforcés [search.spec.ts] — > 20 valeurs / vide / indexée : résultats non filtrés et `activeFilters.author == []` ; étape « OU relâché » des approchants avec filtre auteur ; ordre de la facette indépendant de la collation (même casse).
+- [x] [Review][Patch] Espace [keyboard.ts, FilterSidebar.tsx, FilterChip.tsx] — `spaceToggle` : répétition avalée sans nouvelle visite, modificateurs laissés au navigateur ; appliqué aussi à `FilterChip` ; test de comportement.
+- [x] [Review][Patch] Valeurs `author` ignorées recopiées [search_query.ts, productions.tsx, FilterSidebar.tsx, FilterBar.tsx] — `withActiveAuthors(search, activeFilters.author)` reconstruit les paramètres `author` avant bascule, pagination, tri et recherche.
+- [x] [Review][Defer] Facette auteur non bornée → `deferred-work.md`.
+- [ ] [Review][PO] D-10.6-2 (« Effacer filtres » retire `author`) : à confirmer par Aurélien.
+
 ### Références
 
 - [Source: _bmad-output/planning-artifacts/epics.md#Story 10.6] ; en-tête Epic 10 (règle de visibilité) ; 10.8 (scénarios `author=<slug>`).
@@ -126,6 +142,11 @@ Claude Opus 5.5 (claude-opus-5-5)
 - tests/unit/services/search_service.spec.ts (modifié)
 - tests/unit/lib/search_query_behavior.spec.ts (nouveau)
 - tests/unit/components/filter_sidebar.spec.ts (nouveau)
+- tests/unit/components/filter_chip.spec.ts (modifié, revue)
+- inertia/lib/keyboard.ts (nouveau, revue)
+- inertia/components/public/FilterChip.tsx (modifié, revue)
+- inertia/locales/public/fr.json, en.json (modifiés, revue : `filters.author_limit`)
+- _bmad-output/implementation-artifacts/deferred-work.md (modifié, revue)
 - _bmad-output/implementation-artifacts/10-6-filtre-auteur-du-listing-par-profil-public.md (nouveau)
 
 ## Questions ouvertes (non bloquantes, défauts retenus)
@@ -137,4 +158,5 @@ Claude Opus 5.5 (claude-opus-5-5)
 ## Change Log
 
 - 2026-11-19 : story créée (contexte complet, ready-for-dev).
+- 2026-11-19 : revue de code appliquée (7 correctifs, 1 report, 1 question PO) ; statut done.
 - 2026-11-19 : implémentation (filtre `author=<slug>` par pivot, facette des auteurs visibles, clavier, compteur annoncé) ; 989 tests ; statut review.

@@ -20,6 +20,7 @@ import {
   setPage,
   clearFilters,
   hasActiveFilters,
+  withActiveAuthors,
   type Facets,
   type ProductionFilters,
 } from '~/lib/search_query'
@@ -59,7 +60,12 @@ export default function Productions({
 }: ProductionsProps) {
   const { t } = useTranslation()
   const { url } = usePage()
-  const search = url.includes('?') ? url.slice(url.indexOf('?')) : ''
+  // Auteurs de l'URL remplacés par ceux retenus par le serveur : un slug ignoré n'est
+  // recopié ni par la pagination, ni par le tri, ni par la recherche (Story 10.6).
+  const search = withActiveAuthors(
+    url.includes('?') ? url.slice(url.indexOf('?')) : '',
+    activeFilters.author
+  )
   const [view, setView] = useState<ListingView>(readStoredView)
 
   function changeView(next: ListingView) {
@@ -94,9 +100,23 @@ export default function Productions({
     </div>
   )
 
+  // Annonce du nombre de résultats (flux 5) : région toujours montée, hors des branches
+  // résultats / aucun résultat / approchants, mise à jour par les bascules (preserveState).
+  const announcement =
+    results.length === 0
+      ? q
+        ? t('productions.no_results_for', { term: q })
+        : t('productions.no_results')
+      : approximate
+        ? t('productions.approximate_notice', { term: q })
+        : t('productions.results_count', { count: pagination.total })
+
   return (
     <div className="mx-auto max-w-6xl">
       <h1 className="sr-only">{t('productions.heading')}</h1>
+      <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+        {announcement}
+      </p>
       <SearchBar defaultValue={q ?? ''} onSubmit={handleSearch} />
 
       <div className="mt-6 flex flex-col gap-6 lg:flex-row lg:gap-8">
@@ -130,7 +150,7 @@ export default function Productions({
           ) : (
             <>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-sm text-stone-600" aria-live="polite">
+                <p className="text-sm text-stone-600" aria-hidden="true">
                   {t('productions.results_count', { count: pagination.total })}
                 </p>
                 <div className="flex items-center gap-3">

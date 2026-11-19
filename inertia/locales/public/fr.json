@@ -51,6 +51,7 @@
     "label": "Filtres de recherche",
     "title": "Filtres",
     "author_search": "Rechercher un auteur...",
+    "author_limit": "{{count}} auteurs au maximum : retirez-en un pour en choisir un autre.",
     "filter_by": "Filtrer par {{label}}",
     "dimensions": {
       "category": "Catégorie",

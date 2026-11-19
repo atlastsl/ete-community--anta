@@ -19,6 +19,8 @@ type SearchQueryModule = {
   clearFilters: (search: string) => string
   setPage: (search: string, page: number) => string
   setSort: (search: string, value: string) => string
+  withActiveAuthors: (search: string, authors: string[]) => string
+  MAX_AUTHOR_FILTERS: number
 }
 
 const load = async (): Promise<SearchQueryModule> =>
@@ -52,6 +54,29 @@ test.group('search_query | facette auteur par slug (10.6)', () => {
     assert.isFalse(matchesFacetQuery('Jean EXEMPLE', 'marie'))
   })
 
+  test('matchesFacetQuery : chaque mot, dans n’importe quel ordre ; ligatures repliées', async ({
+    assert,
+  }) => {
+    const { matchesFacetQuery } = await load()
+    assert.isTrue(matchesFacetQuery('Jeanne Marie EXEMPLE', 'exemple jeanne'))
+    assert.isTrue(matchesFacetQuery('Jeanne Marie EXEMPLE', '  marie   exem '))
+    assert.isFalse(matchesFacetQuery('Jeanne Marie EXEMPLE', 'exemple paul'))
+    assert.isTrue(matchesFacetQuery('Lætitia CŒURFICTIF', 'laetitia coeur'))
+    assert.isTrue(matchesFacetQuery('Søren ØSTFICTIF', 'soren ost'))
+  })
+
+  test('withActiveAuthors : slugs ignorés retirés, autres paramètres conservés', async ({
+    assert,
+  }) => {
+    const { withActiveAuthors, setPage, toggleFilter, MAX_AUTHOR_FILTERS } = await load()
+    const search = withActiveAuthors('?q=x&author=Nom%20Libre&author=a-b&category=Livre', ['a-b'])
+    assert.equal(search, '?q=x&category=Livre&author=a-b')
+    assert.equal(withActiveAuthors('?author=inconnu&page=2', []), '?page=2')
+    assert.equal(setPage(search, 2), '?q=x&category=Livre&author=a-b&page=2')
+    assert.equal(toggleFilter(search, 'author', 'c-d'), '?q=x&category=Livre&author=a-b&author=c-d')
+    assert.equal(MAX_AUTHOR_FILTERS, 20)
+  })
+
   test('toggleFilter ajoute / retire un slug et revient page 1', async ({ assert }) => {
     const { toggleFilter } = await load()
     assert.equal(toggleFilter('?q=x&page=3', 'author', 'a-b'), '?q=x&author=a-b')
@@ -65,5 +90,25 @@ test.group('search_query | facette auteur par slug (10.6)', () => {
     assert.equal(setPage('?author=a-b&author=c-d', 2), '?author=a-b&author=c-d&page=2')
     assert.equal(setSort('?author=a-b&page=2', 'views'), '?author=a-b&sort=views')
     assert.equal(clearFilters('?q=x&author=a-b&category=Livre&page=2'), '?q=x')
+  })
+})
+
+test.group('keyboard | Espace sur un filtre-lien (10.6)', () => {
+  type KeyboardModule = {
+    spaceToggle: (event: Record<string, unknown>) => 'visit' | 'swallow' | null
+  }
+  const loadKeyboard = async (): Promise<KeyboardModule> =>
+    import(pathToFileURL(resolve(process.cwd(), 'inertia/lib/keyboard.ts')).href)
+
+  test('Espace simple → visite ; répétition → avalée ; modificateurs et autres touches → rien', async ({
+    assert,
+  }) => {
+    const { spaceToggle } = await loadKeyboard()
+    assert.equal(spaceToggle({ key: ' ' }), 'visit')
+    assert.equal(spaceToggle({ key: ' ', repeat: true }), 'swallow')
+    for (const modifier of ['shiftKey', 'ctrlKey', 'altKey', 'metaKey']) {
+      assert.isNull(spaceToggle({ key: ' ', [modifier]: true }), modifier)
+    }
+    assert.isNull(spaceToggle({ key: 'Enter' }))
   })
 })

@@ -7,6 +7,7 @@ const read = (path: string) => readFileSync(resolve(process.cwd(), path), 'utf-8
 const sidebar = read('inertia/components/public/FilterSidebar.tsx')
 const filterBar = read('inertia/components/public/FilterBar.tsx')
 const productionsPage = read('inertia/pages/productions.tsx')
+const filterChip = read('inertia/components/public/FilterChip.tsx')
 
 test.group('FilterSidebar | facette auteur (10.6)', () => {
   test('options { value, label } : libellé affiché, slug dans l’URL', ({ assert }) => {
@@ -16,16 +17,56 @@ test.group('FilterSidebar | facette auteur (10.6)', () => {
     assert.include(sidebar, 'isFilterActive(activeFilters, dim, option.value)')
   })
 
-  test('recherche de facette sur le libellé, casse et accents ignorés', ({ assert }) => {
-    assert.include(sidebar, 'matchesFacetQuery(option.label, authorQuery)')
+  test('recherche de facette sur le libellé ; auteurs cochés toujours affichés', ({ assert }) => {
+    assert.match(
+      sidebar,
+      /isFilterActive\(activeFilters, dim, option\.value\) \|\|\s*matchesFacetQuery\(option\.label, authorQuery\)/
+    )
     assert.notInclude(sidebar, 'v.toLowerCase().includes')
   })
 
-  test('ligne opérable au clavier : aria-pressed, Espace bascule', ({ assert }) => {
+  test('bascules sur la même page : preserveState + preserveScroll (pas de remontage)', ({
+    assert,
+  }) => {
+    assert.include(sidebar, 'const SAME_PAGE = { preserveState: true, preserveScroll: true }')
+    assert.include(sidebar, 'router.visit(href, SAME_PAGE)')
+    assert.equal(sidebar.split('{...SAME_PAGE}').length - 1, 2) // lignes + « Effacer filtres »
+    assert.include(filterBar, 'preserveState')
+    assert.include(
+      filterChip,
+      'router.visit(href, { preserveState, preserveScroll: preserveState })'
+    )
+  })
+
+  test('groupe déplié par un état local (reste ouvert pendant les bascules)', ({ assert }) => {
+    assert.include(sidebar, 'const [expanded, setExpanded] = useState(activeCount > 0)')
+    assert.include(sidebar, 'open={expanded}')
+    assert.include(sidebar, 'onToggle={(event) => setExpanded(event.currentTarget.open)}')
+  })
+
+  test('20 auteurs actifs : lignes non cochées inertes + texte d’aide', ({ assert }) => {
+    assert.include(sidebar, 'activeCount >= MAX_AUTHOR_FILTERS')
+    assert.include(sidebar, 'disabled={authorLimitReached && !active}')
+    assert.include(sidebar, 'aria-disabled="true"')
+    assert.include(sidebar, "t('filters.author_limit', { count: MAX_AUTHOR_FILTERS })")
+  })
+
+  test('Espace : spaceToggle (répétition et modificateurs ignorés) dans les deux filtres', ({
+    assert,
+  }) => {
+    for (const source of [sidebar, filterChip]) {
+      assert.include(source, 'const action = spaceToggle(event)')
+      assert.include(source, "if (action === 'visit')")
+      assert.notInclude(source, "if (event.key === ' ')")
+    }
     assert.include(sidebar, 'aria-pressed={active}')
-    assert.include(sidebar, 'onKeyDown={handleKeyDown}')
-    assert.include(sidebar, "event.key === ' '")
-    assert.include(sidebar, 'router.visit(href)')
+  })
+
+  test('liens reconstruits depuis activeFilters.author (slugs ignorés retirés)', ({ assert }) => {
+    for (const source of [sidebar, filterBar, productionsPage]) {
+      assert.include(source, 'withActiveAuthors(')
+      assert.include(source, 'activeFilters.author')
+    }
   })
 
   test('FilterBar (mode listing) lit la même forme de facette', ({ assert }) => {
@@ -33,7 +74,17 @@ test.group('FilterSidebar | facette auteur (10.6)', () => {
     assert.include(filterBar, 'label={option.label}')
   })
 
-  test('compteur de résultats annoncé (flux 5)', ({ assert }) => {
-    assert.match(productionsPage, /aria-live="polite">\s*\{t\('productions\.results_count'/)
+  test('région aria-live toujours montée, hors des branches de résultats (flux 5)', ({
+    assert,
+  }) => {
+    const region = productionsPage.indexOf('role="status" aria-live="polite"')
+    assert.isAbove(region, -1)
+    assert.isBelow(region, productionsPage.indexOf('results.length === 0 ? ('))
+    assert.include(productionsPage, '{announcement}')
+    for (const key of ['no_results_for', 'no_results', 'approximate_notice', 'results_count']) {
+      assert.include(productionsPage, `t('productions.${key}'`)
+    }
+    // Le compteur visible n'est plus annoncé une seconde fois.
+    assert.equal(productionsPage.split('aria-live').length - 1, 1)
   })
 })

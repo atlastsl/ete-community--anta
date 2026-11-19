@@ -30,6 +30,9 @@ export type AuthorsListFilters = {
 /** Rolling 365-day window of the rankings (P2.3), computed by Postgres. */
 const WINDOW = "now() - interval '365 days'"
 
+/** Most authors filtered at once on `/productions` (`qs` `arrayLimit: 20`, Story 10.6). */
+export const MAX_AUTHOR_FILTERS = 20
+
 /** Option of the listing's author facet (Story 10.6, D12): slug and "Prénom NOM". */
 export type AuthorFacetOption = { value: string; label: string }
 
@@ -81,7 +84,25 @@ export default class PublicAuthorService {
    */
   static knownAuthorSlugs(requested: string[], options: AuthorFacetOption[]): string[] {
     const known = new Set(options.map((option) => option.value))
-    return [...new Set(requested)].filter((slug) => known.has(slug))
+    return [...new Set(requested)].filter((slug) => known.has(slug)).slice(0, MAX_AUTHOR_FILTERS)
+  }
+
+  /**
+   * Raw `author` query value → at most 20 non-empty strings. Repeated keys give an array;
+   * beyond `qs`'s `arrayLimit` (20), or with indexed keys (`author[x]=`), `qs` returns an
+   * object: its values are kept in order (first 20), anything else is dropped.
+   */
+  static parseAuthorParam(input: unknown): string[] {
+    const values = Array.isArray(input)
+      ? input
+      : input && typeof input === 'object'
+        ? Object.values(input)
+        : [input]
+    return values
+      .filter((value): value is string => typeof value === 'string')
+      .map((value) => value.trim())
+      .filter((value) => value !== '')
+      .slice(0, MAX_AUTHOR_FILTERS)
   }
 
   /** Visible author by slug, affiliations preloaded in their `position` order; else `null`. */
@@ -153,8 +174,11 @@ export default class PublicAuthorService {
     return query.paginate(page, AUTHOR_PROFILE_PER_PAGE)
   }
 
-  /** Ids of the visible authors (`Author.visibleOnSite`), as a sub-query of the facets. */
-  private static visibleAuthorIds() {
+  /**
+   * Ids of the visible authors (`Author.visibleOnSite`), as a sub-query of the facets and of
+   * the listing's author filter (`SearchService`, defence in depth, Story 10.6).
+   */
+  static visibleAuthorIds() {
     return Author.query()
       .withScopes((scopes) => scopes.visibleOnSite())
       .select('authors.id')

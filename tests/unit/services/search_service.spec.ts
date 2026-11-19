@@ -176,6 +176,22 @@ test.group('SearchService | filtres isolés', (group) => {
     assert.deepEqual(await searchTitles({ filters: { author: [author.slug] } }), ['A'])
     assert.deepEqual(await searchTitles({ filters: { author: ['Nom Libre'] } }), [])
   })
+
+  test('author : défense en profondeur, un slug non visible ne filtre jamais (10.6)', async ({
+    assert,
+  }) => {
+    const hidden = await Author.create({
+      firstNames: 'Jeanne',
+      lastNames: 'Nonpublique',
+      consentConfirmedAt: null,
+    })
+    const linked = await createProduction({ title: 'Liee' })
+    await db
+      .table('production_authors')
+      .insert({ production_id: linked.id, author_id: hidden.id, position: 1 })
+    // Appel direct sans validation par la facette : aucune production révélée.
+    assert.deepEqual(await searchTitles({ filters: { author: [hidden.slug] } }), [])
+  })
 })
 
 test.group('SearchService | combinaison de filtres', (group) => {

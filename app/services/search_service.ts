@@ -77,6 +77,9 @@ export default class SearchService {
           .join('authors', 'authors.id', 'production_authors.author_id')
           .whereColumn('production_authors.production_id', 'productions.id')
           .whereIn('authors.slug', filters.author)
+          // Défense en profondeur : auteurs visibles seulement (scope unique), quel que soit
+          // l'appelant — un slug non public ne filtre jamais (et ne révèle rien).
+          .whereIn('authors.id', PublicAuthorService.visibleAuthorIds())
       )
     }
     // Dimension jsonb multi-valeurs (OR intra-dimension via containment).

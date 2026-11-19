@@ -43,29 +43,41 @@ export function facetOptions(
   return (facets[dimension] ?? []).map((value) => ({ value, label: labelOf(dimension, value) }))
 }
 
-/** Clé de comparaison insensible à la casse et aux accents (recherche de facette). */
+/**
+ * Nombre maximal d'auteurs filtrés à la fois : au-delà de 20 valeurs répétées, `qs`
+ * (`arrayLimit: 20`) ne renvoie plus un tableau ; le serveur garde aussi les 20 premières.
+ */
+export const MAX_AUTHOR_FILTERS = 20
+
+/** Ligatures et lettres barrées sans décomposition NFD (« œ » ne devient pas « oe »). */
+const FOLDED_LETTERS: Record<string, string> = {
+  œ: 'oe',
+  æ: 'ae',
+  ø: 'o',
+  ß: 'ss',
+  ł: 'l',
+  đ: 'd',
+}
+
+/** Clé de comparaison insensible à la casse, aux accents et aux ligatures (facette). */
 function foldText(text: string): string {
   return text
+    .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .trim()
+    .replace(/[œæøßłđ]/g, (letter) => FOLDED_LETTERS[letter] ?? letter)
 }
 
-/** Vrai si `label` contient la saisie `query` (casse et accents ignorés ; saisie vide = vrai). */
+/**
+ * Vrai si chaque mot saisi figure dans `label`, dans n'importe quel ordre (« nom prénom »
+ * comme « prénom nom ») ; casse, accents et ligatures ignorés ; saisie vide = vrai.
+ */
 export function matchesFacetQuery(label: string, query: string): boolean {
-  const needle = foldText(query)
-  return needle === '' || foldText(label).includes(needle)
-}
-
-export const EMPTY_FILTERS_CLIENT: ProductionFilters = {
-  category: [],
-  domain: [],
-  subdomain: [],
-  author: [],
-  language: [],
-  country: [],
-  license: [],
+  const haystack = foldText(label)
+  return foldText(query)
+    .split(/\s+/)
+    .filter(Boolean)
+    .every((word) => haystack.includes(word))
 }
 
 function parse(search: string): URLSearchParams {
@@ -75,6 +87,18 @@ function parse(search: string): URLSearchParams {
 function toQueryString(params: URLSearchParams): string {
   const qs = params.toString()
   return qs ? `?${qs}` : ''
+}
+
+/**
+ * Remplace les paramètres `author` de l'URL par les slugs retenus par le serveur
+ * (`activeFilters.author`) : un slug ignoré (inconnu, non public, ancien nom libre, au-delà
+ * de 20) n'est plus recopié par les bascules, la pagination ni le tri (Story 10.6).
+ */
+export function withActiveAuthors(search: string, authors: string[]): string {
+  const params = parse(search)
+  params.delete('author')
+  for (const slug of authors) params.append('author', slug)
+  return toQueryString(params)
 }
 
 /**

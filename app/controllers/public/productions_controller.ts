@@ -101,7 +101,7 @@ export default class ProductionsController {
     // (Story 10.6, D12) ; slug inconnu, non public ou ancien nom libre → ignoré, sans erreur.
     const facets = await SearchService.facets()
     filters.author = PublicAuthorService.knownAuthorSlugs(
-      asArray(request.input('author')),
+      PublicAuthorService.parseAuthorParam(request.input('author')),
       facets.author
     )
 

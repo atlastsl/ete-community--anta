@@ -328,21 +328,81 @@ test.group('Public search | filtre auteur par slug', (group) => {
     assert.deepEqual(props.activeFilters.author, [])
   })
 
-  test('plus de 20 valeurs, valeur vide ou indexée : jamais de 500', async ({ client }) => {
+  test('plus de 20 valeurs inconnues, valeur vide ou indexée : 200, listing non filtré', async ({
+    client,
+    assert,
+  }) => {
+    const author = await createAuthor()
+    await link(await createProduction({ title: 'Liee' }), author)
+    await createProduction({ title: 'Libre' })
+
     const many = Array.from({ length: 21 }, (_, i) => `author=slug-${i}`).join('&')
-    for (const query of [many, 'author=', 'author[a]=x', 'author[]=x&author[]=y']) {
-      const response = await client.get(`/productions?${query}`)
-      response.assertStatus(200)
+    for (const query of [many, 'author=', 'author=%20', 'author[a]=x', 'author[]=x&author[]=y']) {
+      const props = await getProps(client, `/productions?${query}`)
+      assert.sameMembers(titles(props.results), ['Liee', 'Libre'], query)
+      assert.deepEqual(props.activeFilters.author, [], query)
     }
+  })
+
+  test('21 auteurs visibles demandés : les 20 premiers filtrent (qs arrayLimit)', async ({
+    client,
+    assert,
+  }) => {
+    const authors: Author[] = []
+    for (let i = 0; i < 21; i++) {
+      const author = await createAuthor()
+      await link(await createProduction({ title: `Oeuvre ${i}` }), author)
+      authors.push(author)
+    }
+
+    const query = authors.map((author) => `author=${author.slug}`).join('&')
+    const props = await getProps(client, `/productions?${query}`)
+    assert.deepEqual(
+      props.activeFilters.author,
+      authors.slice(0, 20).map((author) => author.slug)
+    )
+    assert.equal(props.pagination.total, 20)
+    assert.notInclude(titles(props.results), 'Oeuvre 20')
+  })
+
+  test('indexé author[x]=<slug> visible : retenu (valeurs de l’objet qs)', async ({
+    client,
+    assert,
+  }) => {
+    const author = await createAuthor()
+    await link(await createProduction({ title: 'Liee' }), author)
+    await createProduction({ title: 'Libre' })
+
+    const props = await getProps(client, `/productions?author[x]=${author.slug}`)
+    assert.deepEqual(titles(props.results), ['Liee'])
+    assert.deepEqual(props.activeFilters.author, [author.slug])
+  })
+
+  test('approchants, étape OU relâché : le filtre auteur est conservé', async ({
+    client,
+    assert,
+  }) => {
+    const author = await createAuthor()
+    await link(await createProduction({ title: 'Topologie quantique' }), author)
+    await createProduction({ title: 'Topologie classique' })
+
+    // « zzzmotabsent » rend la recherche exacte (ET) vide ; « topologie » passe au OU relâché.
+    const props = await getProps(
+      client,
+      `/productions?author=${author.slug}&q=topologie zzzmotabsent`
+    )
+    assert.isTrue(props.approximate)
+    assert.deepEqual(titles(props.results), ['Topologie quantique'])
   })
 
   test('facette : auteurs visibles seulement, { value: slug, label: "Prénom NOM" }, triés', async ({
     client,
     assert,
   }) => {
+    // Noms de même casse, sans accent : ordre identique quelle que soit la collation.
     const zed = await createAuthor({ firstNames: 'Awa', lastNames: 'Zedexemple' })
-    const abel = await createAuthor({ firstNames: 'Marc', lastNames: 'abelexemple' })
-    const abel2 = await createAuthor({ firstNames: 'Ana', lastNames: 'abelexemple' })
+    const abel = await createAuthor({ firstNames: 'Marc', lastNames: 'Abelexemple' })
+    const abel2 = await createAuthor({ firstNames: 'Ana', lastNames: 'Abelexemple' })
     const noConsent = await createAuthor({ consent: false, lastNames: 'Sansconsentement' })
     const draftOnly = await createAuthor({ lastNames: 'Brouillonseul' })
     await createAuthor({ lastNames: 'Sansproduction' })

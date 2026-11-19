@@ -132,3 +132,7 @@
 - **Tri « Titre (A → Z) » sensible aux accents** : `lower(title)` suit la collation de la base (un titre en « É » peut se ranger après « Z »). L'extension `unaccent` n'est pas installée (aucune migration) et n'est pas ajoutée (base partagée, P2.1 « normalisation applicative ») : à traiter avec le tri par titre de la liste (12.1), par une clé normalisée (`normalizeKey`) ou une collation ICU.
 - ~~**Titre d'onglet non rafraîchi en navigation interne**~~ — traité en 10.4 (le titre devenait même « Anta » après hydratation sur toutes les pages publiques). Ancien texte (rappel du report Epic 5) : pas de `<Head>` public, le titre du profil n'est juste qu'au premier chargement ; une navigation Inertia vers ou depuis un profil garde l'ancien titre. À traiter avec 10.4 (liens d'auteurs) / 10.7 (SEO).
 - **Slug en majuscules → 404** : `/authors/Jeanne-Exemple` ne retrouve pas `jeanne-exemple` (comparaison exacte), comme `/productions/:slug`. Accepté (slugs générés en minuscules) ; une redirection 301 vers le slug canonique reste possible.
+
+## Deferred from: code review of 10-6-filtre-auteur-du-listing-par-profil-public (2026-11-19)
+
+- **Facette auteur non bornée** : `facets.author` liste tous les auteurs visibles à chaque `GET /productions` (une requête, toutes les lignes dans les props Inertia). Acceptable à quelques centaines d'auteurs ; au-delà, plafonner (auteurs les plus productifs + auteurs cochés) ou charger la facette à la demande (endpoint JSON paresseux à l'ouverture du groupe « Auteur »).
