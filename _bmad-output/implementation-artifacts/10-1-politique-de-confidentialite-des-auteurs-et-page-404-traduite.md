@@ -4,7 +4,7 @@ baseline_commit: b92d38a
 
 # Story 10.1 : Politique de confidentialité des auteurs et page 404 traduite
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -47,6 +47,16 @@ afin de faire confiance au site avant que des profils soient publiés (exigence 
   - [x] unit `seo_service.spec.ts` : `privacy` et `notFound`.
 - [x] T5 — Lint, typecheck, build, suite complète (baseline 796).
 
+### Review Findings
+
+- [x] [Review][Patch] `<Link>` Inertia sur la 404 : depuis une 404 `/admin/*` (bundle admin, `adminI18n`, sans PublicLayout) « Accueil » rendait l'accueil public avec des clés brutes, et le titre « Page introuvable » restait après navigation (pas de `<Head>` public) [inertia/pages/errors/not_found.tsx] — liens `<a href>` (chargement complet) ; test de source.
+- [x] [Review][Patch] Téléchargement public : 404 en texte brut français (« Production introuvable », « Fichier introuvable ») [app/controllers/public/productions_controller.ts] — NotFoundPage traduite (statut 404) comme `show`, 404 sans page si le client n'accepte pas le HTML ; 3 tests fonctionnels (`download.spec.ts`), en échec sans le correctif.
+- [x] [Review][Patch] Cohérence de la politique : « Données collectées », « Durée de conservation » et « Vos droits » contredisaient la section auteurs ; « aussitôt » pour la photo ignorait le cache public d'une heure prévu en 10.2 [inertia/locales/public/{fr,en}.json] — sections visiteurs précisées avec renvoi à « Données des auteurs », photo « au plus tard sous une heure » ; tests de source. Texte toujours soumis à la validation d'Aurélien.
+- [x] [Review][Patch] Tests manquants — URL `/admin/*` inconnue → 404 dans `admin_layout` (bundle `inertia/admin.tsx`, noindex ; clés `not_found.*` admin vérifiées par le test de source) ; `E_ROW_NOT_FOUND` (`findOrFail`) → NotFoundPage ; status pages hors production = `404` seulement (`tests/unit/exceptions/handler.spec.ts`).
+- [x] [Review][Patch] Dev Agent Record : la section auteurs n'est vérifiée que par le test de source (`privacy_policy_page.spec.ts`), `privacy.spec.ts` ne vérifie que le composant et le titre serveur — corrigé ci-dessous.
+- [x] [Review][Decision] Youch perdu sur les 404 en dev (avertissement journalisé conservé) — accepté (deferred-work.md).
+- [x] [Review][Decision] Langue serveur / client divergente à la première visite sans cookie (préexistant) — accepté, reporté (deferred-work.md).
+
 ## Dev Notes
 
 ### Existant (lu, à préserver)
@@ -75,6 +85,12 @@ afin de faire confiance au site avant que des profils soient publiés (exigence 
 - **D-10.1-3** 404 rendue en Inertia dans tous les environnements ; 5xx inchangé.
 - **D-10.1-4** Clés `not_found.*` dupliquées dans les locales admin pour une URL `/admin/*` inconnue (sinon clés brutes) ; pas de layout admin ajouté (comportement actuel).
 - **D-10.1-5** Pas de lien « Auteurs » sur la 404 avant la Story 10.5.
+- **D-10.1-6** (revue, accepté) Youch n'est plus affiché pour une 404 en dev ; l'avertissement journalisé reste.
+- **D-10.1-7** (revue, accepté) Divergence de langue serveur/client à la première visite sans cookie : préexistante, reportée (deferred-work.md).
+
+### Note pour la Story 10.2 (issue de la revue)
+
+- `/media/*` : une 404 doit répondre par `response.notFound()` avec `Cache-Control: no-store`, **jamais** lever d'exception (`findOrFail`, `abort`…) : le gestionnaire rendrait la NotFoundPage HTML en réponse à une requête d'image.
 
 ### Fichiers
 
@@ -105,8 +121,8 @@ Claude Opus 5.5 (claude-opus-5-5)
 
 ### Debug Log References
 
-- Phase rouge : 16 tests sur 19 en échec avant implémentation (les 3 verts : JSON 404 et deux tests préexistants de `privacy.spec.ts`).
-- Suite complète : 815 tests verts (baseline 796, +19). `npm run lint`, `npm run typecheck`, `node ace build` (NODE_ENV=production) : code de sortie 0.
+- Phase rouge : 16 tests sur 19 en échec avant implémentation (les 3 verts : JSON 404 et deux tests préexistants de `privacy.spec.ts`). La section auteurs est vérifiée uniquement par le test de source `privacy_policy_page.spec.ts` (contenu rendu côté client) ; `privacy.spec.ts` vérifie le composant et le titre serveur.
+- Suite complète : 815 tests verts (baseline 796, +19) ; après revue : 824 tests verts (+9 ; le test `findOrFail` est isolé par transaction globale). `npm run lint`, `npm run typecheck`, `node ace build` (NODE_ENV=production) : code de sortie 0.
 
 ### Completion Notes List
 
@@ -136,9 +152,13 @@ Claude Opus 5.5 (claude-opus-5-5)
 - tests/unit/components/not_found_page.spec.ts (nouveau)
 - tests/unit/components/privacy_policy_page.spec.ts (nouveau)
 - tests/unit/services/seo_service.spec.ts
+- tests/functional/public/download.spec.ts (revue)
+- tests/unit/exceptions/handler.spec.ts (nouveau, revue)
+- _bmad-output/implementation-artifacts/deferred-work.md (revue)
 - _bmad-output/implementation-artifacts/10-1-politique-de-confidentialite-des-auteurs-et-page-404-traduite.md (nouveau)
 
 ## Change Log
 
 - 2026-11-19 : story créée (contexte complet, statut ready-for-dev).
 - 2026-11-19 : implémentation (NotFoundPage traduite, section « Données des auteurs », titres serveur dédiés) ; 815 tests verts ; statut review. Texte `privacy.authors.*` en attente de validation d'Aurélien avant merge.
+- 2026-11-19 : revue de code — 5 correctifs (liens `<a>`, 404 traduite du téléchargement, cohérence de la politique, tests admin/`findOrFail`/status pages, Dev Agent Record), 2 décisions acceptées ; statut done.

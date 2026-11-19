@@ -205,20 +205,21 @@ export default class ProductionsController {
    * Enregistre le téléchargement puis redirige (302) vers l'URL signée R2 (attachment).
    * 404 si production non publiée / fichier étranger ou inexistant (NFR12).
    */
-  async download({ params, request, response, session }: HttpContext) {
+  async download(ctx: HttpContext) {
+    const { params, request, response, session } = ctx
     const production = await Production.query()
       .where('slug', params.slug)
       .where('status', ProductionStatus.PUBLISHED)
       .first()
 
     if (!production) {
-      return response.notFound('Production introuvable')
+      return this.notFound(ctx)
     }
 
     const file = await production.related('files').query().where('id', params.fileId).first()
 
     if (!file) {
-      return response.notFound('Fichier introuvable')
+      return this.notFound(ctx)
     }
 
     // Générer l'URL signée AVANT d'enregistrer : si R2 échoue, on n'enregistre pas (AC#4).
@@ -233,5 +234,16 @@ export default class ProductionsController {
 
     await StatsService.recordDownload(production.id, request.ip())
     return response.redirect(signedUrl)
+  }
+
+  /**
+   * 404 d'un lien de téléchargement : NotFoundPage traduite (comme `show`) pour un navigateur ;
+   * 404 sans corps pour un client qui n'accepte pas le HTML (Story 10.1, revue).
+   */
+  private notFound({ request, response, inertia }: HttpContext) {
+    response.status(404)
+    if (request.accepts(['html', 'json']) !== 'html') return response.notFound()
+    const locale = SeoService.localeFromCookieHeader(request.header('cookie'))
+    return inertia.render('errors/not_found', { meta: SeoService.notFound(locale) })
   }
 }

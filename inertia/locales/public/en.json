@@ -135,7 +135,7 @@
     },
     "data_collected": {
       "heading": "Data collected",
-      "body": "The Site only collects the following data: a language preference cookie (i18n_lang) storing your choice between French and English; anonymous viewing statistics (number of views and downloads per production, without visitor identification). No visitor user accounts are created, and no personal data is requested from visitors."
+      "body": "For visitors, the Site only collects the following data: a language preference cookie (i18n_lang) storing your choice between French and English; anonymous viewing statistics (number of views and downloads per production, without visitor identification). No visitor user accounts are created, and no personal data is requested from visitors. The authors' data published on their profiles is described in the \"Authors' data\" section."
     },
     "data_usage": {
       "heading": "Use of data",
@@ -143,20 +143,20 @@
     },
     "data_retention": {
       "heading": "Data retention",
-      "body": "The language cookie is retained for one year. Viewing statistics are retained in aggregate and anonymous form indefinitely."
+      "body": "The language cookie is retained for one year. Viewing statistics are retained in aggregate and anonymous form indefinitely. The data of an author record is kept as long as the record exists, under the rules of the \"Authors' data\" section."
     },
     "authors": {
       "heading": "Authors' data",
       "intro": "Productions published on the Site always show the names of their authors. An author may also have a public profile presenting their published productions. This section describes the data published on these profiles and how to have it removed.",
       "data": "Data published on a profile: last name, first names, affiliations (institution and, where applicable, department), link to the Google Scholar profile and photo. The Google Scholar link and the photo are optional. A profile is only visible if it is public and linked to at least one published production.",
       "basis": "Legal basis: the author's consent to the publication of their profile, confirmed by a Site administrator. Without this confirmation, the author's record remains non-public: their name appears on their productions without a link to a profile and no photo is served.",
-      "withdrawal": "Withdrawal of consent: at the author's request, an administrator withdraws the consent; the profile is immediately no longer public (profile page unavailable, photo no longer served).",
+      "withdrawal": "Withdrawal of consent: at the author's request, an administrator withdraws the consent; the profile immediately stops being public (profile page unavailable) and its photo is no longer served within one hour at most (browser caching delay).",
       "optional_fields": "Optional fields: at the author's request, the photo, the Google Scholar link and the department are removed from their record.",
       "deletion": "Deletion: an author record can be deleted on request when it is not linked to any production, drafts included. A record linked to a production is kept as long as that production is, so that its authors remain credited; it can be made non-public and reduced to the mandatory fields. Requests should be sent to the address given in the Contact section."
     },
     "rights": {
       "heading": "Your rights",
-      "body": "In accordance with the General Data Protection Regulation (GDPR), you have the right to access, rectify, and delete your data. You can delete the language cookie at any time through your browser settings."
+      "body": "In accordance with the General Data Protection Regulation (GDPR), you have the right to access, rectify, and delete your data. You can delete the language cookie at any time through your browser settings. Authors exercise these rights over the data of their record as described in the \"Authors' data\" section."
     },
     "contact": {
       "heading": "Contact",

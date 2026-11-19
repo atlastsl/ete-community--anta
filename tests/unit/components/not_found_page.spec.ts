@@ -29,10 +29,17 @@ test.group('NotFoundPage | structure', () => {
     assert.include(page, 'href="/productions"')
     assert.include(page, "{t('not_found.home')}")
     assert.include(page, "{t('not_found.search')}")
-    const links = page.match(/<Link\b[^>]*>/g) ?? []
+    const links = page.match(/<a\s+href=[^>]*>/g) ?? []
     assert.lengthOf(links, 2)
     assert.match(page, /const LINK_BASE =\s*'[^']*\bmin-h-11\b/)
     for (const link of links) assert.include(link, '${LINK_BASE}')
+  })
+
+  test('liens en <a href> (chargement complet), jamais <Link> Inertia', ({ assert }) => {
+    // Revue 10.1 : rendue aussi par le bundle admin (URL /admin/* inconnue) et sans <Head> public.
+    assert.notInclude(page, '@adonisjs/inertia/react')
+    assert.notInclude(page, '@inertiajs/react')
+    assert.notMatch(page, /<Link\b/)
   })
 
   test('liens regroupés dans une navigation nommée', ({ assert }) => {

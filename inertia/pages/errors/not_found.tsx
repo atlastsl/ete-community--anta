@@ -1,4 +1,3 @@
-import { Link } from '@adonisjs/inertia/react'
 import { useTranslation } from 'react-i18next'
 import type { SeoMeta } from '~/lib/seo'
 
@@ -9,6 +8,9 @@ const LINK_BASE =
  * NotFoundPage traduite (D36, Story 10.1) : rendue avec le statut 404 par le gestionnaire
  * d'exceptions (URL inconnue) et par les contrôleurs publics (production ou profil non visible).
  * `meta` (titre traduit) est injecté côté serveur dans le <head> par l'edge, non utilisé ici.
+ * Liens `<a href>` (chargement complet), pas le composant Link d'Inertia : la page est aussi rendue par le
+ * bundle admin (URL `/admin/*` inconnue, sans PublicLayout ni locales publiques) et le titre
+ * serveur de la 404 resterait affiché après une navigation SPA (pas de <Head> public).
  */
 export default function NotFound(_props: { meta?: SeoMeta }) {
   const { t } = useTranslation()
@@ -22,20 +24,20 @@ export default function NotFound(_props: { meta?: SeoMeta }) {
       <nav aria-label={t('not_found.nav_label')} className="mt-8">
         <ul className="flex flex-wrap items-center justify-center gap-3">
           <li>
-            <Link
+            <a
               href="/"
               className={`${LINK_BASE} bg-green-700 text-white hover:bg-green-800`}
             >
               {t('not_found.home')}
-            </Link>
+            </a>
           </li>
           <li>
-            <Link
+            <a
               href="/productions"
               className={`${LINK_BASE} border border-stone-300 bg-white text-stone-900 hover:border-green-700 hover:text-green-700`}
             >
               {t('not_found.search')}
-            </Link>
+            </a>
           </li>
         </ul>
       </nav>

@@ -54,8 +54,28 @@ test.group('Privacy policy | section auteurs', () => {
     const b = en.privacy.authors
     assert.include(b.data, 'Google Scholar')
     assert.include(b.basis, 'consent')
-    assert.include(b.withdrawal, 'no longer public')
+    assert.include(b.withdrawal, 'stops being public')
     assert.include(b.optional_fields, 'department')
     assert.include(b.deletion, 'not linked to any production')
+  })
+
+  test('photo : délai de cache d’au plus une heure annoncé (revue 10.1, cache public 10.2)', ({
+    assert,
+  }) => {
+    assert.include(fr.privacy.authors.withdrawal, 'au plus tard sous une heure')
+    assert.include(en.privacy.authors.withdrawal, 'within one hour at most')
+  })
+
+  test('sections visiteurs cohérentes : renvoi à la section des auteurs (revue 10.1)', ({
+    assert,
+  }) => {
+    for (const dict of [fr, en]) {
+      const heading = dict.privacy.authors.heading
+      for (const key of ['data_collected', 'data_retention', 'rights']) {
+        assert.include(dict.privacy[key].body, heading, `${key} renvoie à « ${heading} »`)
+      }
+    }
+    assert.include(fr.privacy.data_collected.body, 'Pour les visiteurs')
+    assert.include(en.privacy.data_collected.body, 'For visitors')
   })
 })

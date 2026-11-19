@@ -135,7 +135,7 @@
     },
     "data_collected": {
       "heading": "Données collectées",
-      "body": "Le Site collecte uniquement les données suivantes : un cookie de préférence de langue (i18n_lang) stockant votre choix entre français et anglais ; des statistiques de consultation anonymes (nombre de vues et de téléchargements par production, sans identification du visiteur). Aucun compte utilisateur visiteur n'est créé, aucune donnée personnelle n'est demandée aux visiteurs."
+      "body": "Pour les visiteurs, le Site collecte uniquement les données suivantes : un cookie de préférence de langue (i18n_lang) stockant votre choix entre français et anglais ; des statistiques de consultation anonymes (nombre de vues et de téléchargements par production, sans identification du visiteur). Aucun compte utilisateur visiteur n'est créé, aucune donnée personnelle n'est demandée aux visiteurs. Les données des auteurs publiées sur leurs profils sont décrites dans la section « Données des auteurs »."
     },
     "data_usage": {
       "heading": "Utilisation des données",
@@ -143,20 +143,20 @@
     },
     "data_retention": {
       "heading": "Durée de conservation",
-      "body": "Le cookie de langue est conservé pendant un an. Les statistiques de consultation sont conservées de manière agrégée et anonyme sans limite de durée."
+      "body": "Le cookie de langue est conservé pendant un an. Les statistiques de consultation sont conservées de manière agrégée et anonyme sans limite de durée. Les données d'une fiche auteur sont conservées tant que la fiche existe, selon les règles de la section « Données des auteurs »."
     },
     "authors": {
       "heading": "Données des auteurs",
       "intro": "Les productions publiées sur le Site indiquent toujours le nom de leurs auteurs. Un auteur peut en outre disposer d'un profil public, qui présente ses productions publiées. Cette section décrit les données publiées sur ces profils et la manière de les faire retirer.",
       "data": "Données publiées sur un profil : nom, prénoms, affiliations (institution et, le cas échéant, département), lien vers le profil Google Scholar et photo. Le lien Google Scholar et la photo sont facultatifs. Un profil n'est visible que s'il est public et lié à au moins une production publiée.",
       "basis": "Base du traitement : le consentement de l'auteur à la publication de son profil, confirmé par un administrateur du Site. Sans cette confirmation, la fiche de l'auteur reste non publique : son nom s'affiche sur ses productions sans lien vers un profil et aucune photo n'est diffusée.",
-      "withdrawal": "Retrait du consentement : sur demande de l'auteur, un administrateur retire le consentement ; le profil repasse aussitôt non public (page de profil inaccessible, photo plus diffusée).",
+      "withdrawal": "Retrait du consentement : sur demande de l'auteur, un administrateur retire le consentement ; le profil repasse aussitôt non public (page de profil inaccessible) et sa photo cesse d'être diffusée au plus tard sous une heure (délai de mise en cache des navigateurs).",
       "optional_fields": "Champs facultatifs : sur demande de l'auteur, la photo, le lien Google Scholar et le département sont retirés de sa fiche.",
       "deletion": "Suppression : une fiche auteur peut être supprimée sur demande lorsqu'elle n'est liée à aucune production, brouillons compris. Une fiche liée à une production est conservée tant que cette production l'est, afin que ses auteurs restent cités ; elle peut être rendue non publique et réduite aux champs obligatoires. Les demandes sont à adresser à l'adresse indiquée dans la section Contact."
     },
     "rights": {
       "heading": "Vos droits",
-      "body": "Conformément au Règlement Général sur la Protection des Données (RGPD), vous disposez d'un droit d'accès, de rectification et de suppression de vos données. Vous pouvez supprimer le cookie de langue à tout moment via les paramètres de votre navigateur."
+      "body": "Conformément au Règlement Général sur la Protection des Données (RGPD), vous disposez d'un droit d'accès, de rectification et de suppression de vos données. Vous pouvez supprimer le cookie de langue à tout moment via les paramètres de votre navigateur. Les auteurs exercent ces droits sur les données de leur fiche selon les modalités de la section « Données des auteurs »."
     },
     "contact": {
       "heading": "Contact",

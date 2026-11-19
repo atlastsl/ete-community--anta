@@ -1,4 +1,6 @@
 import { test } from '@japa/runner'
+import db from '@adonisjs/lucid/services/db'
+import AdminUser from '#models/admin_user'
 
 // Story 10.1 — NotFoundPage traduite (D36) : statut 404, composant `errors/not_found`, titre traduit.
 function extractPage(body: string) {
@@ -7,7 +9,12 @@ function extractPage(body: string) {
   return JSON.parse(match[1].replace(/&quot;/g, '"'))
 }
 
-test.group('Public | NotFoundPage', () => {
+test.group('Public | NotFoundPage', (group) => {
+  group.each.setup(async () => {
+    await db.beginGlobalTransaction()
+    return () => db.rollbackGlobalTransaction()
+  })
+
   test('URL inconnue → 404 + composant errors/not_found (HTML)', async ({ client, assert }) => {
     const response = await client.get('/cette-page-nexiste-pas')
     response.assertStatus(404)
@@ -63,5 +70,38 @@ test.group('Public | NotFoundPage', () => {
     const response = await client.get('/cette-page-nexiste-pas').accept('json')
     response.assertStatus(404)
     assert.notInclude(response.text(), 'data-page=')
+  })
+
+  // Revue 10.1 : URL /admin/* inconnue → bundle et layout admin (locales admin, noindex).
+  test('URL /admin/* inconnue → 404 + errors/not_found dans admin_layout', async ({
+    client,
+    assert,
+  }) => {
+    const response = await client.get('/admin/cette-page-nexiste-pas')
+    response.assertStatus(404)
+    const html = response.text()
+    assert.equal(extractPage(html)?.component, 'errors/not_found')
+    assert.include(html, 'inertia/admin.tsx')
+    assert.notInclude(html, 'inertia/app.tsx')
+    assert.include(html, '<meta name="robots" content="noindex, nofollow"')
+  })
+
+  test('E_ROW_NOT_FOUND (findOrFail) → NotFoundPage, statut 404', async ({ client, assert }) => {
+    const admin = await AdminUser.create({
+      email: `nf-${Math.floor(Math.random() * 1_000_000)}@anta.test`,
+      passwordHash: 'plain-password-hashed-by-mixin',
+      role: 'admin',
+      passwordChanged: true,
+      isActive: true,
+      createdById: null,
+    })
+    const response = await client
+      .post('/admin/productions/00000000-0000-0000-0000-000000000000/unpublish')
+      .header('Accept', 'text/html')
+      .withCsrfToken()
+      .loginAs(admin)
+      .redirects(0)
+    response.assertStatus(404)
+    assert.equal(extractPage(response.text())?.component, 'errors/not_found')
   })
 })
