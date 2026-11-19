@@ -41,9 +41,14 @@ test.group('Avatar', () => {
   test('photo publique (Story 10.2) : srcSet w128/w384 via media.ts, width/height, lazy', ({
     assert,
   }) => {
-    assert.include(avatar, "import { authorPhotoImage } from '~/lib/media'")
-    assert.include(avatar, 'photoUrl?: string | null')
-    assert.include(avatar, 'authorPhotoImage(photoUrl, px, sizes)')
+    assert.include(avatar, "import { authorPhotoImage, type ResponsiveImage } from '~/lib/media'")
+    assert.include(
+      avatar,
+      'photoBase?: string | null',
+      'pas de collision avec les photoUrl signées'
+    )
+    assert.notInclude(avatar, 'photoUrl')
+    assert.include(avatar, 'authorPhotoImage(photoBase, px, sizes)')
     assert.include(avatar, 'srcSet={image.srcSet}')
     assert.include(avatar, 'sizes={image.sizes}')
     assert.include(avatar, 'width={image.width}')
@@ -54,8 +59,15 @@ test.group('Avatar', () => {
 
   test('URL signée de l’admin toujours acceptée par src (profils non publics)', ({ assert }) => {
     assert.include(avatar, 'src: signedSrc')
-    assert.match(avatar, /: signedSrc\s*\?\s*\{ src: signedSrc, width: px, height: px \}/)
-    assert.match(adminForm, /<Avatar[^>]*src=/s)
+    assert.include(
+      avatar,
+      'publicImage ?? (signedSrc ? { src: signedSrc, width: px, height: px } : null)'
+    )
+    assert.match(
+      adminForm,
+      /<Avatar[^>]*src=\{preview\}[^>]*loading="eager"/s,
+      'aperçu blob immédiat'
+    )
   })
 
   test('authorInitials : 1re lettre (NFC, ponctuation ignorée, hors BMP), capitales fr-FR', ({

@@ -21,7 +21,10 @@ test.group('media | authorPhotoImage', () => {
     assert.include(source, 'sizes = `${sizePx}px`')
   })
 
-  test('base sans barre finale', ({ assert }) => {
-    assert.include(source, "photoUrl.replace(/\\/+$/, '')")
+  test('base /media/ seulement (sinon null), sans barre finale', ({ assert }) => {
+    assert.include(source, "const MEDIA_PREFIX = '/media/'")
+    assert.include(source, 'if (!photoBase.startsWith(MEDIA_PREFIX)) return null')
+    assert.include(source, '): ResponsiveImage | null {')
+    assert.include(source, "photoBase.replace(/\\/+$/, '')")
   })
 })

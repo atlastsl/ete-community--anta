@@ -4,7 +4,7 @@ baseline_commit: 5cb3b48
 
 # Story 10.2 : Photos d'auteurs publiques et composant Avatar
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -88,6 +88,18 @@ afin de reconnaître les membres de la communauté (FR57, FR58, D13, D25).
 1. Diffuser la photo d'un auteur public **sans** production publiée (non « visible » au sens D11) ? Défaut : oui, l'AC ne demande que le profil public ; l'URL n'est exposée par aucune page.
 2. Basculer les avatars de l'admin vers `/media` pour les profils publics (cache navigateur) ? Défaut : non, URL signées partout dans l'admin.
 
+### Review Findings
+
+- [x] [Review][Patch] Tests de remontée de chemin inopérants : superagent (`new URL()`) résolvait `..`/`%2e%2e` côté client [tests/functional/public/media.spec.ts] — requêtes brutes `node:http` sur le serveur de Japa ; cas `%252e%252e`, `..%5c`, `%2e%2e%2f`, antislash, `//`, `/media/../` ; témoin 200.
+- [x] [Review][Patch] Erreur de flux : 404 renvoyée avec `Content-Length`/`ETag` de l'image → client en attente [app/controllers/public/media_controller.ts] — rappel d'erreur : en-têtes image retirés, corps vide, `no-store` ; test (objet supprimé entre métadonnées et lecture).
+- [x] [Review][Patch] HEAD lisait le flux [media_controller.ts] — réponse après les en-têtes (+ `Content-Length`), sans `getStream` ; test.
+- [x] [Review][Patch] Toute erreur de `getMetaData` traitée en 404 [media_controller.ts] — `isStorageNotFound` (ENOENT, NoSuchKey, NotFound, HTTP 404, via `cause`) → 404 ; sinon 503 `no-store` + `logger.error` ; même règle pour `getStream`, la lecture et la requête en base ; tests.
+- [x] [Review][Patch] Middleware de session sur `/media` : consommait les messages flash de la page en cours et réécrivait les cookies (`adonis-session`, `XSRF-TOKEN`) [start/kernel.ts, app/middleware/media_middleware.ts] — `MediaMiddleware` (middleware serveur) sert `GET|HEAD /media/*` avant le routeur : ni session, ni shield, ni auth, aucun `Set-Cookie` ; la route `media.show` reste déclarée (nommage) ; test sans `Set-Cookie`. Entrée deferred-work retirée.
+- [x] [Review][Patch] Prop `photoUrl` de l'Avatar en collision avec les `photoUrl` signées de l'admin [inertia/components/shared/Avatar.tsx, inertia/lib/media.ts] — renommée `photoBase` ; `authorPhotoImage` n'accepte qu'une base `/media/…` (sinon `null`).
+- [x] [Review][Patch] Régression admin : aperçu blob du formulaire passé en `loading="lazy"` [inertia/components/admin/AuthorForm.tsx] — `loading="eager"`.
+- [x] [Review][Decision] Avatar `lg` à 112 px dès `sm` aussi dans l'admin (D-10.2-4) — conforme à DESIGN.md, conservé.
+- [x] [Review][Patch] Tests manquants [tests/] — retrait du consentement après un 200 (revalidation `If-None-Match` → 404, pas 304), HEAD, cas unitaires de `resolve()` (consentement, ancienne clé, sans photo, préfixe d'un autre auteur), test « absent ou retiré » renommé.
+
 ## Dev Agent Record
 
 ### Agent Model Used
@@ -97,7 +109,7 @@ Claude Opus 5.5 (claude-opus-5-5)
 ### Debug Log References
 
 - Phase rouge : tests écrits avant le code ; premier lancement interrompu (modules `#services/media_service` et contrôleur absents). Après implémentation : 24 tests ciblés verts.
-- Suite complète : 843 tests verts (baseline 824, +19). `npm run lint`, `npm run typecheck`, `node ace build` (NODE_ENV=production) : code de sortie 0. `.adonisjs` régénéré (`/tmp/d37/gen.sh`).
+- Suite complète : 843 tests verts (baseline 824, +19) ; après revue : 853 (+10). `npm run lint`, `npm run typecheck`, `node ace build` (NODE_ENV=production) : code de sortie 0. `.adonisjs` régénéré (`/tmp/d37/gen.sh`).
 
 ### Completion Notes List
 
@@ -106,7 +118,7 @@ Claude Opus 5.5 (claude-opus-5-5)
 - `inertia/lib/media.ts` : `authorPhotoImage(photoUrl, sizePx, sizes)` → `src` w128, `srcSet` w128/w384, `sizes`, `width`/`height`.
 - `Avatar` : nouvelle prop `photoUrl` (base publique, prioritaire) ; `src` signé de l'admin inchangé ; `width`/`height`, `loading="lazy"` par défaut ; lg 112 px dès `sm` (DESIGN.md) ; repli `onError` indexé sur la source effective.
 - Décisions par défaut : D-10.2-1 métadonnées + flux (2 opérations R2 au premier chargement, 1 seule ensuite grâce au 304) ; D-10.2-2 photo servie pour tout profil public, même sans production publiée (AC ; URL exposée par aucune page) ; D-10.2-3 admin reste en URL signées.
-- Reporté (deferred-work) : `Set-Cookie` des middlewares sur `/media` (à traiter avant un cache partagé).
+- Revue : `/media` servi par `MediaMiddleware` avant le routeur (sans session ni cookies) ; 503 pour une panne du stockage ; HEAD sans flux ; prop `photoBase`.
 
 ### File List
 
@@ -124,6 +136,9 @@ Claude Opus 5.5 (claude-opus-5-5)
 - tests/unit/services/media_service.spec.ts (nouveau)
 - tests/unit/lib/media.spec.ts (nouveau)
 - tests/unit/components/avatar.spec.ts
+- app/middleware/media_middleware.ts (nouveau, revue)
+- start/kernel.ts (revue)
+- inertia/components/admin/AuthorForm.tsx (revue)
 - _bmad-output/implementation-artifacts/deferred-work.md
 - _bmad-output/implementation-artifacts/10-2-photos-d-auteurs-publiques-et-composant-avatar.md (nouveau)
 
@@ -131,3 +146,4 @@ Claude Opus 5.5 (claude-opus-5-5)
 
 - 2026-11-19 : story créée (contexte complet, statut ready-for-dev).
 - 2026-11-19 : implémentation (`GET /media/*` pour les photos d'auteurs à profil public, `MediaService`, `inertia/lib/media.ts`, `Avatar` public) ; 843 tests verts ; statut review.
+- 2026-11-19 : revue de code — 8 correctifs (requêtes brutes des tests de traversée, rappel d'erreur de flux, HEAD, 503 stockage, `/media` sans session ni cookies via `MediaMiddleware`, prop `photoBase`, aperçu admin `eager`, tests), 1 décision (lg 112 px) ; 853 tests verts ; statut done.

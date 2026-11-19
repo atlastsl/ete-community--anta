@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { cn } from '~/lib/utils'
 import { authorInitials } from '~/lib/author_form'
-import { authorPhotoImage } from '~/lib/media'
+import { authorPhotoImage, type ResponsiveImage } from '~/lib/media'
 
 type Size = 'sm' | 'md' | 'lg'
 
@@ -21,9 +21,9 @@ const SIZES: Record<Size, { box: string; text: string; px: number; sizes: string
 }
 
 type Props = {
-  /** Public base URL (`/media/authors/<id>/<token>`, public profiles only, Story 10.2). */
-  photoUrl?: string | null
-  /** Ready-made image URL (admin signed previews, Story 9.3); `photoUrl` wins. */
+  /** Public base (`/media/authors/<id>/<token>`, public profiles only, Story 10.2). */
+  photoBase?: string | null
+  /** Ready-made image URL (admin signed previews, Story 9.3); `photoBase` wins. */
   src?: string | null
   firstNames: string
   lastNames: string
@@ -40,7 +40,7 @@ type Props = {
  * assistive technologies since the name is always displayed next to it.
  */
 export default function Avatar({
-  photoUrl,
+  photoBase,
   src: signedSrc,
   firstNames,
   lastNames,
@@ -50,11 +50,9 @@ export default function Avatar({
   className,
 }: Props) {
   const { box, text, px, sizes } = SIZES[size]
-  const image: Partial<ReturnType<typeof authorPhotoImage>> | null = photoUrl
-    ? authorPhotoImage(photoUrl, px, sizes)
-    : signedSrc
-      ? { src: signedSrc, width: px, height: px }
-      : null
+  const publicImage = photoBase ? authorPhotoImage(photoBase, px, sizes) : null
+  const image: Partial<ResponsiveImage> | null =
+    publicImage ?? (signedSrc ? { src: signedSrc, width: px, height: px } : null)
   const src = image?.src ?? null
 
   // The source that failed, not a flag: a new source is tried at once (no initials flash).

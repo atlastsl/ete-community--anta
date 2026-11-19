@@ -22,6 +22,8 @@ router
 router.get('/privacy-policy', [controllers.public.Pages, 'privacy']).as('privacy-policy')
 // Images publiques adossées à R2 (P2.5) : photos d'auteurs à profil public. Les fichiers
 // sous licence (`productions/…`) ne passent jamais par ici (URL signées).
+// Servie avant le routeur par `MediaMiddleware` (sans session ni cookies) ; la route reste
+// déclarée pour le nommage et la construction d'URL.
 router.get('/media/*', [controllers.public.Media, 'show']).as('media.show')
 
 // Health check (Docker / déploiement) — sans base de données ni rendu.
