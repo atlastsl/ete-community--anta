@@ -14,6 +14,11 @@
       @if(page.props.meta.ogUrl)
         <meta property="og:url" content="{{ page.props.meta.ogUrl }}" />
       @end
+      {{-- Aperçu de partage : photo og.jpg des profils d'auteurs seulement (P2.5, D37 — Story 10.7) --}}
+      @if(page.props.meta.ogImage)
+        <meta property="og:image" content="{{ page.props.meta.ogImage }}" />
+      @end
+      <meta name="twitter:card" content="{{ page.props.meta.ogImage ? 'summary_large_image' : 'summary' }}" />
     @end
 
     <link rel="icon" type="image/png" href="/favicon.png" />

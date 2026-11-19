@@ -54,7 +54,7 @@ export default class AuthorsController {
       institutionOptions,
       domainOptions,
       hasAuthors,
-      meta: SeoService.authorsList(locale),
+      meta: SeoService.authorsList(locale, env.get('APP_URL')),
     })
   }
 
@@ -84,12 +84,15 @@ export default class AuthorsController {
     const stats = await PublicAuthorService.stats(author.id)
     await PublicBylineService.attach(paginator.all())
 
+    // Public photo base (photo + consent): the same value feeds the prop and the og:image.
+    const photoBase = MediaService.authorPhotoUrl(author)
+
     return inertia.render('author', {
       author: {
         slug: author.slug,
         firstNames: author.firstNames,
         lastNames: author.lastNames,
-        photoBase: MediaService.authorPhotoUrl(author),
+        photoBase,
         googleScholarUrl: PublicAuthorService.safeHttpUrl(author.googleScholarUrl),
         affiliations: author.affiliations.map((a) => ({
           institution: a.institution,
@@ -118,6 +121,7 @@ export default class AuthorsController {
           slug: author.slug,
           primaryInstitution: author.affiliations[0]?.institution ?? null,
           publishedCount: stats.productions,
+          photoBase,
         },
         env.get('APP_URL')
       ),

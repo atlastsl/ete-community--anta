@@ -14,7 +14,24 @@ export type MetaTags = {
   ogDescription: string
   ogType: string
   ogUrl?: string
+  /**
+   * Absolute URL of the preview image (`og:image`, `twitter:card=summary_large_image`): author
+   * profiles only, the `og.jpg` variant of the public photo (P2.5, P2.7). Productions never
+   * have one (D37).
+   */
+  ogImage?: string
   locale: Locale
+}
+
+/** Prefix of a public author photo base (`MediaService.authorPhotoUrl`). */
+const AUTHOR_PHOTO_PREFIX = '/media/authors/'
+/** Variant of the author photos made for the social previews (600×600 JPEG, `ImageService`). */
+const AUTHOR_OG_VARIANT = 'og.jpg'
+
+/** `appUrl` (any trailing slash dropped) + `path`, or `undefined` without a configured URL. */
+function absoluteUrl(appUrl: string | null | undefined, path: string): string | undefined {
+  const base = appUrl?.trim().replace(/\/+$/, '')
+  return base ? `${base}${path}` : undefined
 }
 
 /**
@@ -97,10 +114,10 @@ export default class SeoService {
   }
 
   /**
-   * Meta de la liste des auteurs (Story 10.5, forme minimale : titre et description = phrase
-   * d'introduction de la page ; complétée en 10.7).
+   * Meta de la liste des auteurs (Story 10.5 ; 10.7 : `ogUrl` absolue `/authors`, sans les
+   * paramètres de filtre, de tri ni de page). Titre et description = phrase d'introduction.
    */
-  static authorsList(locale: Locale): MetaTags {
+  static authorsList(locale: Locale, appUrl?: string | null): MetaTags {
     const { name } = SITE[locale]
     const title = `${locale === 'fr' ? 'Auteurs' : 'Authors'} — ${name}`
     const description =
@@ -113,6 +130,7 @@ export default class SeoService {
       ogTitle: title,
       ogDescription: description,
       ogType: 'website',
+      ogUrl: absoluteUrl(appUrl, '/authors'),
       locale,
     }
   }
@@ -164,8 +182,7 @@ export default class SeoService {
     const description = composed.length > 200 ? `${composed.slice(0, 197).trimEnd()}…` : composed
 
     const slug = production.slug?.trim()
-    const baseUrl = appUrl?.replace(/\/$/, '')
-    const ogUrl = slug && baseUrl ? `${baseUrl}/productions/${slug}` : undefined
+    const ogUrl = slug ? absoluteUrl(appUrl, `/productions/${slug}`) : undefined
 
     return {
       title,
@@ -179,9 +196,10 @@ export default class SeoService {
   }
 
   /**
-   * Meta of a visible author profile (FR36, P2.7). Minimal shape (Story 10.3): `ogImage`
-   * (photo `og.jpg`) and `twitter:card` come with Story 10.7. "Prénom NOM": the last names
-   * are upper-cased for display only (D34), like `formatAuthorName` on the front.
+   * Meta of a visible author profile (FR36, P2.7; Story 10.3, `ogImage` in 10.7). "Prénom NOM":
+   * the last names are upper-cased for display only (D34), like `formatAuthorName` on the front.
+   * `photoBase` must come from `MediaService.authorPhotoUrl` (photo **and** consent): the
+   * `og.jpg` variant of that public base becomes the absolute `ogImage`.
    */
   static forAuthor(
     locale: Locale,
@@ -191,6 +209,7 @@ export default class SeoService {
       slug?: string | null
       primaryInstitution?: string | null
       publishedCount: number
+      photoBase?: string | null
     },
     appUrl?: string | null
   ): MetaTags {
@@ -207,8 +226,12 @@ export default class SeoService {
     const description = institution ? `${institution} — ${count}` : count
 
     const slug = author.slug?.trim()
-    const baseUrl = appUrl?.replace(/\/$/, '')
-    const ogUrl = slug && baseUrl ? `${baseUrl}/authors/${slug}` : undefined
+    const ogUrl = slug ? absoluteUrl(appUrl, `/authors/${slug}`) : undefined
+    const photoBase = author.photoBase
+    const ogImage =
+      photoBase?.startsWith(AUTHOR_PHOTO_PREFIX) && photoBase.length > AUTHOR_PHOTO_PREFIX.length
+        ? absoluteUrl(appUrl, `${photoBase}/${AUTHOR_OG_VARIANT}`)
+        : undefined
 
     return {
       title,
@@ -217,6 +240,7 @@ export default class SeoService {
       ogDescription: description,
       ogType: 'profile',
       ogUrl,
+      ogImage,
       locale,
     }
   }
