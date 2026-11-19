@@ -161,7 +161,7 @@ export default class ProductionsController {
 
     if (!production) {
       response.status(404)
-      return inertia.render('errors/not_found', { meta: SeoService.site(locale) })
+      return inertia.render('errors/not_found', { meta: SeoService.notFound(locale) })
     }
 
     // URL signée R2 (TTL 1h) par fichier, générée serveur (jamais la clé brute exposée).

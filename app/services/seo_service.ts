@@ -62,6 +62,38 @@ export default class SeoService {
     }
   }
 
+  /** Meta de la politique de confidentialité (titre dédié, Story 10.1). */
+  static privacy(locale: Locale): MetaTags {
+    const { name, description } = SITE[locale]
+    const title = `${locale === 'fr' ? 'Politique de confidentialité' : 'Privacy policy'} — ${name}`
+    return {
+      title,
+      description,
+      ogTitle: title,
+      ogDescription: description,
+      ogType: 'website',
+      locale,
+    }
+  }
+
+  /** Meta de la NotFoundPage (statut 404, titre traduit, D36 — Story 10.1). */
+  static notFound(locale: Locale): MetaTags {
+    const { name } = SITE[locale]
+    const title = `${locale === 'fr' ? 'Page introuvable' : 'Page not found'} — ${name}`
+    const description =
+      locale === 'fr'
+        ? "Cette page n'existe pas ou n'est plus disponible."
+        : 'This page does not exist or is no longer available.'
+    return {
+      title,
+      description,
+      ogTitle: title,
+      ogDescription: description,
+      ogType: 'website',
+      locale,
+    }
+  }
+
   /** Meta du listing (avec ou sans terme de recherche). */
   static listing(locale: Locale, q?: string | null): MetaTags {
     const { name, description } = SITE[locale]

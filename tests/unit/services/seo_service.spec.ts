@@ -104,3 +104,30 @@ test.group('SeoService | forProduction', () => {
     assert.equal(meta.ogUrl, 'https://anta.example.com/productions/mon-article')
   })
 })
+
+// Story 10.1 — titres dédiés de la politique de confidentialité et de la NotFoundPage.
+test.group('SeoService | privacy', () => {
+  test('titre traduit FR / EN', ({ assert }) => {
+    assert.equal(SeoService.privacy('fr').title, 'Politique de confidentialité — Anta')
+    assert.equal(SeoService.privacy('en').title, 'Privacy policy — Anta')
+    assert.equal(SeoService.privacy('en').ogTitle, 'Privacy policy — Anta')
+    assert.equal(SeoService.privacy('en').locale, 'en')
+    assert.equal(SeoService.privacy('fr').ogType, 'website')
+  })
+})
+
+test.group('SeoService | notFound', () => {
+  test('titre traduit FR / EN', ({ assert }) => {
+    assert.equal(SeoService.notFound('fr').title, 'Page introuvable — Anta')
+    assert.equal(SeoService.notFound('en').title, 'Page not found — Anta')
+    assert.equal(SeoService.notFound('en').locale, 'en')
+    assert.equal(
+      SeoService.notFound('fr').description,
+      "Cette page n'existe pas ou n'est plus disponible."
+    )
+    assert.equal(
+      SeoService.notFound('en').description,
+      'This page does not exist or is no longer available.'
+    )
+  })
+})
