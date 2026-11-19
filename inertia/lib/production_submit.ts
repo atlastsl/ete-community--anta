@@ -1,4 +1,5 @@
 import { router } from '@inertiajs/react'
+import type { PickerAuthor } from '~/lib/author_picker'
 
 export type PendingProductionLink = {
   url: string
@@ -65,4 +66,16 @@ export function publishProduction(productionId: string): Promise<void> {
 export function productionIdFromEditPage(props: Record<string, unknown>): string | null {
   const production = props.production as { id?: string } | undefined
   return production?.id ?? null
+}
+
+/**
+ * Corps envoyé au serveur (Story 9.7) : les auteurs sélectionnés deviennent `authorIds`
+ * ordonnés ; l'objet `authors` (affichage) n'est jamais envoyé — le serveur ignorerait de
+ * toute façon un champ `authors` (colonne écrite par ProductionAuthorService seulement).
+ */
+export function toProductionPayload<T extends { authors: PickerAuthor[] }>(
+  data: T
+): Omit<T, 'authors'> & { authorIds: string[] } {
+  const { authors, ...rest } = data
+  return { ...rest, authorIds: authors.map((author) => author.id) }
 }

@@ -1,5 +1,6 @@
-import { ReactNode, useState } from 'react'
+import { ReactNode, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { AlertTriangle } from 'lucide-react'
 import { Input } from '~/components/ui/input'
 import {
   Select,
@@ -23,9 +24,12 @@ import {
 import type { PendingProductionLink } from '~/lib/production_submit'
 import CompletionIndicator, { type FieldStatus } from '~/components/admin/CompletionIndicator'
 import ChipInput from '~/components/admin/ChipInput'
+import AuthorCombobox from '~/components/admin/AuthorCombobox'
+import SelectedAuthorList from '~/components/admin/SelectedAuthorList'
+import type { PickerAuthor } from '~/lib/author_picker'
 import FileUploader, { type ProductionFileRow } from '~/components/admin/FileUploader'
 import LinkManager, { type ProductionLinkRow } from '~/components/admin/LinkManager'
-import { isAttachmentSatisfied } from '~/lib/production_completion'
+import { hasRequiredAuthors, isAttachmentSatisfied } from '~/lib/production_completion'
 
 /** Valeurs existantes en BDD pour l'auto-complétion (toutes statuts). */
 export type ProductionSuggestions = {
@@ -49,7 +53,8 @@ const EMPTY_SUGGESTIONS: ProductionSuggestions = {
 export type ProductionFormData = {
   title: string
   summary: string
-  authors: string[]
+  /** Selected authors of the referential, in order (Story 9.7); sent as `authorIds`. */
+  authors: PickerAuthor[]
   tags: string[]
   category: string
   domain: string
@@ -87,7 +92,11 @@ export function getRequiredFieldStatuses(data: ProductionFormData): FieldStatus[
   const text = (v: string) => v.trim() !== ''
   return [
     { key: 'title', labelKey: 'productions.form.fields.title', filled: text(data.title) },
-    { key: 'authors', labelKey: 'productions.form.fields.authors', filled: data.authors.length > 0 },
+    {
+      key: 'authors',
+      labelKey: 'productions.form.completion.authors',
+      filled: hasRequiredAuthors(data.authors),
+    },
     { key: 'category', labelKey: 'productions.form.fields.category', filled: text(data.category) },
     { key: 'domain', labelKey: 'productions.form.fields.domain', filled: text(data.domain) },
     {
@@ -117,7 +126,8 @@ type Setter = <K extends keyof ProductionFormData>(key: K, value: ProductionForm
 type Props = {
   data: ProductionFormData
   setData: Setter
-  errors: Partial<Record<keyof ProductionFormData, string>>
+  /** `authorIds` : erreurs serveur de la sélection d'auteurs (Story 9.7). */
+  errors: Partial<Record<keyof ProductionFormData | 'authorIds', string>>
   /** Présent en édition : id persisté. Absent en création : files/links en attente côté client. */
   productionId?: string
   files?: ProductionFileRow[]
@@ -126,8 +136,15 @@ type Props = {
   onPendingFilesChange?: (files: File[]) => void
   pendingLinks?: PendingProductionLink[]
   onPendingLinksChange?: (links: PendingProductionLink[]) => void
-  /** Valeurs existantes pour l'auto-complétion (auteur, tags). */
+  /** Valeurs existantes pour l'auto-complétion (tags). */
   suggestions?: ProductionSuggestions
+  /**
+   * Noms de la colonne dénormalisée qu'aucune fiche liée ne porte (production non convertie
+   * ou partiellement rattachée) : avertissement « Auteurs à rattacher » (Story 9.7, D-9.7-k).
+   */
+  legacyAuthorNames?: string[]
+  /** La colonne dénormalisée contient une valeur non textuelle (message générique). */
+  legacyAuthorsNonText?: boolean
 }
 
 const REQUIRED_KEYS = new Set([
@@ -155,9 +172,12 @@ export default function ProductionForm({
   pendingLinks = [],
   onPendingLinksChange,
   suggestions = EMPTY_SUGGESTIONS,
+  legacyAuthorNames = [],
+  legacyAuthorsNonText = false,
 }: Props) {
   const { t } = useTranslation()
   const [touched, setTouched] = useState<Record<string, boolean>>({})
+  const authorSearchRef = useRef<HTMLInputElement>(null)
 
   const hasFileOrLink = isAttachmentSatisfied(
     data.licenseStatus,
@@ -175,6 +195,13 @@ export default function ProductionForm({
   /** Message d'erreur d'un champ : erreur serveur prioritaire, sinon hint "requis pour publier" au blur. */
   function fieldError(key: keyof ProductionFormData): string | null {
     if (errors[key]) return t(errors[key]!, { defaultValue: errors[key]! })
+    if (key === 'authors') {
+      // `authorIds` or a per-element `authorIds.N` (uuid) error of the server.
+      const authorError = Object.entries(errors as Record<string, string | undefined>).find(
+        ([field, message]) => (field === 'authorIds' || field.startsWith('authorIds.')) && message
+      )?.[1]
+      if (authorError) return t(authorError, { defaultValue: authorError })
+    }
     if (REQUIRED_KEYS.has(key) && touched[key] && !filledMap.get(key)) {
       return t('productions.form.errors.required_to_publish')
     }
@@ -332,7 +359,7 @@ export default function ProductionForm({
     allowedValues,
     formatChip,
   }: {
-    name: 'authors' | 'tags' | 'subdomain'
+    name: 'tags' | 'subdomain'
     suggestions?: string[]
     allowedValues?: readonly string[]
     formatChip?: (key: string) => string
@@ -369,13 +396,84 @@ export default function ProductionForm({
     )
   }
 
+  /**
+   * Fieldset « Auteurs » (Story 9.7, D18) : sélection ordonnée dans le référentiel, plus de
+   * saisie libre (FR54). Appelé comme fonction (pas `<AuthorsField />`) pour ne pas remonter
+   * le combobox à chaque rendu.
+   */
+  function authorsField() {
+    const error = fieldError('authors')
+    const showLegacy = legacyAuthorNames.length > 0 || legacyAuthorsNonText
+    const selectedIds = data.authors.map((author) => author.id)
+    return (
+      <fieldset aria-describedby="authors-hint">
+        <legend className="text-sm font-medium text-stone-700">
+          {t('productions.form.fields.authors')}
+          <span className="text-red-600"> *</span>
+        </legend>
+        <p id="authors-hint" className="mt-1 text-xs text-stone-500">
+          {t('productions.form.authors_hint')}
+        </p>
+        {showLegacy && (
+          <div
+            role="note"
+            className="mt-2 flex gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900"
+          >
+            <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+            <div>
+              <p className="font-medium">{t('authors.picker.legacy_title')}</p>
+              {legacyAuthorNames.length > 0 && (
+                <p className="mt-1">
+                  {t('authors.picker.legacy_description', {
+                    names: legacyAuthorNames.join(', '),
+                  })}
+                </p>
+              )}
+              {legacyAuthorsNonText && (
+                <p className="mt-1">{t('authors.picker.legacy_non_text')}</p>
+              )}
+            </div>
+          </div>
+        )}
+        <div className="mt-2 space-y-3">
+          <SelectedAuthorList
+            authors={data.authors}
+            onChange={(next) => {
+              setData('authors', next)
+              markTouched('authors')
+            }}
+            onEmptied={() => authorSearchRef.current?.focus()}
+          />
+          <AuthorCombobox
+            id="authors"
+            inputRef={authorSearchRef}
+            selectedIds={selectedIds}
+            onSelect={(author) => {
+              // Already selected (stale result): no duplicate.
+              if (selectedIds.includes(author.id)) return
+              setData('authors', [...data.authors, author])
+            }}
+            onBlur={() => markTouched('authors')}
+            invalid={!!error}
+            describedBy={error ? 'authors-error authors-hint' : 'authors-hint'}
+          />
+        </div>
+        {error && (
+          <p id="authors-error" className="mt-1 text-sm text-red-600">
+            {error}
+          </p>
+        )}
+      </fieldset>
+    )
+  }
+
   return (
     <div className="space-y-8">
       <CompletionIndicator fields={fields} hasFileOrLink={hasFileOrLink} />
 
       <Section legend={t('productions.form.sections.general')}>
         {TextField({ name: 'title', required: true })}
-        {ChipField({ name: 'authors', suggestions: suggestions.authors })}
+        {authorsField()}
         <TaxonomySelect name="category" options={PRODUCTION_CATEGORIES} group="categories" />
         <TaxonomySelect name="domain" options={PRODUCTION_DOMAINS} group="domains" />
         {data.domain.trim() !== '' &&

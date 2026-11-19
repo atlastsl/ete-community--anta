@@ -29,6 +29,8 @@ test.group('ActivityLogService', (group) => {
       ActionType.UNPUBLISH,
       ActionType.DELETE,
       ActionType.PASSWORD_RESET,
+      ActionType.CONSENT_CONFIRM,
+      ActionType.CONSENT_WITHDRAW,
     ]
 
     for (const actionType of actionTypes) {
@@ -41,7 +43,7 @@ test.group('ActivityLogService', (group) => {
     }
 
     const logs = await AdminActivityLog.query().where('adminUserId', testUser.id)
-    assert.equal(logs.length, 7)
+    assert.equal(logs.length, actionTypes.length)
 
     const loggedTypes = logs.map((log) => log.actionType).sort()
     const expectedTypes = [...actionTypes].sort()
@@ -106,4 +108,27 @@ test.group('ActivityLogService', (group) => {
   // Vérification par compilation, pas par test runtime.
   // Exemple : ActivityLogService.log({ adminUserId: '', actionType: 'invalid' })
   //   ↑ TS2322: Type '"invalid"' is not assignable to type 'ActionType'
+
+  test('enregistre metadata (jsonb) et NULL par défaut', async ({ assert }) => {
+    await ActivityLogService.log({
+      adminUserId: testUser.id,
+      actionType: ActionType.UPDATE,
+      resourceType: 'author',
+      resourceId: 'author-id',
+      metadata: { name: 'Jean Fictif', fields: ['lastNames'] },
+    })
+    await ActivityLogService.log({ adminUserId: testUser.id, actionType: ActionType.LOGIN })
+
+    const withMeta = await AdminActivityLog.query()
+      .where('adminUserId', testUser.id)
+      .where('resourceType', 'author')
+      .firstOrFail()
+    assert.deepEqual(withMeta.metadata, { name: 'Jean Fictif', fields: ['lastNames'] })
+
+    const withoutMeta = await AdminActivityLog.query()
+      .where('adminUserId', testUser.id)
+      .where('actionType', ActionType.LOGIN)
+      .firstOrFail()
+    assert.isNull(withoutMeta.metadata)
+  })
 })

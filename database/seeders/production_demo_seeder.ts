@@ -2,7 +2,10 @@ import { BaseSeeder } from '@adonisjs/lucid/seeders'
 import db from '@adonisjs/lucid/services/db'
 import { DateTime } from 'luxon'
 import { PRODUCTION_DOMAINS, SUBDOMAINS_BY_DOMAIN } from '#constants/production_taxonomy'
+import Author from '#models/author'
+import AuthorAffiliation from '#models/author_affiliation'
 import Production from '#models/production'
+import ProductionAuthorService from '#services/production_author_service'
 import ProductionService from '#services/production_service'
 
 /**
@@ -14,7 +17,13 @@ import ProductionService from '#services/production_service'
  * + tri vues/téléchargements).
  *
  * Marqueur `institution = 'SEED_DEMO'` → idempotent : un re-run purge d'abord les données
- * de démo (CASCADE nettoie les stats), sans toucher aux productions réelles.
+ * de démo (CASCADE nettoie les stats et le pivot), sans toucher aux productions réelles.
+ *
+ * Auteurs (Story 9.7) : fiches fictives (noms inventés) marquées `migration_key = 'seed-demo:<n>'`,
+ * 1 ou 2 affiliations, un tiers à consentement confirmé ; chaque production est rattachée par
+ * `ProductionAuthorService.sync` (pivot et colonne dénormalisée `productions.authors` cohérents).
+ * Purge : productions de démo d'abord, puis fiches `seed-demo:` (celles qu'un admin aurait liées
+ * à une vraie production sont conservées). Base LOCALE uniquement, jamais la base partagée.
  *
  * Lancer : node ace db:seed --files=./database/seeders/production_demo_seeder.ts
  */
@@ -40,20 +49,20 @@ const COUNTRIES = [
   'Bénin',
 ]
 const LICENSES = ['member', 'free_license', 'external_link'] as const
-const AUTHORS = [
-  'Cheikh Anta Diop',
-  'Aminata Sow Fall',
-  'Léopold Sédar Senghor',
-  'Mariama Bâ',
-  'Ousmane Sembène',
-  'Kofi Annan',
-  'Wangari Maathai',
-  'Chinua Achebe',
-  'Fatou Diome',
-  'Felwine Sarr',
-  'Achille Mbembe',
-  'Boubacar Boris Diop',
+/** Marqueur des fiches auteurs de démo (`authors.migration_key`). */
+export const SEED_AUTHOR_PREFIX = 'seed-demo:'
+const SEED_AUTHOR_COUNT = 24
+// Noms inventés (dépôt public) : aucune personne réelle.
+const SEED_FIRST_NAMES = ['Awa', 'Koffi', 'Mariam', 'Sékou', 'Nafi', 'Yao', 'Binta', 'Idrissa']
+const SEED_LAST_NAMES = ['Démoville', 'Exemplaire', 'Fictivé']
+const SEED_INSTITUTIONS = [
+  'Université Démo de Thiès',
+  'Institut Exemple des Sciences',
+  'École Fictive de Bamako',
+  'Université Modèle de Lomé',
 ]
+const SEED_DEPARTMENTS = ['Mathématiques', 'Histoire', 'Biologie', null]
+
 const TITLE_A = [
   'Introduction à',
   'Études sur',
@@ -91,7 +100,6 @@ function pick<T>(arr: readonly T[]): T {
 type Row = Partial<Production> & { status: 'draft' | 'published' | 'unpublished' }
 
 function buildRow(i: number, status: Row['status']): Record<string, unknown> {
-  const authors = [pick(AUTHORS), ...(Math.random() < 0.4 ? [pick(AUTHORS)] : [])]
   const isPublished = status === 'published'
   const isUnpublished = status === 'unpublished'
 
@@ -110,7 +118,8 @@ function buildRow(i: number, status: Row['status']): Record<string, unknown> {
     title,
     slug: ProductionService.generateSlug(title),
     summary: `Document académique portant sur ${subPick.replace(/_/g, ' ')}. Ressource de référence pour les chercheurs et étudiants. Réf. ${i + 1}.`,
-    authors: JSON.stringify(authors),
+    // Rempli depuis le pivot par ProductionAuthorService.sync (étape 4).
+    authors: JSON.stringify([]),
     tags: JSON.stringify([subPick, domain]),
     category: pick(CATEGORIES),
     domain,
@@ -133,21 +142,46 @@ function buildRow(i: number, status: Row['status']): Record<string, unknown> {
   }
 }
 
+/** 1 à 3 auteurs distincts, ordre aléatoire. */
+function pickAuthorIds(ids: string[]): string[] {
+  const count = Math.random() < 0.5 ? 1 : Math.random() < 0.7 ? 2 : 3
+  const pool = [...ids]
+  const picked: string[] = []
+  while (picked.length < count && pool.length > 0) {
+    picked.push(pool.splice(randInt(0, pool.length - 1), 1)[0])
+  }
+  return picked
+}
+
 export default class extends BaseSeeder {
   static environment = ['development']
 
   async run() {
-    // 1. Purge des données de démo précédentes (CASCADE → stats nettoyées)
-    const deleted = await Production.query().where('institution', MARKER).delete()
+    // 1. Purge des données de démo précédentes : productions (CASCADE → stats, pivot), puis
+    //    fiches `seed-demo:` qui ne sont plus liées à aucune production (FK RESTRICT).
+    const deleted = await Production.query({ client: this.client })
+      .where('institution', MARKER)
+      .delete()
     console.log(`🧹 ${deleted} production(s) de démo précédente(s) supprimée(s)`)
+    const deletedAuthors = await Author.query({ client: this.client })
+      .whereLike('migration_key', `${SEED_AUTHOR_PREFIX}%`)
+      .whereNotExists((sub) =>
+        sub.from('production_authors').whereColumn('production_authors.author_id', 'authors.id')
+      )
+      .delete()
+    console.log(`🧹 ${deletedAuthors} fiche(s) auteur de démo supprimée(s)`)
 
-    // 2. Construction des 300 lignes
+    // 2. Fiches auteurs fictives (reprises si une fiche liée ailleurs a survécu à la purge).
+    const authorIds = await this.seedAuthors()
+    console.log(`✔ ${authorIds.length} fiches auteurs de démo`)
+
+    // 3. Construction des 300 lignes
     const rows: Record<string, unknown>[] = []
     for (let i = 0; i < 250; i++) rows.push(buildRow(i, 'published'))
     for (let i = 250; i < 280; i++) rows.push(buildRow(i, 'unpublished'))
     for (let i = 280; i < 300; i++) rows.push(buildRow(i, 'draft'))
 
-    // 3. Insertion en lot (multiInsert = un INSERT multi-lignes ; le trigger peuple search_vector).
+    // 4. Insertion en lot (multiInsert = un INSERT multi-lignes ; le trigger peuple search_vector).
     //    `?::jsonb` pour authors/tags (colonnes jsonb).
     const inserted: { id: string; status: string }[] = []
     const CHUNK = 50
@@ -158,12 +192,23 @@ export default class extends BaseSeeder {
         tags: db.raw('?::jsonb', [r.tags as string]),
         subdomain: db.raw('?::jsonb', [r.subdomain as string]),
       }))
-      const res = await db.table('productions').multiInsert(chunk).returning(['id', 'status'])
+      const res = await this.client
+        .table('productions')
+        .multiInsert(chunk)
+        .returning(['id', 'status'])
       inserted.push(...(res as { id: string; status: string }[]))
     }
     console.log(`✔ ${inserted.length} productions créées`)
 
-    // 4. Compteurs vues / téléchargements pour les publiées (sections + tri)
+    // 5. Auteurs de chaque production : pivot + colonne dénormalisée (Story 9.7).
+    await this.client.transaction(async (trx) => {
+      for (const production of inserted) {
+        await ProductionAuthorService.sync(production.id, pickAuthorIds(authorIds), trx)
+      }
+    })
+    console.log('✔ auteurs rattachés (pivot + productions.authors)')
+
+    // 6. Compteurs vues / téléchargements pour les publiées (sections + tri)
     const publishedIds = inserted.filter((r) => r.status === 'published').map((r) => r.id)
     const viewRows: { production_id: string; ip_hash: string }[] = []
     const downloadRows: { production_id: string; ip_hash: string }[] = []
@@ -177,12 +222,55 @@ export default class extends BaseSeeder {
     }
     const SCHUNK = 2000
     for (let c = 0; c < viewRows.length; c += SCHUNK) {
-      await db.table('stats_views').multiInsert(viewRows.slice(c, c + SCHUNK))
+      await this.client.table('stats_views').multiInsert(viewRows.slice(c, c + SCHUNK))
     }
     for (let c = 0; c < downloadRows.length; c += SCHUNK) {
-      await db.table('stats_downloads').multiInsert(downloadRows.slice(c, c + SCHUNK))
+      await this.client.table('stats_downloads').multiInsert(downloadRows.slice(c, c + SCHUNK))
     }
     console.log(`✔ ${viewRows.length} vues + ${downloadRows.length} téléchargements générés`)
     console.log('✅ Seed démo terminé : 250 publiées, 30 dépubliées, 20 brouillons')
+  }
+
+  /** Creates the missing `seed-demo:<n>` cards; returns the ids of all of them. */
+  private async seedAuthors(): Promise<string[]> {
+    const ids: string[] = []
+    for (let n = 1; n <= SEED_AUTHOR_COUNT; n++) {
+      const migrationKey = `${SEED_AUTHOR_PREFIX}${n}`
+      const existing = await Author.query({ client: this.client })
+        .where('migration_key', migrationKey)
+        .first()
+      if (existing) {
+        ids.push(existing.id)
+        continue
+      }
+      const author = await Author.create(
+        {
+          firstNames: SEED_FIRST_NAMES[(n - 1) % SEED_FIRST_NAMES.length],
+          lastNames: SEED_LAST_NAMES[Math.floor((n - 1) / SEED_FIRST_NAMES.length)],
+          migrationKey,
+          createdById: null,
+        },
+        { client: this.client }
+      )
+      const affiliations = n % 2 === 0 ? 2 : 1
+      for (let position = 1; position <= affiliations; position++) {
+        await AuthorAffiliation.create(
+          {
+            authorId: author.id,
+            position,
+            institution: SEED_INSTITUTIONS[(n + position) % SEED_INSTITUTIONS.length],
+            department: SEED_DEPARTMENTS[(n + position) % SEED_DEPARTMENTS.length],
+          },
+          { client: this.client }
+        )
+      }
+      // Un tiers à consentement confirmé (D27 : chaque fiche a au moins une affiliation).
+      if (n % 3 === 0) {
+        author.consentConfirmedAt = DateTime.now()
+        await author.save()
+      }
+      ids.push(author.id)
+    }
+    return ids
   }
 }

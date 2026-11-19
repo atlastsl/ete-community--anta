@@ -22,3 +22,12 @@ test.group('production_completion | isAttachmentSatisfied (AC5)', () => {
     assert.match(source, /return\s+hasFile\s*\|\|\s*hasLink/, 'sinon hasFile || hasLink')
   })
 })
+
+test.group('production_completion | hasRequiredAuthors (Story 9.7, FR21)', () => {
+  test('au moins un auteur sélectionné (aligné sur le pivot côté serveur)', ({ assert }) => {
+    assert.match(
+      source,
+      /export function hasRequiredAuthors\(authors: readonly unknown\[\]\): boolean \{\s*return authors\.length > 0/
+    )
+  })
+})

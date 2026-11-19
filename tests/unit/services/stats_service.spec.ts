@@ -10,7 +10,7 @@ async function createProduction() {
   return Production.create({
     title: `Stats ${Math.floor(Math.random() * 1_000_000)}`,
     status: 'published',
-    authors: [],
+    authorNames: [],
     tags: [],
     subdomain: [],
     licenseStatus: 'member',

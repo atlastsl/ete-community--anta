@@ -41,7 +41,39 @@ test.group('Admin activity logs (7.3)', (group) => {
     const props = extractProps(response.text())
     assert.properties(props, ['logs', 'pagination', 'admins', 'actionTypes'])
     assert.equal(props.pagination.perPage, 20)
-    assert.lengthOf(props.actionTypes, 7)
+    assert.lengthOf(props.actionTypes, 9)
+    assert.includeMembers(props.actionTypes, ['consent_confirm', 'consent_withdraw'])
+  })
+
+  test('entrée auteur → resourceName issu de metadata ; null sans metadata', async ({
+    client,
+    assert,
+  }) => {
+    const su = await createUser('super_admin')
+    await AdminActivityLog.create({
+      adminUserId: su.id,
+      actionType: 'create',
+      resourceType: 'author',
+      resourceId: 'author-id',
+      metadata: { name: 'Jean Fictif' },
+    })
+    await AdminActivityLog.create({
+      adminUserId: su.id,
+      actionType: 'publish',
+      resourceType: 'production',
+      resourceId: 'prod-id',
+    })
+
+    const response = await client.get('/admin/activity').loginAs(su)
+    const props = extractProps(response.text())
+    const byType = Object.fromEntries(
+      props.logs.map((l: { resourceType: string; resourceName: string | null }) => [
+        l.resourceType,
+        l.resourceName,
+      ])
+    )
+    assert.equal(byType.author, 'Jean Fictif')
+    assert.isNull(byType.production)
   })
 
   test('filtre par administrateur', async ({ client, assert }) => {
@@ -90,6 +122,35 @@ test.group('Admin activity logs (7.3)', (group) => {
     const props = extractProps(response.text())
     assert.lengthOf(props.logs, 1)
     assert.equal(props.logs[0].actionType, 'publish')
+  })
+
+  test('filtre consent_confirm (Story 9.4) : entrée auteur avec son nom', async ({
+    client,
+    assert,
+  }) => {
+    const su = await createUser('super_admin')
+    await AdminActivityLog.create({
+      adminUserId: su.id,
+      actionType: 'consent_confirm',
+      resourceType: 'author',
+      resourceId: 'author-id',
+      metadata: { name: 'Jean Fictif' },
+    })
+    await AdminActivityLog.create({
+      adminUserId: su.id,
+      actionType: 'consent_withdraw',
+      resourceType: 'author',
+      resourceId: 'author-id',
+      metadata: { name: 'Jean Fictif' },
+    })
+
+    const response = await client
+      .get(`/admin/activity?adminId=${su.id}&actionType=consent_confirm`)
+      .loginAs(su)
+    const props = extractProps(response.text())
+    assert.equal(props.currentActionType, 'consent_confirm')
+    assert.lengthOf(props.logs, 1)
+    assert.equal(props.logs[0].resourceName, 'Jean Fictif')
   })
 
   test('pagination 20/page', async ({ client, assert }) => {

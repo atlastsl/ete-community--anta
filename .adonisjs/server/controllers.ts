@@ -7,6 +7,7 @@ export const controllers = {
   admin: {
     ActivityLogs: () => import('#controllers/admin/activity_logs_controller'),
     Auth: () => import('#controllers/admin/auth_controller'),
+    Authors: () => import('#controllers/admin/authors_controller'),
     Dashboard: () => import('#controllers/admin/dashboard_controller'),
     Files: () => import('#controllers/admin/files_controller'),
     Links: () => import('#controllers/admin/links_controller'),

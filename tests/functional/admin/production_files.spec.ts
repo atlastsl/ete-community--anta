@@ -23,7 +23,7 @@ async function createProduction(): Promise<Production> {
   return Production.create({
     title: `Prod ${Math.floor(Math.random() * 1_000_000)}`,
     status: 'draft',
-    authors: [],
+    authorNames: [],
     tags: [],
     licenseStatus: 'member',
     createdById: null,

@@ -72,3 +72,48 @@
 - **Seeder démo : pic d'évolution sur un seul jour** : `production_demo_seeder` insère les `stats_views`/`stats_downloads` sans date → la colonne prend `default now()` → toute l'évolution 30j s'affiche en un pic le jour du seed. Artefact démo (pas de données prod). Action éventuelle : répartir `recorded_at`/`downloaded_at` sur les 30-60 derniers jours dans le seeder pour une démo réaliste.
 - **Fuseau horaire des stats (robustesse)** : le bucketing 30j repose sur la cohérence de zone Luxon entre `DateTime.now()` (squelette) et `recordedAt` hydraté par Lucid (vérifié cohérent par défaut, même zone process). Action de robustesse (non urgent) : fixer explicitement la zone (ex. UTC) côté Lucid + service pour éviter toute dérive si la config TZ du process change.
 - **Dropdown admins non borné (logs)** : `ActivityLogsController` charge tous les admins pour le filtre (borné par l'effectif admin, trivial). Action si l'effectif grandit : recherche/typeahead.
+
+## Deferred from: code review of 9-1-creer-et-modifier-une-fiche-auteur (2026-11-18)
+
+- **Paramètre `page` non borné** : `Math.max(1, Number(page) || 1)` laisse passer `Infinity`, `1.5`, `1e21` (offset incohérent). Même patron dans les contrôleurs admin productions, activity_logs, authors et public productions. Action : helper commun `Number.isSafeInteger` + `Math.floor`.
+- **Bouton dans un lien** : `<Link><Button/></Link>` produit `<a><button>` (HTML invalide, deux arrêts de tabulation). Patron de toutes les pages admin. Action : `Button asChild` autour du `Link`.
+- **Normalisation des clés** : `normalizeKey` (NFD) n'unifie pas `'`/`’`/`ʼ`, trait d'union/espace, ni `ł`, `ø`, `æ`, `đ`. Conforme à P2.1 ; à reconsidérer avant le dédoublonnage des auteurs/institutions (9.5/9.6). **Auteurs : traité en 9.5** pour la proposition de conversion (`AuthorConversionService.groupKey` assimile apostrophes et tirets ; `normalizeKey` inchangé). Reste ouvert pour les institutions (`institution_key`).
+
+## Deferred from: code review of 9-2-liste-des-auteurs-filtres-et-suppression (2026-11-18)
+
+- **Dialogs de confirmation** : `role="alertdialog"` posé sur un `Dialog` Radix (fermeture au clic extérieur et Échap, focus initial sur le premier bouton). Même patron dans Users/Productions. Action : ajouter la primitive shadcn `alert-dialog` et migrer les dialogs de suppression.
+- **Performance de la recherche d'auteurs** : `search_name LIKE '%t%' OR similarity(...) > 0.3` n'utilise pas l'index GIN trigram (seuls les opérateurs `%`/`LIKE` seuls le peuvent) ; `quickFilterCounts` et `institutionOptions` balaient les tables à chaque page. Action pour 9.7 (autocomplétion) : `LIKE` seul ou opérateur `%` avec `pg_trgm.similarity_threshold`, cache léger des compteurs. *9.7 (2026-11-18)* : `GET /admin/authors/search` réutilise la même logique avec `limit(10)` (quelques centaines de fiches) ; report maintenu jusqu'à un volume qui le justifie (D-9.7-b).
+
+## Deferred from: code review of 9-3-photo-d-un-auteur (2026-11-18)
+
+- **Objets R2 orphelins** : variantes envoyées avant le commit ; un arrêt du processus entre les deux, ou l'échec de la suppression best-effort de l'ancien préfixe, laisse des objets sous `authors/<id>/<token>/` sans référence. Action : commande planifiée qui liste `authors/` et supprime les préfixes absents de `authors.photo_key` et âgés de plus d'une heure.
+- **Limites d'envoi** : limite multipart globale 110 Mo (pour les PDF) ; une photo au-delà donne un 413 (modal Inertia) au lieu de `photo_size`, et le fichier est écrit sur disque avant le refus. Action : limite multipart par route pour `/admin/authors`.
+- **Envoi R2 sans délai d'expiration** : un `putObject` bloqué fige la requête. Action : `AbortSignal.timeout` ou course avec délai.
+- **URLs signées des avatars** : nouvelles à chaque rendu, donc jamais en cache navigateur ; pas de `loading="lazy"` dans la liste. Action : durée de signature arrondie ou diffusion publique (Epic 10, `/media`).
+- **Constantes dupliquées** : 5 Mo et 40 Mpx répétés dans `image_service`, le validateur, `author_form.ts` et les libellés FR/EN.
+
+## Deferred from: code review of 9-4-confirmer-et-retirer-le-consentement-d-un-auteur (2026-11-18)
+
+- **Noms accessibles des actions de ligne** : « Modifier », « Supprimer », « Confirmer / Retirer le consentement » identiques sur chaque ligne de la liste des auteurs (WCAG 2.4.6). Action : `aria-label` avec le nom de l'auteur (« Supprimer Jean FICTIF »), à appliquer aussi aux listes Productions et Utilisateurs.
+- **Case de consentement désactivée** : `disabled` natif retire la case de l'ordre de tabulation ; la raison (« Complétez d'abord une affiliation. ») n'est lue qu'en mode lecture. Action : `aria-disabled` focusable comme les actions de la liste.
+
+## Deferred from: code review of 9-5-proposition-et-validation-de-la-table-de-conversion-des-auteurs (2026-11-18)
+
+- ~~**Liens comptés approximativement dans le rapport de `authors:validate`**~~ — traité en 9.6 : le rapport d'`authors:apply` (et son `--dry-run`) compte les liens réellement insérés ; le plan de `validate` reste indicatif. Ancien texte : quand la fiche cible est déjà liée à la production (par un autre nom), le plan compte quand même un lien. Exact en 9.6 (`ON CONFLICT DO NOTHING`, rapport d'`apply` sur les lignes réellement insérées).
+
+## Deferred from: code review of 9-6-application-idempotente-et-verification-de-la-conversion (2026-11-18)
+
+- **Interblocage possible entre `authors:apply` et un renommage concurrent** — `apply` verrouille toutes les productions puis insère des liens (verrou `KEY SHARE` sur les fiches) ; un renommage verrouille la fiche puis ses productions. Postgres annule l'une des deux (l'`apply` renvoie « modification concurrente », rien d'écrit). Procédure : geler les modifications admin pendant `apply`, relancer `authors:verify` juste après.
+- **Renommage d'une fiche liée à une production partiellement rattachée** — la production garde l'ancien nom dans `productions.authors` jusqu'au prochain `propose` / `apply` (D-9.6-f). Question ouverte à Aurélien : acceptable jusqu'à la bascule 9.7 ?
+
+## Revue de code de la Story 9.7 (2026-11-18)
+
+- **Surlignage de la correspondance** dans les options d'`AuthorCombobox` (`<mark>`, `components.author-combobox.match-highlight` de DESIGN.md) : non livré (correspondance insensible aux accents à reporter sur le texte affiché).
+- **Auteur supprimé entre-temps** : l'erreur `productions.form.errors.author_unknown` ne nomme pas la fiche disparue ; l'admin doit retirer lui-même l'auteur concerné (la suppression est déjà refusée pour une fiche liée, cas limite d'une fiche ajoutée à la sélection non enregistrée).
+- **Index trigram de la recherche d'auteurs** : `LIKE '%t%' OR similarity` non indexé (voir plus haut), conservé pour `GET /admin/authors/search` (D-9.7-b).
+
+## Deferred from: code review of 9-8-creer-un-auteur-sans-quitter-le-formulaire-de-production (2026-11-18)
+
+- **Fichiers temporaires multipart non supprimés avant le contrôleur** : quand Shield (CSRF) ou l'authentification refusent une requête multipart, le bodyparser a déjà écrit le fichier dans `tmpdir()` et aucun `finally` de contrôleur ne s'exécute. Préexistant, toutes les routes multipart (auteurs, fichiers de production). Action : middleware de nettoyage après réponse, ou `tmpFileName` dans un dossier purgé périodiquement.
+- **Clé d'idempotence pour `POST /admin/authors/quick`** : une perte de réseau après le commit fait renvoyer la fenêtre par l'admin → seconde fiche. Action : en-tête `Idempotency-Key` généré à l'ouverture de la fenêtre, mémorisé quelques minutes côté serveur.
+- **Avertissement d'homonyme avant création** (question PO) : la fenêtre ne signale pas une fiche existante au nom proche ; la liste de résultats du combobox reste la seule aide.

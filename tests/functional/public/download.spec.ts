@@ -9,7 +9,7 @@ async function createProduction(status: 'draft' | 'published' | 'unpublished' = 
   return Production.create({
     title: `DL ${Math.floor(Math.random() * 1_000_000)}`,
     status,
-    authors: [],
+    authorNames: [],
     tags: [],
     subdomain: [],
     licenseStatus: 'member',

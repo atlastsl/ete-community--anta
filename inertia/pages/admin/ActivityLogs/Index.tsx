@@ -20,6 +20,7 @@ type LogRow = {
   actionType: string
   resourceType: string | null
   resourceId: string | null
+  resourceName: string | null
   createdAt: string | null
 }
 
@@ -66,10 +67,15 @@ export default function AdminActivityLogsIndex({
   const formatDateTime = (iso: string | null) =>
     iso ? new Date(iso).toLocaleString(i18n.language === 'fr' ? 'fr-FR' : 'en-US') : '—'
 
-  const resourceLabel = (log: LogRow) =>
-    log.resourceType
-      ? `${log.resourceType} #${(log.resourceId ?? '').slice(0, 8)}`
-      : '—'
+  const resourceLabel = (log: LogRow) => {
+    if (!log.resourceType) return '—'
+    const shortId = `#${(log.resourceId ?? '').slice(0, 8)}`
+    if (log.resourceType === 'author') {
+      const label = t('activity.resource.author')
+      return log.resourceName ? `${label} — ${log.resourceName}` : `${label} ${shortId}`
+    }
+    return `${log.resourceType} ${shortId}`
+  }
 
   return (
     <div className="mx-auto max-w-5xl">

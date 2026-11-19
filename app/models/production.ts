@@ -1,9 +1,17 @@
-import { BaseModel, column, hasMany, belongsTo, beforeCreate } from '@adonisjs/lucid/orm'
-import type { HasMany, BelongsTo } from '@adonisjs/lucid/types/relations'
+import {
+  BaseModel,
+  column,
+  hasMany,
+  belongsTo,
+  manyToMany,
+  beforeCreate,
+} from '@adonisjs/lucid/orm'
+import type { HasMany, BelongsTo, ManyToMany } from '@adonisjs/lucid/types/relations'
 import { DateTime } from 'luxon'
 import type { ProductionStatus } from '#enums/production_status'
 import type { LicenseStatus } from '#enums/license_status'
 import AdminUser from '#models/admin_user'
+import Author from '#models/author'
 import ProductionFile from '#models/production_file'
 import ProductionLink from '#models/production_link'
 import StatsView from '#models/stats_view'
@@ -35,11 +43,24 @@ export default class Production extends BaseModel {
   @column()
   declare summary: string | null
 
+  /** Denormalized "First Last" names, ordered like the pivot (P2-02). Read-only outside ProductionAuthorService (Story 9.6+). */
   @column({
+    columnName: 'authors',
     prepare: (value: string[]) => JSON.stringify(value),
     consume: (value: string | string[]) => (typeof value === 'string' ? JSON.parse(value) : value),
   })
-  declare authors: string[]
+  declare authorNames: string[]
+
+  /** Ordered authors of the referential (pivot `production_authors`, Story 9.2). */
+  @manyToMany(() => Author, {
+    pivotTable: 'production_authors',
+    pivotColumns: ['position'],
+    // Not on sub-queries (`withCount`, `has`): an ORDER BY there breaks the aggregate.
+    onQuery: (query) => {
+      if (!query.isRelatedSubQuery) query.orderBy('production_authors.position', 'asc')
+    },
+  })
+  declare authors: ManyToMany<typeof Author>
 
   @column({
     prepare: (value: string[]) => JSON.stringify(value),

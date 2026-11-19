@@ -21,7 +21,7 @@ test.group('Production model', (group) => {
     const production = await Production.create({
       title: 'Test Production',
       summary: 'A test summary',
-      authors: ['Author One', 'Author Two'],
+      authorNames: ['Author One', 'Author Two'],
       tags: ['tag1', 'tag2'],
       category: 'informatique',
       domain: 'sciences',
@@ -33,7 +33,7 @@ test.group('Production model', (group) => {
 
     assert.isString(production.id)
     assert.equal(production.title, 'Test Production')
-    assert.deepEqual(production.authors, ['Author One', 'Author Two'])
+    assert.deepEqual(production.authorNames, ['Author One', 'Author Two'])
     assert.deepEqual(production.tags, ['tag1', 'tag2'])
     assert.equal(production.status, 'draft')
     assert.equal(production.licenseStatus, 'member')
@@ -49,7 +49,7 @@ test.group('Production model', (group) => {
     await Production.create({
       title: 'Artificial Intelligence Research',
       summary: 'Deep learning and neural networks',
-      authors: ['Jean Dupont'],
+      authorNames: ['Jean Dupont'],
       tags: ['AI', 'deep learning'],
       category: 'informatique',
       domain: 'sciences',
@@ -100,7 +100,7 @@ test.group('Production model', (group) => {
 
     const production = await Production.create({
       title: 'Rel Test',
-      authors: [],
+      authorNames: [],
       tags: [],
       licenseStatus: 'free_license',
       createdById: admin.id,
@@ -129,7 +129,7 @@ test.group('Production model', (group) => {
 
     const production = await Production.create({
       title: 'Link Test',
-      authors: [],
+      authorNames: [],
       tags: [],
       licenseStatus: 'external_link',
       createdById: admin.id,
@@ -156,7 +156,7 @@ test.group('Production model', (group) => {
 
     const production = await Production.create({
       title: 'BelongsTo Test',
-      authors: [],
+      authorNames: [],
       tags: [],
       licenseStatus: 'member',
       createdById: admin.id,

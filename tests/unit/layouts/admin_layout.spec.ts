@@ -28,6 +28,17 @@ test.group('AdminLayout | structure', () => {
     )
   })
 
+  test('entrée « Auteurs » juste après Productions, visible pour tous les admins', ({ assert }) => {
+    const src = adminLayoutSource
+    const productions = src.indexOf("labelKey: 'nav.productions'")
+    const authors = src.indexOf(
+      "{ labelKey: 'nav.authors', href: '/admin/authors', icon: BookUser }"
+    )
+    const statistics = src.indexOf("labelKey: 'nav.statistics'")
+    assert.isAbove(authors, productions)
+    assert.isBelow(authors, statistics)
+  })
+
   test("affiche un message d'avertissement sur mobile (< lg)", ({ assert }) => {
     assert.include(adminLayoutSource, 'lg:hidden', 'doit avoir un bloc lg:hidden pour mobile')
     assert.include(
