@@ -158,7 +158,49 @@ test.group('Public SEO | pages auteurs (Story 10.7)', (group) => {
       metaContent(head, 'property', 'og:image'),
       `${APP_URL}/media/authors/${author.id}/${TOKEN}/og.jpg`
     )
+    assert.equal(metaContent(head, 'property', 'og:image:width'), '600')
+    assert.equal(metaContent(head, 'property', 'og:image:height'), '600')
+    assert.equal(metaContent(head, 'property', 'og:image:type'), 'image/jpeg')
     assert.equal(metaContent(head, 'name', 'twitter:card'), 'summary_large_image')
+  })
+
+  test('photo mais consentement retiré → 404, aucune meta de l’auteur', async ({
+    client,
+    assert,
+  }) => {
+    const author = await createAuthor({ lastNames: 'Retiree', photo: true })
+    await link(await createProduction(), author)
+    author.consentConfirmedAt = null
+    await author.save()
+
+    const response = await client.get(`/authors/${author.slug}`)
+    response.assertStatus(404)
+    const head = headOf(response.text())
+    assert.isNull(metaContent(head, 'property', 'og:image'))
+    assert.notInclude(head, '/media/authors')
+    assert.notInclude(head, 'RETIREE')
+    assert.notInclude(head.toLowerCase(), 'retiree')
+    assert.equal(metaContent(head, 'name', 'twitter:card'), 'summary')
+  })
+
+  test('photo et consentement mais aucune production publiée → 404, aucune meta de l’auteur', async ({
+    client,
+    assert,
+  }) => {
+    const author = await createAuthor({ lastNames: 'Sansoeuvre', photo: true })
+    const draft = await createProduction()
+    draft.status = 'draft'
+    draft.antaPublishedAt = null
+    await draft.save()
+    await link(draft, author)
+
+    const response = await client.get(`/authors/${author.slug}`)
+    response.assertStatus(404)
+    const head = headOf(response.text())
+    assert.isNull(metaContent(head, 'property', 'og:image'))
+    assert.notInclude(head, '/media/authors')
+    assert.notInclude(head.toLowerCase(), 'sansoeuvre')
+    assert.equal(metaContent(head, 'name', 'twitter:card'), 'summary')
   })
 
   test('profil sans photo : pas d’og:image, twitter:card summary', async ({ client, assert }) => {
@@ -172,6 +214,8 @@ test.group('Public SEO | pages auteurs (Story 10.7)', (group) => {
     assert.equal(metaContent(head, 'property', 'og:type'), 'profile')
     assert.equal(metaContent(head, 'property', 'og:url'), `${APP_URL}/authors/${author.slug}`)
     assert.isNull(metaContent(head, 'property', 'og:image'))
+    assert.isNull(metaContent(head, 'property', 'og:image:width'))
+    assert.isNull(metaContent(head, 'property', 'og:image:type'))
     assert.equal(metaContent(head, 'name', 'twitter:card'), 'summary')
   })
 

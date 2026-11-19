@@ -4,7 +4,7 @@ baseline_commit: 8155ca4
 
 # Story 10.7 : Référencement des pages auteurs
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -69,6 +69,14 @@ afin de reconnaître le profil avant de cliquer (FR36).
 - **D-10.7-3** `ogUrl` de la liste = `/authors` nu, quels que soient filtres et page (URL canonique de partage).
 - **D-10.7-4** Pas de `og:image:alt`, `og:image:width/height`, `twitter:title` (les robots retombent sur `og:*`) : hors spec.
 
+### Review Findings
+
+- [x] [Review][Patch] Tests de non-exposition [seo.spec.ts] — auteur avec photo dont le consentement est retiré, et auteur avec photo et consentement sans production publiée (brouillon seul) → 404, `<head>` sans `og:image`, sans `/media/authors`, sans le nom (verts dès l'écriture : garde de régression, la visibilité passe par `findVisibleBySlug`).
+- [x] [Review][Patch] Type client [inertia/lib/seo.ts] — `SeoMeta.ogImage?: string` (miroir de `MetaTags`).
+- [x] [Review][Patch] Dimensions de l'aperçu [inertia_layout.edge] — `og:image:width=600`, `og:image:height=600`, `og:image:type=image/jpeg` quand `ogImage` existe (variante fixe) ; test rouge puis vert, absents sans photo (amende D-10.7-4).
+- [x] [Review][Note] `/media` sert les photos sur le seul consentement (sans exiger de production publiée) : question PO de 10.2, inchangée ; l'`og:image` n'est de toute façon émise que sur un profil visible.
+- [ ] [Review][PO] Recadrage 2:1 de X avec `summary_large_image` sur une photo carrée (D-10.7-2) : reste une question PO.
+
 ### Références
 
 - [Source: _bmad-output/planning-artifacts/epics.md#Story 10.7] ; en-tête Epic 10 (visibilité) ; 10.8 (scénarios SEO).
@@ -102,6 +110,7 @@ Claude Opus 5.5 (claude-opus-5-5)
 - resources/views/inertia_layout.edge (modifié)
 - tests/unit/services/seo_service.spec.ts (modifié)
 - tests/functional/public/seo.spec.ts (modifié)
+- inertia/lib/seo.ts (modifié, revue)
 - _bmad-output/implementation-artifacts/10-7-referencement-des-pages-auteurs.md (nouveau)
 
 ## Questions ouvertes (non bloquantes, défauts retenus)
@@ -113,3 +122,4 @@ Claude Opus 5.5 (claude-opus-5-5)
 
 - 2026-11-19 : story créée (contexte complet, ready-for-dev).
 - 2026-11-19 : implémentation (`og:image` og.jpg des profils, `twitter:card`, `og:url` de la liste, tests SEO) ; 1010 tests ; statut review.
+- 2026-11-19 : revue de code appliquée (3 correctifs, 1 note, 1 question PO) ; 1012 tests ; statut done.

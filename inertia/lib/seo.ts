@@ -13,6 +13,8 @@ export type SeoMeta = {
   ogDescription: string
   ogType: string
   ogUrl?: string
+  /** Absolute `og:image` URL: author profiles with a public photo only (Story 10.7, D37). */
+  ogImage?: string
   locale: 'fr' | 'en'
 }
 
