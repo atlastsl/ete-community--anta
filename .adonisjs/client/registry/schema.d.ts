@@ -55,6 +55,18 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/public/productions_controller').default['download']>>>
     }
   }
+  'authors.show': {
+    methods: ["GET","HEAD"]
+    pattern: '/authors/:slug'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { slug: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/public/authors_controller').default['show']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/public/authors_controller').default['show']>>>
+    }
+  }
   'privacy-policy': {
     methods: ["GET","HEAD"]
     pattern: '/privacy-policy'

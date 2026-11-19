@@ -442,5 +442,31 @@
     "nav_label": "Useful links",
     "home": "Home",
     "search": "Advanced search"
+  },
+  "authors": {
+    "profile": {
+      "breadcrumb_label": "Breadcrumb",
+      "breadcrumb_home": "Home",
+      "photo_alt": "Photo of {{name}}",
+      "affiliations_label": "Affiliations",
+      "scholar": "Google Scholar",
+      "new_tab": "(opens in a new tab)",
+      "stats_label": "Author statistics",
+      "stats": {
+        "views": "Views",
+        "downloads": "Downloads",
+        "productions": "Productions"
+      },
+      "stats_note": "Totals of published productions.",
+      "productions_heading": "Productions",
+      "productions_count_one": "{{count}} published production · {{from}}–{{to}}",
+      "productions_count_other": "{{count}} published productions · {{from}}–{{to}}",
+      "sort": {
+        "date": "Publication date",
+        "views": "Most viewed",
+        "downloads": "Most downloaded",
+        "title": "Title (A → Z)"
+      }
+    }
   }
 }

@@ -442,5 +442,31 @@
     "nav_label": "Liens utiles",
     "home": "Accueil",
     "search": "Recherche avancée"
+  },
+  "authors": {
+    "profile": {
+      "breadcrumb_label": "Fil d'Ariane",
+      "breadcrumb_home": "Accueil",
+      "photo_alt": "Photo de {{name}}",
+      "affiliations_label": "Affiliations",
+      "scholar": "Google Scholar",
+      "new_tab": "(nouvel onglet)",
+      "stats_label": "Statistiques de l'auteur",
+      "stats": {
+        "views": "Vues",
+        "downloads": "Téléchargements",
+        "productions": "Productions"
+      },
+      "stats_note": "Totaux des productions publiées.",
+      "productions_heading": "Productions",
+      "productions_count_one": "{{count}} production publiée · {{from}}–{{to}}",
+      "productions_count_other": "{{count}} productions publiées · {{from}}–{{to}}",
+      "sort": {
+        "date": "Date de publication de l'œuvre",
+        "views": "Les plus consultées",
+        "downloads": "Les plus téléchargées",
+        "title": "Titre (A → Z)"
+      }
+    }
   }
 }

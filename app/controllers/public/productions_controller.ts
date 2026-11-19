@@ -12,22 +12,7 @@ import SeoService from '#services/seo_service'
 import FileStorageService from '#services/file_storage_service'
 import StatsService from '#services/stats_service'
 import env from '#start/env'
-
-/** Sérialisation plate d'une production pour les ProductionCard. */
-function serialize(p: Production) {
-  return {
-    id: p.id,
-    slug: p.slug,
-    title: p.title,
-    authors: p.authorNames ?? [],
-    category: p.category,
-    domain: p.domain,
-    summary: p.summary,
-    viewsCount: Number(p.$extras.viewsCount ?? 0),
-    downloadsCount: Number(p.$extras.downloadsCount ?? 0),
-    publishedAt: p.antaPublishedAt?.toISO() ?? null,
-  }
-}
+import ProductionCardTransformer from '#transformers/production_card_transformer'
 
 /** Sérialisation complète pour la page détail (toutes métadonnées publiques + fichiers/liens). */
 function serializeDetail(p: Production) {
@@ -114,12 +99,12 @@ export default class ProductionsController {
     const facets = await SearchService.facets()
 
     // Résultats approchants : si la recherche exacte ne renvoie rien, proposer les plus proches.
-    let results = paginator.all().map(serialize)
+    let results = ProductionCardTransformer.transform(paginator.all())
     let approximate = false
     if (meta.total === 0 && q) {
       const approx = await SearchService.approximate({ q, filters })
       if (approx.length) {
-        results = approx.map(serialize)
+        results = ProductionCardTransformer.transform(approx)
         approximate = true
       }
     }

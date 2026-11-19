@@ -8,6 +8,9 @@ export interface ApiDefinition {
     show: typeof routes['production.show']
     download: typeof routes['production.download']
   }
+  authors: {
+    show: typeof routes['authors.show']
+  }
   privacyPolicy: typeof routes['privacy-policy']
   media: {
     show: typeof routes['media.show']

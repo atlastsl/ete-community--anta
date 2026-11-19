@@ -154,4 +154,47 @@ export default class SeoService {
       locale,
     }
   }
+
+  /**
+   * Meta of a visible author profile (FR36, P2.7). Minimal shape (Story 10.3): `ogImage`
+   * (photo `og.jpg`) and `twitter:card` come with Story 10.7. "Prénom NOM": the last names
+   * are upper-cased for display only (D34), like `formatAuthorName` on the front.
+   */
+  static forAuthor(
+    locale: Locale,
+    author: {
+      firstNames: string
+      lastNames: string
+      slug?: string | null
+      primaryInstitution?: string | null
+      publishedCount: number
+    },
+    appUrl?: string | null
+  ): MetaTags {
+    const { name } = SITE[locale]
+    const displayName = `${author.firstNames} ${author.lastNames.toLocaleUpperCase('fr-FR')}`.trim()
+    const title = `${displayName} — ${name}`
+
+    const n = author.publishedCount
+    const count =
+      locale === 'fr'
+        ? `${n} ${n > 1 ? 'productions publiées' : 'production publiée'} sur ${name}`
+        : `${n} ${n === 1 ? 'production' : 'productions'} published on ${name}`
+    const institution = author.primaryInstitution?.trim()
+    const description = institution ? `${institution} — ${count}` : count
+
+    const slug = author.slug?.trim()
+    const baseUrl = appUrl?.replace(/\/$/, '')
+    const ogUrl = slug && baseUrl ? `${baseUrl}/authors/${slug}` : undefined
+
+    return {
+      title,
+      description,
+      ogTitle: displayName,
+      ogDescription: description,
+      ogType: 'profile',
+      ogUrl,
+      locale,
+    }
+  }
 }

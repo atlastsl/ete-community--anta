@@ -131,3 +131,40 @@ test.group('SeoService | notFound', () => {
     )
   })
 })
+
+// Story 10.3 — forme minimale de SeoService.forAuthor (ogImage en Story 10.7).
+test.group('SeoService | forAuthor', () => {
+  const author = {
+    firstNames: 'Awa Marie',
+    lastNames: 'Fictive',
+    slug: 'awa-marie-fictive',
+    primaryInstitution: 'Université Exemple',
+    publishedCount: 3,
+  }
+
+  test('FR : titre « Prénom NOM — Anta », description, profile, og:url absolue', ({ assert }) => {
+    const meta = SeoService.forAuthor('fr', author, 'https://anta.example.org/')
+    assert.equal(meta.title, 'Awa Marie FICTIVE — Anta')
+    assert.equal(meta.ogTitle, 'Awa Marie FICTIVE')
+    assert.equal(meta.description, 'Université Exemple — 3 productions publiées sur Anta')
+    assert.equal(meta.ogDescription, meta.description)
+    assert.equal(meta.ogType, 'profile')
+    assert.equal(meta.ogUrl, 'https://anta.example.org/authors/awa-marie-fictive')
+    assert.equal(meta.locale, 'fr')
+  })
+
+  test('EN et singulier', ({ assert }) => {
+    const meta = SeoService.forAuthor('en', { ...author, publishedCount: 1 }, null)
+    assert.equal(meta.description, 'Université Exemple — 1 production published on Anta')
+    assert.isUndefined(meta.ogUrl)
+    assert.equal(
+      SeoService.forAuthor('fr', { ...author, publishedCount: 1 }).description,
+      'Université Exemple — 1 production publiée sur Anta'
+    )
+  })
+
+  test('sans affiliation : affiliation omise', ({ assert }) => {
+    const meta = SeoService.forAuthor('fr', { ...author, primaryInstitution: null })
+    assert.equal(meta.description, '3 productions publiées sur Anta')
+  })
+})
