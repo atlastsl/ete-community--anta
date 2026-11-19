@@ -71,7 +71,12 @@ export default function AuthorPage({ author, stats, productions, pagination, sor
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {productions.map((production) => (
-            <ProductionCard key={production.id} production={production} variant="grid" />
+            <ProductionCard
+              key={production.id}
+              production={production}
+              variant="grid"
+              dateField="work"
+            />
           ))}
         </div>
 

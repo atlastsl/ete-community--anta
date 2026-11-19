@@ -126,3 +126,9 @@
 ## Deferred from: dev of 10-2-photos-d-auteurs-publiques-et-composant-avatar (2026-11-19)
 
 - **Avatars de l'admin toujours en URL signées** (suite de « URLs signées des avatars », 9.3) : non mis en cache navigateur ; les profils publics pourraient utiliser `/media` (question PO 10.2), les non publics doivent rester signés.
+
+## Deferred from: code review of 10-3-page-de-profil-d-un-auteur (2026-11-19)
+
+- **Tri « Titre (A → Z) » sensible aux accents** : `lower(title)` suit la collation de la base (un titre en « É » peut se ranger après « Z »). L'extension `unaccent` n'est pas installée (aucune migration) et n'est pas ajoutée (base partagée, P2.1 « normalisation applicative ») : à traiter avec le tri par titre de la liste (12.1), par une clé normalisée (`normalizeKey`) ou une collation ICU.
+- **Titre d'onglet non rafraîchi en navigation interne** (rappel du report Epic 5) : pas de `<Head>` public, le titre du profil n'est juste qu'au premier chargement ; une navigation Inertia vers ou depuis un profil garde l'ancien titre. À traiter avec 10.4 (liens d'auteurs) / 10.7 (SEO).
+- **Slug en majuscules → 404** : `/authors/Jeanne-Exemple` ne retrouve pas `jeanne-exemple` (comparaison exacte), comme `/productions/:slug`. Accepté (slugs générés en minuscules) ; une redirection 301 vers le slug canonique reste possible.

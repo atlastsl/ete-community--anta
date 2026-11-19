@@ -8,6 +8,8 @@ const header = read('inertia/components/public/AuthorProfileHeader.tsx')
 const sortSelect = read('inertia/components/shared/SortSelect.tsx')
 const page = read('inertia/pages/author.tsx')
 const query = read('inertia/lib/author_profile_query.ts')
+const service = read('app/services/public_author_service.ts')
+const card = read('inertia/components/public/ProductionCard.tsx')
 const locales = {
   fr: JSON.parse(read('inertia/locales/public/fr.json')),
   en: JSON.parse(read('inertia/locales/public/en.json')),
@@ -111,10 +113,35 @@ test.group('Page author', () => {
     assert.include(page, 'pageHref(author.slug, sort, p)')
   })
 
-  test('helpers d’URL : défaut omis, page 1 omise', ({ assert }) => {
+  test('helpers d’URL : défaut omis, page 1 omise, tri → page 1 (miroir du serveur)', ({
+    assert,
+  }) => {
     assert.include(query, "export const DEFAULT_PROFILE_SORT = 'date'")
-    assert.include(query, 'export function sortHref')
-    assert.include(query, 'export function pageHref')
+    assert.include(query, 'if (sort !== DEFAULT_PROFILE_SORT) params.set')
+    assert.include(query, "if (page > 1) params.set('page'")
+    assert.match(
+      query,
+      /export function sortHref\([^)]*\): string \{\s*return profileUrl\(slug, sort, 1\)/
+    )
+    assert.match(
+      query,
+      /export function pageHref\([^)]*\): string \{\s*return profileUrl\(slug, sort, page\)/
+    )
+    // Renvoi croisé avec le constructeur serveur (redirection hors limites).
+    assert.include(query, 'PublicAuthorService.profilePath')
+    assert.include(service, 'inertia/lib/author_profile_query.ts')
+    assert.include(service, 'if (sort !== DEFAULT_AUTHOR_PROFILE_SORT) params.set')
+    assert.include(service, "if (page > 1) params.set('page'")
+  })
+
+  test('cartes du profil : date de l’œuvre (tri par défaut), en UTC', ({ assert }) => {
+    assert.include(page, 'dateField="work"')
+    assert.include(card, "dateField = 'published'")
+    assert.include(card, 'production.workPublishedAt')
+    assert.include(card, "timeZone: 'UTC'")
+    assert.include(card, "'production_card.work_published_at'")
+    assert.isString(locales.fr.production_card.work_published_at)
+    assert.isString(locales.en.production_card.work_published_at)
   })
 
   test('libellés de tri du profil (EXPERIENCE.md)', ({ assert }) => {

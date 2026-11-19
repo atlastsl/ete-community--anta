@@ -101,7 +101,24 @@ export default class PublicAuthorService {
     return Number.isSafeInteger(value) && value >= 1 ? value : 1
   }
 
-  /** Profile URL keeping only the known parameters (default sort and page 1 omitted). */
+  /**
+   * The URL when it parses as `http:` / `https:`, else `null`: a stored `javascript:` or
+   * `data:` value never reaches an `href` (the admin validator already restricts it).
+   */
+  static safeHttpUrl(value: string | null): string | null {
+    if (!value) return null
+    try {
+      const url = new URL(value)
+      return url.protocol === 'http:' || url.protocol === 'https:' ? value : null
+    } catch {
+      return null
+    }
+  }
+
+  /**
+   * Profile URL keeping only the known parameters (default sort and page 1 omitted). Same rules as the
+   * front builder `inertia/lib/author_profile_query.ts` (TS boundary: keep both in sync).
+   */
   static profilePath(slug: string, sort: AuthorProfileSort, page: number): string {
     const params = new URLSearchParams()
     if (sort !== DEFAULT_AUTHOR_PROFILE_SORT) params.set('sort', sort)

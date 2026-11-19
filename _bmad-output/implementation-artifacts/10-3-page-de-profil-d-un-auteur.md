@@ -4,7 +4,7 @@ baseline_commit: 8f7ac86
 
 # Story 10.3 : Page de profil d'un auteur
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -103,6 +103,17 @@ afin de découvrir son travail et ses affiliations (FR58, FR53, D11, D15, D17).
 - [Source: 10-1-…md] (NotFoundPage, `SeoService.notFound`) ; [Source: 10-2-…md] (`MediaService.authorPhotoUrl`, `Avatar photoBase`).
 - [Source: deferred-work.md] (« Paramètre `page` non borné » : traité ici pour le profil ; `Pagination` sans fenêtrage).
 
+### Review Findings
+
+- [x] [Review][Patch] Tri par défaut sur la date de l'œuvre mais cartes affichant la date de publication sur Anta (dates en désordre apparent) [app/controllers/public/authors_controller.ts, inertia/components/public/ProductionCard.tsx, inertia/pages/author.tsx] — la maquette montre la date Anta sur des cartes qui ne sont pas dans l'ordre de leurs dates (affichage non conçu pour ce tri) : **D-10.3-6** le transformer partagé reste inchangé (AC 8 tenu pour l'accueil et le listing) ; le contrôleur du profil ajoute `workPublishedAt` (`YYYY-MM-DD`) aux cartes du profil seulement, et `ProductionCard` reçoit `dateField="work"` (formatée en UTC, libellé « Date de l'œuvre : … »). Accueil et listing inchangés. Test de forme mis à jour.
+- [x] [Review][Defer] Tri par titre sensible aux accents — `unaccent` absent des migrations, aucune extension ajoutée ; consigné dans deferred-work.
+- [x] [Review][Patch] Départage stable non testé [tests/functional/public/author_profile.spec.ts] — 13 productions à 0 vue triées par vues : pages 1/2 disjointes, ordre `id`.
+- [x] [Review][Patch] Constructeur d'URL dupliqué serveur/front [app/services/public_author_service.ts, inertia/lib/author_profile_query.ts] — commentaires de renvoi croisé ; tests de source (page 1 omise, tri → page 1, mêmes règles des deux côtés).
+- [x] [Review][Patch] URL Google Scholar non vérifiée à l'affichage [public_author_service.ts, authors_controller.ts] — `safeHttpUrl` : `null` sauf `http:`/`https:` ; test avec `javascript:` écrit directement en base.
+- [x] [Review][Patch] Course entre contrôle de visibilité et requête des productions [authors_controller.ts] — 0 production → NotFoundPage 404 (avant la redirection hors limites) ; test par substitution de `findVisibleBySlug`.
+- [x] [Review][Defer] Pas de `<Head>` (titre d'onglet en navigation interne, avec 10.4/10.7) ; slug en majuscules → 404 (comme les productions) — deferred-work.
+- [x] [Review][Patch] Libellé du test des props (« aucun champ interne ») inexact [author_profile.spec.ts] — précise que l'id ne figure que dans `photoBase` (conception de /media, 10.2).
+
 ## Dev Agent Record
 
 ### Agent Model Used
@@ -146,6 +157,8 @@ Claude Opus 5.5 (claude-opus-5-5)
 - inertia/lib/author_profile_query.ts (nouveau)
 - inertia/locales/public/fr.json
 - inertia/locales/public/en.json
+- inertia/components/public/ProductionCard.tsx (revue)
+- _bmad-output/implementation-artifacts/deferred-work.md (revue)
 - tests/functional/public/author_profile.spec.ts (nouveau)
 - tests/unit/components/author_profile.spec.ts (nouveau)
 - tests/unit/transformers/production_card_transformer.spec.ts (nouveau)
@@ -163,3 +176,4 @@ Claude Opus 5.5 (claude-opus-5-5)
 
 - 2026-11-19 : story créée (contexte complet, statut ready-for-dev).
 - 2026-11-19 : implémentation (`GET /authors/:slug`, `PublicAuthorService`, `ProductionCardTransformer`, `SeoService.forAuthor` minimal, `AuthorProfileHeader`, `SortSelect`, page `author`) ; 892 tests verts ; statut review.
+- 2026-11-19 : revue de code — 6 correctifs (date de l'œuvre sur les cartes du profil, `safeHttpUrl`, garde 404 de course, tests de départage et d'URL, libellé de test), 2 reports (deferred-work) ; statut done.

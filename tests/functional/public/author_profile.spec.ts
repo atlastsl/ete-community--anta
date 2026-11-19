@@ -3,6 +3,7 @@ import { DateTime } from 'luxon'
 import type { ApiClient } from '@japa/api-client'
 import db from '@adonisjs/lucid/services/db'
 import Author from '#models/author'
+import PublicAuthorService from '#services/public_author_service'
 import AuthorAffiliation from '#models/author_affiliation'
 import Production from '#models/production'
 import StatsView from '#models/stats_view'
@@ -225,7 +226,8 @@ test.group('Public | profil d’auteur — contenu', (group) => {
         { institution: 'Institut Second', department: null },
       ],
     })
-    // Aucun champ interne exposé.
+    // Pas d'identifiant ni de clé brute en champ propre (l'id ne figure que dans `photoBase`,
+    // par conception de /media en 10.2), ni l'état du consentement.
     assert.notProperty(props.author, 'id')
     assert.notProperty(props.author, 'photoKey')
     assert.notProperty(props.author, 'consentConfirmedAt')
@@ -267,8 +269,13 @@ test.group('Public | profil d’auteur — contenu', (group) => {
     )
   })
 
-  test('cartes : même forme que le listing (transformer unique)', async ({ client, assert }) => {
-    const { author, production } = await visibleAuthor()
+  test('cartes : forme du transformer unique + date de l’œuvre (revue 10.3)', async ({
+    client,
+    assert,
+  }) => {
+    const author = await createAuthor()
+    const production = await createProduction({ workPublishedAt: DateTime.fromISO('2019-03-07') })
+    await link(production, author)
     await addViews(production, 2)
     const props = await propsOf(client, `/authors/${author.slug}`)
     assert.deepEqual(Object.keys(props.productions[0]).sort(), [
@@ -282,9 +289,48 @@ test.group('Public | profil d’auteur — contenu', (group) => {
       'summary',
       'title',
       'viewsCount',
+      'workPublishedAt',
     ])
+    assert.equal(props.productions[0].workPublishedAt, '2019-03-07')
     assert.equal(props.productions[0].viewsCount, 2)
     assert.deepEqual(props.productions[0].authors, ['Jeanne Exemple'])
+  })
+
+  test('URL Google Scholar non http(s) en base (javascript:) → null', async ({
+    client,
+    assert,
+  }) => {
+    const { author } = await visibleAuthor()
+    await db
+      .from('authors')
+      .where('id', author.id)
+      .update({ google_scholar_url: 'javascript:alert(1)' })
+    const props = await propsOf(client, `/authors/${author.slug}`)
+    assert.isNull(props.author.googleScholarUrl)
+    assert.equal(
+      PublicAuthorService.safeHttpUrl('https://scholar.example.org/x'),
+      'https://scholar.example.org/x'
+    )
+    assert.isNull(PublicAuthorService.safeHttpUrl('data:text/html,x'))
+    assert.isNull(PublicAuthorService.safeHttpUrl('pas une url'))
+  })
+
+  test('course : plus aucune production publiée après le contrôle de visibilité → 404', async ({
+    client,
+    assert,
+  }) => {
+    // Simule la dépublication entre `findVisibleBySlug` et la requête des productions.
+    const author = await createAuthor()
+    const original = PublicAuthorService.findVisibleBySlug
+    PublicAuthorService.findVisibleBySlug = async (slug: string) =>
+      slug === author.slug ? author : original.call(PublicAuthorService, slug)
+    try {
+      const response = await client.get(`/authors/${author.slug}`).redirects(0)
+      response.assertStatus(404)
+      assert.equal(extractPage(response.text())?.component, 'errors/not_found')
+    } finally {
+      PublicAuthorService.findVisibleBySlug = original
+    }
   })
 
   test('meta serveur : titre « Prénom NOM — Anta », og:type profile, og:url', async ({
@@ -403,5 +449,26 @@ test.group('Public | profil d’auteur — tris et pagination', (group) => {
       response.assertStatus(200)
       assert.equal(extractPage(response.text())!.props.pagination.currentPage, 1, value)
     }
+  })
+
+  test('départage stable : 13 productions à 0 vue triées par vues → pages disjointes, ordre id', async ({
+    client,
+    assert,
+  }) => {
+    const author = await createAuthor()
+    const ids: string[] = []
+    for (let i = 0; i < 13; i++) {
+      const p = await createProduction()
+      await link(p, author)
+      ids.push(p.id)
+    }
+    const first = await propsOf(client, `/authors/${author.slug}?sort=views`)
+    const second = await propsOf(client, `/authors/${author.slug}?sort=views&page=2`)
+    const page1 = first.productions.map((p: { id: string }) => p.id)
+    const page2 = second.productions.map((p: { id: string }) => p.id)
+    assert.lengthOf(page1, 12)
+    assert.lengthOf(page2, 1)
+    assert.notInclude(page1, page2[0])
+    assert.deepEqual([...page1, ...page2], [...ids].sort())
   })
 })

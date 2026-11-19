@@ -14,24 +14,42 @@ export type ProductionCardData = {
   viewsCount: number
   downloadsCount: number
   publishedAt?: string | null
+  /** Date of the work (`YYYY-MM-DD`), sent by the author profile only (review 10.3). */
+  workPublishedAt?: string | null
 }
 
 export default function ProductionCard({
   production,
   variant = 'grid',
+  dateField = 'published',
 }: {
   production: ProductionCardData
   variant?: 'grid' | 'list'
+  /** `work`: the work date (author profile, sorted by it) instead of the Anta date. */
+  dateField?: 'published' | 'work'
 }) {
   const { t, i18n } = useTranslation()
-  const { slug, title, authors, category, domain, summary, viewsCount, downloadsCount, publishedAt } =
-    production
+  const {
+    slug,
+    title,
+    authors,
+    category,
+    domain,
+    summary,
+    viewsCount,
+    downloadsCount,
+    publishedAt,
+  } = production
 
-  const dateLabel = publishedAt
-    ? new Date(publishedAt).toLocaleDateString(i18n.language, {
+  const showWork = dateField === 'work'
+  const dateValue = showWork ? production.workPublishedAt : publishedAt
+  const dateLabel = dateValue
+    ? new Date(dateValue).toLocaleDateString(i18n.language, {
         day: 'numeric',
         month: 'short',
         year: 'numeric',
+        // A work date has no time: read it in UTC so it never shifts by one day.
+        ...(showWork ? { timeZone: 'UTC' } : {}),
       })
     : null
 
@@ -75,7 +93,15 @@ export default function ProductionCard({
         {downloadsCount}
       </span>
       {dateLabel && (
-        <span className="flex items-center gap-1" aria-label={t('production_card.published_at', { date: dateLabel })}>
+        <span
+          className="flex items-center gap-1"
+          aria-label={t(
+            showWork ? 'production_card.work_published_at' : 'production_card.published_at',
+            {
+              date: dateLabel,
+            }
+          )}
+        >
           <Calendar className="size-4" aria-hidden />
           {dateLabel}
         </span>

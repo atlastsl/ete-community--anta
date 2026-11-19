@@ -1,6 +1,7 @@
 /**
  * URLs of an author profile (Story 10.3). Pure helpers: the default sort and page 1 are
- * omitted from the URL. Values duplicated from `PublicAuthorService` (TS boundary, TS6305).
+ * omitted from the URL. Mirror of `PublicAuthorService.profilePath` (server redirect of an
+ * out-of-range page): TS boundary (TS6305), keep both in sync.
  */
 export const PROFILE_SORTS = ['date', 'views', 'downloads', 'title'] as const
 export type ProfileSort = (typeof PROFILE_SORTS)[number]

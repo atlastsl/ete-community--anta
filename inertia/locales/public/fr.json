@@ -65,7 +65,8 @@
     "by": "Par",
     "views": "{{count}} vues",
     "downloads": "{{count}} téléchargements",
-    "published_at": "Publié le {{date}}"
+    "published_at": "Publié le {{date}}",
+    "work_published_at": "Date de l'œuvre : {{date}}"
   },
   "production_detail": {
     "breadcrumb_label": "Fil d'Ariane",

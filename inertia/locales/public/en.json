@@ -65,7 +65,8 @@
     "by": "By",
     "views": "{{count}} views",
     "downloads": "{{count}} downloads",
-    "published_at": "Published on {{date}}"
+    "published_at": "Published on {{date}}",
+    "work_published_at": "Work date: {{date}}"
   },
   "production_detail": {
     "breadcrumb_label": "Breadcrumb",
