@@ -23,8 +23,8 @@ type PivotRow = {
  */
 export default class PublicBylineService {
   /**
-   * Computes the bylines of a batch of productions in two queries whatever its size (pivot +
-   * authors, then the slugs of the visible ones) and stores each one in `$extras.byline`,
+   * Computes the bylines of a batch of productions in at most two queries whatever its size
+   * (pivot + authors, then the slugs of the visible ones, skipped when no author is linked) and stores each one in `$extras.byline`,
    * read by `ProductionCardTransformer` and the detail page.
    */
   static async attach(productions: Production[]): Promise<void> {

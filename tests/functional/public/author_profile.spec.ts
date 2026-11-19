@@ -8,6 +8,7 @@ import AuthorAffiliation from '#models/author_affiliation'
 import Production from '#models/production'
 import StatsView from '#models/stats_view'
 import StatsDownload from '#models/stats_download'
+import ProductionAuthorService from '#services/production_author_service'
 
 // Story 10.3 — profil public d'un auteur (D11, D15, D17). Noms fictifs uniquement (dépôt public).
 // Les lignes créées sont annulées par la transaction globale de chaque test.
@@ -77,12 +78,14 @@ async function createProduction(
   })
 }
 
+/** Pivot row + jsonb rewritten from the pivot, as the 9.7 `sync` does (no stale free-text name). */
 async function link(production: Production, author: Author, position = 1) {
   await db.table('production_authors').insert({
     production_id: production.id,
     author_id: author.id,
     position,
   })
+  await ProductionAuthorService.refreshDenormalizedNames([production.id])
 }
 
 async function addViews(production: Production, count: number) {
@@ -293,10 +296,9 @@ test.group('Public | profil d’auteur — contenu', (group) => {
     ])
     assert.equal(props.productions[0].workPublishedAt, '2019-03-07')
     assert.equal(props.productions[0].viewsCount, 2)
-    // Story 10.4: byline `{ name, slug }` — the linked author, then the jsonb name it does not match.
+    // Story 10.4: byline `{ name, slug }` (pivot written like the 9.7 sync).
     assert.deepEqual(props.productions[0].authors, [
       { name: `Jeanne ${author.lastNames.toUpperCase()}`, slug: author.slug },
-      { name: 'Jeanne Exemple', slug: null },
     ])
   })
 

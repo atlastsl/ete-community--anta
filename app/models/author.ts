@@ -77,9 +77,10 @@ export default class Author extends BaseModel {
 
   /**
    * Profile visible on the public site (P2.1, D11): consent confirmed **and** at least one
-   * published production linked. The single definition of the rule, used by the profile
-   * page (Story 10.3) and the bylines (Story 10.4); anything else stays invisible (404, no
-   * link, no slug exposed).
+   * published production linked. Single source of the profile and byline visibility: the
+   * profile page (Story 10.3) and the bylines (Story 10.4) both use it; anything else stays
+   * invisible (404, no link, no slug exposed). The `/media` photos are served on consent
+   * alone (Story 10.2 AC, `MediaService.authorPhotoUrl`; PO question), not through this scope.
    */
   static visibleOnSite = scope((query: ModelQueryBuilderContract<typeof Author>) => {
     query

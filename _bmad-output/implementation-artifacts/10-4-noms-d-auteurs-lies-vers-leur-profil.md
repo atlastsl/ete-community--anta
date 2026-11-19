@@ -4,7 +4,7 @@ baseline_commit: 3b5f5df
 
 # Story 10.4 : Noms d'auteurs liés vers leur profil
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -18,7 +18,7 @@ afin d'accéder à son profil en un clic (FR59, FR53, D12, D24, D36).
 
 - Story **sans migration, sans route, sans dépendance npm** (pas de régénération de `.adonisjs` attendue pour les routes ; le type du transformer change → `/tmp/d37/gen.sh` met à jour `.adonisjs/client/data.d.ts`, à commiter s'il change).
 - **Une seule règle de visibilité** : le prédicat « profil visible » (consentement confirmé **et** ≥ 1 production publiée liée, P2.1/D11) devient un *query scope* du modèle `Author` (`visibleOnSite`), utilisé par `PublicAuthorService.findVisibleBySlug` (10.3, refactorisé) **et** par le calcul des bylines. Aucun prédicat dupliqué. Sur une production publiée, « public » et « visible » coïncident (la production elle-même satisfait la 2ᵉ condition) : l'AC « slug seulement pour un profil public » est donc tenu par le même scope.
-- **Calcul groupé, sans N+1** : `PublicBylineService.attach(productions)` = 2 requêtes par lot quel que soit le nombre de cartes (lignes pivot + auteurs, puis slugs des seuls auteurs visibles), résultat posé dans `production.$extras.byline` ; le transformer et le détail le lisent.
+- **Calcul groupé, sans N+1** : `PublicBylineService.attach(productions)` = au plus 2 requêtes par lot quel que soit le nombre de cartes (lignes pivot + auteurs, puis slugs des seuls auteurs visibles), résultat posé dans `production.$extras.byline` ; le transformer et le détail le lisent.
 - **Aucune fuite** : le slug n'est lu (`SELECT id, slug`) que pour les auteurs visibles ; aucune autre donnée d'auteur (id, photo, consentement) n'est exposée. Un auteur non public → `{ name, slug: null }`.
 - **Productions non converties / partielles** : `productions.authors` (jsonb) sans pivot → noms en texte simple (`slug: null`), comme aujourd'hui. Production partiellement rattachée → auteurs du pivot (ordre `position`) puis noms jsonb non rattachés (`ProductionAuthorService.legacyOf`, déjà utilisé par le formulaire 9.7) en texte simple : aucun nom ne disparaît du site.
 - **Titre d'onglet** (report Epic 5 / 10.3, « à traiter avec 10.4 / 10.7 ») : constat empirique (Playwright sur le serveur local) : après hydratation, **toutes** les pages publiques affichent « Anta » (le head manager d'Inertia remplace le `<title inertia>` serveur par le titre par défaut). Les liens d'auteurs rendant la navigation interne vers les profils centrale, le correctif minimal est inclus (AC 7) : `<Head>` dans `PublicLayout` alimenté par `meta.title`, callback `title` du point d'entrée public sans suffixe. Les `og:*` restent côté edge (10.7).
@@ -28,7 +28,7 @@ afin d'accéder à son profil en un clic (FR59, FR53, D12, D24, D36).
 
 1. **Forme sérialisée** — Given `ProductionCardTransformer` (accueil, listing — résultats approchants compris —, profil) et la page de détail (`production.show`), When une production publiée est sérialisée, Then elle expose `authors: { name: string, slug: string | null }[]` : d'abord les auteurs du pivot dans l'ordre `position` (nom « Prénom NOM », nom de famille en capitales), puis les noms jsonb non rattachés ; `slug` n'est renseigné que pour un profil visible (scope unique `visibleOnSite`) ; aucune autre donnée d'un auteur n'est exposée.
 2. **Production non convertie** — Given une production sans ligne pivot, When elle est sérialisée, Then ses noms jsonb (non vides, dédoublonnés) sont rendus `{ name, slug: null }` dans leur ordre.
-3. **Calcul groupé** — Given une page de N cartes, When les bylines sont calculées, Then le nombre de requêtes est constant (2), indépendant de N ; une liste vide n'émet aucune requête.
+3. **Calcul groupé** — Given une page de N cartes, When les bylines sont calculées, Then le nombre de requêtes est d'au plus 2, indépendant de N ; une liste vide n'émet aucune requête.
 4. **`AuthorByline`** — Given `inertia/components/public/AuthorByline.tsx`, When il rend les auteurs, Then un auteur avec `slug` est un lien Inertia vers `urlFor('authors.show', { slug })` (souligné `decoration-stone-300`, `underline-offset-2`, survol `text-green-700` / `decoration-green-700`, D24) ; sans `slug`, du texte simple sans style distinctif (D12) ; séparateur « , » (variante `inline`) ou un nom par ligne (variante `stacked`, aside « Auteurs »).
    - Cartes : au plus 3 auteurs puis « et {n} autres » (`authors.byline.others`, pluriel i18next FR/EN) ; détail : aucune troncature (D36).
    - Profil : le nom de l'auteur du profil (`currentSlug`) est rendu en texte simple.
@@ -89,6 +89,16 @@ afin d'accéder à son profil en un clic (FR59, FR53, D12, D24, D36).
 - **D-10.4-4** Aside « Auteurs » : un nom par ligne (maquette) ; la byline sous le titre garde le séparateur « , ».
 - **D-10.4-5** Correctif du titre d'onglet inclus (AC 7) ; `og:*` client non synchronisés (inutile aux robots, edge fait foi).
 - **D-10.4-6** Meta de la production : noms de la byline (mêmes noms qu'à l'écran, prépare 10.7).
+- **D-10.4-7** (revue) Carte du profil dont l'auteur est au-delà des 3 premiers : les 2 premiers noms puis l'auteur du profil (texte simple), « et {n} autres » inchangé (`n = total − 3`).
+
+### Review Findings
+
+- [x] [Review][Patch] Auteur du profil absent de sa propre carte quand il est au-delà de `max` [inertia/components/public/AuthorByline.tsx] — `visibleAuthors` : `max − 1` premiers + l'auteur courant, compteur inchangé (D-10.4-7) ; test de source.
+- [x] [Review][Patch] Résultats approchants non couverts [tests/functional/public/bylines.spec.ts] — requête à faute de frappe trouvée par `pg_trgm` seul (`approximate: true`), slug du profil public présent.
+- [x] [Review][Patch] Test « titre puis byline » ne vérifiait qu'une variante [tests/unit/components/author_byline.spec.ts] — blocs `list` et `grid` extraits et vérifiés séparément.
+- [x] [Review][Patch] Fixture du profil avec un nom jsonb périmé (doublon attendu) [tests/functional/public/author_profile.spec.ts] — `link()` réécrit le jsonb par `refreshDenormalizedNames` comme le `sync` 9.7 ; le cas partiel reste couvert par `bylines.spec.ts`.
+- [x] [Review][Patch] `SeoService.forAuthor` dupliquait le formatage du nom [app/services/seo_service.ts] — `formatAuthorName`.
+- [x] [Review][Patch] Commentaires [app/models/author.ts, public_byline_service.ts, bylines.spec.ts] — visibilité profil/byline à source unique ; photos `/media` servies sur le seul consentement (AC 10.2, question PO) ; « au plus 2 requêtes ».
 
 ### Références
 
@@ -128,6 +138,7 @@ Claude Opus 5.5 (claude-opus-5-5)
 - app/models/author.ts
 - app/services/public_author_service.ts
 - app/services/public_byline_service.ts (nouveau)
+- app/services/seo_service.ts (revue)
 - app/helpers/author_name.ts (nouveau)
 - app/transformers/production_card_transformer.ts
 - app/controllers/public/home_controller.ts
@@ -160,4 +171,5 @@ Claude Opus 5.5 (claude-opus-5-5)
 ## Change Log
 
 - 2026-11-19 : story créée (contexte complet, statut ready-for-dev).
+- 2026-11-19 : revue de code — 6 correctifs (auteur du profil au-delà de `max`, test des résultats approchants, test d'ordre des deux variantes, fixture jsonb du profil, `formatAuthorName` dans `forAuthor`, commentaires) ; statut done.
 - 2026-11-19 : implémentation (scope `visibleOnSite`, `PublicBylineService`, `AuthorByline`, cartes et détail liés, titre d'onglet public) ; 920 tests verts ; statut review.

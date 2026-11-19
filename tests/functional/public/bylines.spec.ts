@@ -175,6 +175,21 @@ test.group('Public | bylines — cartes', (group) => {
     assert.deepEqual(freeCard.authors, [{ name: 'Nom Libre', slug: null }])
   })
 
+  test('listing, résultats approchants (pg_trgm seul) : lien du profil public', async ({
+    client,
+    assert,
+  }) => {
+    const author = await createAuthor({ firstNames: 'Awa', lastNames: 'Approchée' })
+    const production = await createProduction({ title: 'Xylophonique Brumaire' })
+    await linkAll(production, [author])
+
+    // Faute de frappe : aucun mot ne correspond en préfixe, seule la similarité trigram trouve.
+    const props = await propsOf(client, '/productions?q=Xylofonnique')
+    assert.isTrue(props.approximate)
+    const card = props.results.find((r: { id: string }) => r.id === production.id)
+    assert.deepEqual(card.authors, [{ name: 'Awa APPROCHÉE', slug: author.slug }])
+  })
+
   test('accueil : cartes au format { name, slug }', async ({ client, assert }) => {
     const author = await createAuthor()
     const production = await createProduction()
@@ -226,9 +241,7 @@ test.group('PublicBylineService', (group) => {
     return count
   }
 
-  test('nombre de requêtes constant (2), quel que soit le nombre de productions', async ({
-    assert,
-  }) => {
+  test('au plus 2 requêtes, quel que soit le nombre de productions', async ({ assert }) => {
     const productions: Production[] = []
     for (let i = 0; i < 6; i++) {
       const production = await createProduction()
@@ -237,8 +250,8 @@ test.group('PublicBylineService', (group) => {
     }
     const few = await countQueries(() => PublicBylineService.attach(productions.slice(0, 1)))
     const many = await countQueries(() => PublicBylineService.attach(productions))
-    assert.equal(few, 2)
-    assert.equal(many, 2)
+    assert.isAtMost(few, 2)
+    assert.isAtMost(many, 2)
     assert.lengthOf(productions[5].$extras.byline, 2)
   })
 

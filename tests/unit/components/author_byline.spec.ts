@@ -50,6 +50,16 @@ test.group('AuthorByline | source', () => {
     assert.include(byline, 'author.slug !== currentSlug')
   })
 
+  test('profil : auteur au-delà de max → max-1 premiers + cet auteur (revue 10.4)', ({
+    assert,
+  }) => {
+    assert.include(byline, 'const shown = visibleAuthors(authors, max, currentSlug)')
+    assert.include(byline, 'authors.findIndex((a) => a.slug === currentSlug)')
+    assert.include(byline, 'return [...authors.slice(0, max - 1), authors[current]]')
+    // Le compteur « et {n} autres » reste authors.length - shown.length (= length - max).
+    assert.include(byline, 'const hidden = authors.length - shown.length')
+  })
+
   test('variante empilée (aside « Auteurs ») : un nom par ligne', ({ assert }) => {
     assert.include(byline, "variant?: 'inline' | 'stacked'")
     assert.include(byline, "variant === 'stacked'")
@@ -73,10 +83,18 @@ test.group('ProductionCard | byline (10.4)', () => {
     assert.include(card, 'const CARD_MAX_AUTHORS = 3')
     // Le Link du titre ne contient que le titre.
     assert.match(card, /<Link href=\{`\/productions\/\$\{slug\}`\}[^>]*>\s*\{title\}\s*<\/Link>/)
-    // Ordre dans la carte : titre puis byline.
-    for (const variant of card.split("if (variant === 'list')")) {
-      if (!variant.includes('{titleLink}')) continue
-      assert.isBelow(variant.indexOf('{titleLink}'), variant.indexOf('{byline}'))
+    // Ordre dans la carte : titre puis byline, dans les deux variantes (revue 10.4).
+    const listStart = card.indexOf("if (variant === 'list')")
+    const list = card.slice(listStart, card.indexOf('</article>', listStart))
+    const gridStart = card.indexOf('return (', card.indexOf('</article>', listStart))
+    const grid = card.slice(gridStart, card.indexOf('</article>', gridStart))
+    for (const [name, block] of [
+      ['list', list],
+      ['grid', grid],
+    ]) {
+      assert.include(block, '{titleLink}', name)
+      assert.include(block, '{byline}', name)
+      assert.isBelow(block.indexOf('{titleLink}'), block.indexOf('{byline}'), name)
     }
   })
 

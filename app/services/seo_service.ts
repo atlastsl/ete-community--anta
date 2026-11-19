@@ -1,3 +1,5 @@
+import { formatAuthorName } from '#helpers/author_name'
+
 export type Locale = 'fr' | 'en'
 
 /**
@@ -172,7 +174,7 @@ export default class SeoService {
     appUrl?: string | null
   ): MetaTags {
     const { name } = SITE[locale]
-    const displayName = `${author.firstNames} ${author.lastNames.toLocaleUpperCase('fr-FR')}`.trim()
+    const displayName = formatAuthorName(author.firstNames, author.lastNames)
     const title = `${displayName} — ${name}`
 
     const n = author.publishedCount
