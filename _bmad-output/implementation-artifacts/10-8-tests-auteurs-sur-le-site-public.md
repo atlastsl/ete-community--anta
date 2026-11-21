@@ -206,8 +206,9 @@ Revue de code du 2026-11-19 : 6 constats, tous corrigés (tests seulement, aucun
 1. **Photo d'un auteur consentant sans production publiée** : `/media` la sert (règle 10.2 : « profil public » =
    consentement) alors que le profil n'est visible nulle part ; la clé n'étant jamais exposée, le risque est faible.
    Défaut : comportement conservé et figé par la matrice. Faut-il aligner `/media` sur « visible sur le site » ?
-2. **Tests d'accessibilité automatisés** (axe, P2.8) : ajouter `@axe-core/playwright` et une suite `browser`
-   (Chromium dans la CI) ? Non fait sans accord (aucune dépendance ajoutée).
+2. ~~**Tests d'accessibilité automatisés** (axe, P2.8) : ajouter `@axe-core/playwright` et une suite `browser`
+   (Chromium dans la CI) ?~~ **Tranché le 2026-11-21 (Aurélien) : non.** Pas de dépendance ni de suite `browser` ;
+   l'accessibilité reste couverte par les tests de source et l'audit Lighthouse manuel.
 
 ## Change Log
 

@@ -25,7 +25,7 @@ export type MetaTags = {
 
 /** Prefix of a public author photo base (`MediaService.authorPhotoUrl`). */
 const AUTHOR_PHOTO_PREFIX = '/media/authors/'
-/** Variant of the author photos made for the social previews (600×600 JPEG, `ImageService`). */
+/** Variant of the author photos made for the social previews (1200×630 JPEG, `ImageService`). */
 const AUTHOR_OG_VARIANT = 'og.jpg'
 
 /** `appUrl` (any trailing slash dropped) + `path`, or `undefined` without a configured URL. */

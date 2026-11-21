@@ -65,7 +65,7 @@ afin de reconnaître le profil avant de cliquer (FR36).
 ### Décisions par défaut (D-10.7-x)
 
 - **D-10.7-1** `og:image` = variante `og.jpg` (600×600 JPEG) conformément à P2.5/P2.7, pas `w384.webp`.
-- **D-10.7-2** `twitter:card=summary_large_image` avec la photo carrée, comme l'exige l'epic (aperçu recadré par X ; `summary` serait plus fidèle au carré — question PO).
+- **D-10.7-2** `twitter:card=summary_large_image`. **Amendée le 2026-11-21 (Aurélien : « la photo doit occuper tout l'espace de la carte »)** : la variante `og.jpg` passe de 600×600 à 1200×630 (ratio 1.91:1 des grandes cartes), recadrage `cover` sur la zone saillante (`sharp.strategy.attention`, visages), précédé d'un recadrage centré quand le ratio de la source s'écarte de plus de 3× (sinon `attention` évalue l'image agrandie entière : 2×20000 px → 41 Go demandés, vérifié) ; `og:image:width/height` = 1200/630. Aucune photo existante à régénérer (migrations 9.x jamais appliquées sur Supabase).
 - **D-10.7-3** `ogUrl` de la liste = `/authors` nu, quels que soient filtres et page (URL canonique de partage).
 - **D-10.7-4** Pas de `og:image:alt`, `og:image:width/height`, `twitter:title` (les robots retombent sur `og:*`) : hors spec.
 
@@ -75,7 +75,7 @@ afin de reconnaître le profil avant de cliquer (FR36).
 - [x] [Review][Patch] Type client [inertia/lib/seo.ts] — `SeoMeta.ogImage?: string` (miroir de `MetaTags`).
 - [x] [Review][Patch] Dimensions de l'aperçu [inertia_layout.edge] — `og:image:width=600`, `og:image:height=600`, `og:image:type=image/jpeg` quand `ogImage` existe (variante fixe) ; test rouge puis vert, absents sans photo (amende D-10.7-4).
 - [x] [Review][Note] `/media` sert les photos sur le seul consentement (sans exiger de production publiée) : question PO de 10.2, inchangée ; l'`og:image` n'est de toute façon émise que sur un profil visible.
-- [ ] [Review][PO] Recadrage 2:1 de X avec `summary_large_image` sur une photo carrée (D-10.7-2) : reste une question PO.
+- [x] [Review][PO] Recadrage de X (D-10.7-2) : tranché le 2026-11-21 — variante `og.jpg` 1200×630 qui remplit la carte.
 
 ### Références
 
@@ -115,7 +115,7 @@ Claude Opus 5.5 (claude-opus-5-5)
 
 ## Questions ouvertes (non bloquantes, défauts retenus)
 
-- `twitter:card=summary_large_image` avec une photo carrée 600×600 (exigé par l'epic) : X recadre en 2:1 ; `summary` (vignette carrée) serait plus fidèle. Garder ? (D-10.7-2)
+- ~~`twitter:card=summary_large_image` avec une photo carrée 600×600~~ : tranché le 2026-11-21, `og.jpg` 1200×630 (D-10.7-2 amendée).
 - JSON-LD `Person`, `<link rel="canonical">`, `noindex` des variantes filtrées/paginées et `sitemap.xml` ne sont pas demandés en Phase 2 (sitemap facultatif, dernière story SEO/accessibilité) : à planifier ?
 
 ## Change Log

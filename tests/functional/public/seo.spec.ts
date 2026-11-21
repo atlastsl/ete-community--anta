@@ -158,8 +158,9 @@ test.group('Public SEO | pages auteurs (Story 10.7)', (group) => {
       metaContent(head, 'property', 'og:image'),
       `${APP_URL}/media/authors/${author.id}/${TOKEN}/og.jpg`
     )
-    assert.equal(metaContent(head, 'property', 'og:image:width'), '600')
-    assert.equal(metaContent(head, 'property', 'og:image:height'), '600')
+    // Variante large 1.91:1 : la photo occupe toute la carte de partage (D-10.7-2 amendée).
+    assert.equal(metaContent(head, 'property', 'og:image:width'), '1200')
+    assert.equal(metaContent(head, 'property', 'og:image:height'), '630')
     assert.equal(metaContent(head, 'property', 'og:image:type'), 'image/jpeg')
     assert.equal(metaContent(head, 'name', 'twitter:card'), 'summary_large_image')
   })

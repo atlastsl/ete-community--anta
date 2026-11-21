@@ -140,5 +140,5 @@
 ## Deferred from: dev of 10-8-tests-auteurs-sur-le-site-public (2026-11-19)
 
 - **Lighthouse mobile 4G sur le staging (AC 3 de 10.8, NFR17)** : `/authors` et un profil, LCP < 3 s, à lancer par Aurélien après déploiement de l'Epic 10 et à consigner dans la story 10.8 (services distants hors des sessions de dev).
-- **Suite `browser` + axe (architecture P2.8)** : `tests/browser/` n'existe pas et `@axe-core/playwright` n'est pas une dépendance (Playwright et `@japa/browser-client` sont présents). Action (question PO) : ajouter la dépendance, une suite « 0 violation A/AA » sur accueil, listing, détail, `/authors`, profil, politique en FR/EN, et Chromium dans `ci.yml`.
+- ~~**Suite `browser` + axe (architecture P2.8)**~~ — **refusée par Aurélien le 2026-11-21** : pas de dépendance `@axe-core/playwright` ni de suite `browser` ; accessibilité couverte par les tests de source et l'audit Lighthouse manuel.
 - **`/media` sert la photo d'un auteur consentant sans production publiée** (question PO 10.8) : conforme à 10.2 (public = consentement), clé jamais exposée tant que le profil n'est pas visible ; aligner sur `visibleOnSite` si le PO le souhaite (le test de matrice l'indique).
