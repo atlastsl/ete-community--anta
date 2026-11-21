@@ -2,6 +2,7 @@ import { test } from '@japa/runner'
 import { DateTime } from 'luxon'
 import db from '@adonisjs/lucid/services/db'
 import Author from '#models/author'
+import Production from '#models/production'
 import MediaService from '#services/media_service'
 import { isStorageNotFound } from '#controllers/public/media_controller'
 
@@ -118,6 +119,190 @@ test.group('MediaService | resolve', (group) => {
 
   test('clé mal formée : null sans requête', async ({ assert }) => {
     assert.isNull(await MediaService.resolve(['authors', 'not-a-uuid', TOKEN, 'w128.webp']))
+  })
+})
+
+// Story 11.2 — vignettes de la bannière (`thumbnails/<productionId>/<token>/<variante>`).
+test.group('MediaService | parseThumbnailKey', () => {
+  test('clé valide → id, préfixe, clé, image/webp pour les 3 variantes', ({ assert }) => {
+    assert.deepEqual(MediaService.parseThumbnailKey(['thumbnails', ID, TOKEN, 'w400.webp']), {
+      productionId: ID,
+      prefix: `thumbnails/${ID}/${TOKEN}`,
+      key: `thumbnails/${ID}/${TOKEN}/w400.webp`,
+      contentType: 'image/webp',
+    })
+    for (const variant of ['w800.webp', 'w1600.webp']) {
+      assert.equal(
+        MediaService.parseThumbnailKey(['thumbnails', ID, TOKEN, variant])?.contentType,
+        'image/webp'
+      )
+    }
+  })
+
+  test('clés refusées : préfixe, uuid, jeton, variante (dont celles des auteurs), segments', ({
+    assert,
+  }) => {
+    const refused: string[][] = [
+      [],
+      ['thumbnails'],
+      ['authors', ID, TOKEN, 'w400.webp'],
+      ['posters', ID, TOKEN, 'w400.webp'],
+      ['productions', ID, TOKEN, 'w400.webp'],
+      ['thumbnails', 'not-a-uuid', TOKEN, 'w400.webp'],
+      ['thumbnails', ID, 'short', 'w400.webp'],
+      ['thumbnails', ID, `${TOKEN}x`, 'w400.webp'],
+      ['thumbnails', ID, TOKEN, 'w128.webp'],
+      ['thumbnails', ID, TOKEN, 'og.jpg'],
+      ['thumbnails', ID, TOKEN, 'W400.webp'],
+      ['thumbnails', ID, TOKEN, '..'],
+      ['thumbnails', ID, TOKEN, ''],
+      ['thumbnails', ID, TOKEN, 'w400.webp', 'extra'],
+    ]
+    for (const segments of refused) {
+      assert.isNull(MediaService.parseThumbnailKey(segments), segments.join('/'))
+    }
+  })
+})
+
+test.group('MediaService | productionImageUrl', () => {
+  test('base /media/<thumbnail_key> pour une production publiée avec vignette', ({ assert }) => {
+    assert.equal(
+      MediaService.productionImageUrl({
+        status: 'published',
+        thumbnailKey: `thumbnails/${ID}/${TOKEN}`,
+      }),
+      `/media/thumbnails/${ID}/${TOKEN}`
+    )
+  })
+
+  test('null : brouillon, dépubliée (aucune clé non publiée) ou sans vignette', ({ assert }) => {
+    for (const status of ['draft', 'unpublished'] as const) {
+      assert.isNull(
+        MediaService.productionImageUrl({ status, thumbnailKey: `thumbnails/${ID}/${TOKEN}` })
+      )
+    }
+    assert.isNull(MediaService.productionImageUrl({ status: 'published', thumbnailKey: null }))
+  })
+})
+
+test.group('MediaService | resolve (vignettes)', (group) => {
+  group.each.setup(async () => {
+    await db.beginGlobalTransaction()
+    return () => db.rollbackGlobalTransaction()
+  })
+
+  let sequence = 0
+  async function production(
+    status: 'draft' | 'published' | 'unpublished',
+    token: string | null = TOKEN
+  ) {
+    sequence++
+    const created = await Production.create({
+      title: `Oeuvre média ${sequence}`,
+      summary: 'Résumé.',
+      authorNames: [],
+      tags: [],
+      category: 'Livre',
+      domain: 'Informatique',
+      subdomain: [],
+      language: 'fr',
+      publicationCountry: 'Sénégal',
+      licenseStatus: 'member',
+      status,
+    })
+    if (token) {
+      created.thumbnailKey = `thumbnails/${created.id}/${token}`
+      await created.save()
+    }
+    return created
+  }
+
+  test('clé courante d’une production publiée → clé, webp, cache d’un an immutable', async ({
+    assert,
+  }) => {
+    const p = await production('published')
+    assert.deepEqual(await MediaService.resolve(['thumbnails', p.id, TOKEN, 'w1600.webp']), {
+      key: `thumbnails/${p.id}/${TOKEN}/w1600.webp`,
+      contentType: 'image/webp',
+      cacheControl: 'public, max-age=31536000, immutable',
+    })
+  })
+
+  test('null : brouillon, dépubliée, ancienne clé, sans vignette, id croisé', async ({
+    assert,
+  }) => {
+    const draft = await production('draft')
+    assert.isNull(await MediaService.resolve(['thumbnails', draft.id, TOKEN, 'w400.webp']))
+
+    const unpublished = await production('unpublished')
+    assert.isNull(await MediaService.resolve(['thumbnails', unpublished.id, TOKEN, 'w400.webp']))
+
+    const current = await production('published')
+    assert.isNull(await MediaService.resolve(['thumbnails', current.id, OTHER, 'w400.webp']))
+
+    const none = await production('published', null)
+    assert.isNull(await MediaService.resolve(['thumbnails', none.id, TOKEN, 'w400.webp']))
+
+    // Le jeton de `current` sous l'id d'une autre production publiée : refusé.
+    const other = await production('published', OTHER)
+    assert.isNull(await MediaService.resolve(['thumbnails', other.id, TOKEN, 'w400.webp']))
+  })
+
+  test('les photos d’auteurs gardent leur cache d’1 h (10.2 inchangé)', async ({ assert }) => {
+    const author = await Author.create({
+      firstNames: 'Jeanne',
+      lastNames: 'Exemple',
+      consentConfirmedAt: DateTime.now(),
+      photoKey: null,
+    })
+    author.photoKey = `authors/${author.id}/${TOKEN}`
+    await author.save()
+    const served = await MediaService.resolve(['authors', author.id, TOKEN, 'w128.webp'])
+    assert.equal(served?.cacheControl, 'public, max-age=3600')
+  })
+})
+
+test.group('MediaService | resolve sans requête pour une clé mal formée (revue 11.2)', (group) => {
+  const originals = { production: Production.query, author: Author.query }
+  let queries = 0
+  group.each.setup(() => {
+    queries = 0
+    Production.query = function (this: typeof Production, ...args: any[]) {
+      queries++
+      return originals.production.apply(this, args as any)
+    } as typeof Production.query
+    Author.query = function (this: typeof Author, ...args: any[]) {
+      queries++
+      return originals.author.apply(this, args as any)
+    } as typeof Author.query
+    return () => {
+      Production.query = originals.production
+      Author.query = originals.author
+    }
+  })
+
+  test('vignettes et photos : aucune requête base pour une clé refusée par la liste blanche', async ({
+    assert,
+  }) => {
+    const malformed: string[][] = [
+      ['thumbnails', 'not-a-uuid', TOKEN, 'w400.webp'],
+      ['thumbnails', ID, 'short', 'w400.webp'],
+      ['thumbnails', ID, TOKEN, 'w128.webp'],
+      ['thumbnails', ID, TOKEN, 'w400%2Ewebp'],
+      ['thumbnails', ID, TOKEN, 'w400.webp', 'extra'],
+      ['posters', ID, TOKEN, 'w400.webp'],
+      ['productions', ID, TOKEN, 'w400.webp'],
+      ['authors', ID, TOKEN, 'w400.webp'],
+    ]
+    for (const segments of malformed) {
+      assert.isNull(await MediaService.resolve(segments), segments.join('/'))
+    }
+    assert.equal(queries, 0)
+  })
+
+  test('témoin : une clé bien formée interroge la base', async ({ assert }) => {
+    await MediaService.resolve(['thumbnails', ID, TOKEN, 'w400.webp'])
+    assert.equal(queries, 1)
   })
 })
 

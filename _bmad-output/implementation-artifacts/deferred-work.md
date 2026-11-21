@@ -148,3 +148,9 @@
 - **Erreurs serveur de `FileUploader` jamais affichées** : `files_controller.ts` utilise `session.flashErrors` (sac `errorsBag`), or seul `inputErrorsBag` devient la prop Inertia `errors` (`@adonisjs/inertia`, `getValidationErrors`) → `props.errors.file` reste vide (MIME falsifié, fichier absent). Corriger comme `thumbnails_controller.ts` (`flashValidationErrors`) dans une story de l'Epic 4/11.
 - **Envois simultanés de vignettes (11.4)** : Inertia annule la visite synchrone en cours ; `FeaturedSlot` doit utiliser `async: true` ou un verrou « occupé » au niveau de la page.
 - **Aperçu du poster vidéo dans `ThumbnailField` (11.3)** : prop poster + mention « Image extraite de la vidéo » (DESIGN.md).
+
+## Deferred from: dev of 11-2-diffusion-publique-des-images-de-la-banniere (2026-11-21)
+
+- ~~**Test « ratios extrêmes » d'`image_service.spec.ts` (11.1) instable sous charge**~~ — **résolu** à la revue de 11.2 : budgets 15 s + `.timeout(30_000)`.
+- **Cache `immutable` des vignettes** : une image dépubliée reste affichée depuis le cache navigateur (jusqu'à un an) chez qui l'a chargée — accepté (P2-10), information PO ; évolution possible : `max-age` plus court sans `immutable`.
+- **`sizes` de l'emplacement `lead` (11.6)** : l'image étirée de la bannière à 3 éléments (`lg:aspect-auto lg:flex-1`) n'est pas prise en compte → recalculer dans `FeaturedBanner`.

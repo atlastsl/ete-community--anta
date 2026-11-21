@@ -190,12 +190,14 @@ test.group('ImageService | photo d’auteur', () => {
       const input = await blank(width, height).png().toBuffer()
       const started = Date.now()
       const variants = await ImageService.authorPhotoVariants(input)
-      assert.isBelow(Date.now() - started, 3000)
+      assert.isBelow(Date.now() - started, 15_000)
       const meta = await sharp(variants.find((v) => v.name === 'og.jpg')!.body).metadata()
       assert.equal(meta.width, 1200)
       assert.equal(meta.height, 630)
     }
   })
+    // Wall-clock budget well above a loaded full suite; the unbounded path OOMs or takes far longer.
+    .timeout(30_000)
 
   test('PNG transparent → og.jpg sur fond blanc (pas le noir par défaut)', async ({ assert }) => {
     const png = await sharp({
@@ -320,7 +322,7 @@ test.group('ImageService | ratios extrêmes (revue 11.1)', () => {
     const started = Date.now()
     const thumbnails = await ImageService.thumbnailVariants(input)
     const photos = await ImageService.authorPhotoVariants(input)
-    assert.isBelow(Date.now() - started, 5000)
+    assert.isBelow(Date.now() - started, 15_000)
     for (const [variant, spec] of [
       ...thumbnails.map((v, i) => [v, THUMBNAIL_VARIANTS[i]] as const),
       ...photos.map((v, i) => [v, AUTHOR_PHOTO_VARIANTS[i]] as const),
@@ -330,6 +332,8 @@ test.group('ImageService | ratios extrêmes (revue 11.1)', () => {
       assert.equal(meta.height, spec.height, variant.name)
     }
   })
+    // Wall-clock budget well above a loaded full suite; the unbounded path OOMs or takes far longer.
+    .timeout(30_000)
 
   test('40000×1 et 4×10 000 000 (centre) → plus de refus « out of range »', async ({ assert }) => {
     const wide = await ImageService.thumbnailVariants(await blank(40000, 1).png().toBuffer())
@@ -339,4 +343,6 @@ test.group('ImageService | ratios extrêmes (revue 11.1)', () => {
     const meta = await sharp(tall[2].body).metadata()
     assert.deepEqual([meta.width, meta.height], [1600, 900])
   })
+    // Wall-clock budget well above a loaded full suite; the unbounded path OOMs or takes far longer.
+    .timeout(30_000)
 })

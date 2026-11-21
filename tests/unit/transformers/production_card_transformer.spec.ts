@@ -45,6 +45,25 @@ test.group('ProductionCardTransformer', () => {
     })
   })
 
+  test('vignette posée : forme exacte inchangée, aucune image (11.2, D37)', ({ assert }) => {
+    const p = production()
+    p.thumbnailKey = `thumbnails/${p.id}/AbCdEfGhIjKlMnOp_-12`
+    const card = new ProductionCardTransformer(p).toObject()
+    assert.deepEqual(Object.keys(card).sort(), [
+      'authors',
+      'category',
+      'domain',
+      'downloadsCount',
+      'id',
+      'publishedAt',
+      'slug',
+      'summary',
+      'title',
+      'viewsCount',
+    ])
+    assert.notInclude(JSON.stringify(card), 'thumbnails/')
+  })
+
   test('agrégats absents → 0 ; date et auteurs absents', ({ assert }) => {
     const p = production()
     p.$extras = {}
