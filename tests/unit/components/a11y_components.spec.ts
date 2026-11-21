@@ -87,7 +87,7 @@ test.group('A11y | un seul <h1> par page publique', () => {
 // Story 10.8 — un seul h1 sur tout l'arbre rendu : la page, PublicLayout (posé par
 // `inertia/app.tsx`) et tous les composants locaux importés, récursivement (le h1 du profil vit
 // dans AuthorProfileHeader ; aucun enfant — cartes, filtres, pagination — n'en ajoute un).
-function componentTree(entry: string): string[] {
+function componentTree(entry: string, layout = 'inertia/layouts/PublicLayout.tsx'): string[] {
   const seen = new Set<string>()
   const visit = (path: string) => {
     if (seen.has(path)) return
@@ -98,7 +98,7 @@ function componentTree(entry: string): string[] {
     }
   }
   visit(entry)
-  visit('inertia/layouts/PublicLayout.tsx')
+  visit(layout)
   return [...seen]
 }
 
@@ -136,6 +136,42 @@ test.group('A11y | un seul <h1> sur l’arbre des pages auteurs (Story 10.8)', (
       for (const child of children) assert.include(tree, child, `${child} non résolu`)
       for (const file of tree) {
         assert.equal(h1Count(read(file)), file === h1In ? 1 : 0, `<h1> dans ${file}`)
+      }
+    })
+  }
+})
+
+// Story 11.7 — même règle pour l'accueil avec sa bannière (h2 masqué, cartes en h3 : jamais de
+// h1 dans `public/FeaturedBanner`, `shared/FeaturedBanner`, `AuthorByline`) et pour la page
+// admin « À la une » (AdminLayout, emplacements, sélecteur, aperçu de la bannière partagée).
+test.group('A11y | un seul <h1> sur l’arbre de l’accueil et de « À la une » (Story 11.7)', () => {
+  const cases = {
+    'inertia/pages/home.tsx': {
+      layout: 'inertia/layouts/PublicLayout.tsx',
+      children: [
+        'inertia/components/public/FeaturedBanner.tsx',
+        'inertia/components/shared/FeaturedBanner.tsx',
+        'inertia/components/public/AuthorByline.tsx',
+        'inertia/components/public/ProductionCard.tsx',
+      ],
+    },
+    'inertia/pages/admin/Featured/Index.tsx': {
+      layout: 'inertia/layouts/AdminLayout.tsx',
+      children: [
+        'inertia/components/admin/FeaturedSlot.tsx',
+        'inertia/components/admin/ProductionPicker.tsx',
+        'inertia/components/admin/ThumbnailField.tsx',
+        'inertia/components/admin/BannerPreview.tsx',
+        'inertia/components/shared/FeaturedBanner.tsx',
+      ],
+    },
+  }
+  for (const [page, { layout, children }] of Object.entries(cases)) {
+    test(`${page} : exactement un <h1> (dans la page), aucun dans les composants`, ({ assert }) => {
+      const tree = componentTree(page, layout)
+      for (const child of children) assert.include(tree, child, `${child} non résolu`)
+      for (const file of tree) {
+        assert.equal(h1Count(read(file)), file === page ? 1 : 0, `<h1> dans ${file}`)
       }
     })
   }
