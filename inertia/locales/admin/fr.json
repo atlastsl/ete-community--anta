@@ -43,6 +43,7 @@
     "draft_saved": "Brouillon enregistré.",
     "update_success": "Modifications enregistrées.",
     "auto_unpublished": "Modifications enregistrées. La production a été dépubliée car elle est désormais incomplète.",
+    "auto_unpublished_featured": "Modifications enregistrées. La production a été dépubliée car elle est désormais incomplète, et retirée de la bannière à la une.",
     "published": "Production publiée.",
     "unpublish_success": "Production dépubliée.",
     "delete_success": "Production supprimée.",
@@ -58,6 +59,9 @@
       "title": "Supprimer cette production ?",
       "description": "Cette action est irréversible. La production et ses fichiers associés seront supprimés définitivement.",
       "confirm": "Supprimer définitivement"
+    },
+    "confirm": {
+      "featured_warning": "Cette production est à la une : elle sera retirée de la bannière."
     },
     "form": {
       "sections": {
@@ -484,7 +488,8 @@
       "password_reset": "Réinit. mot de passe",
       "consent_confirm": "Consentement confirmé",
       "consent_withdraw": "Consentement retiré",
-      "featured_update": "Sélection à la une modifiée"
+      "featured_update": "Sélection à la une modifiée",
+      "featured_auto_remove": "Retrait automatique de la une"
     },
     "resource": {
       "author": "Auteur",

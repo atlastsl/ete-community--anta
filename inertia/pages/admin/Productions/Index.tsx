@@ -13,16 +13,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '~/components/ui/select'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-  DialogClose,
-} from '~/components/ui/dialog'
 import StatusBadge from '~/components/admin/StatusBadge'
+import ProductionConfirmDialog from '~/components/admin/ProductionConfirmDialog'
 import Pagination from '~/components/shared/Pagination'
 import { languageLabel } from '~/lib/languages'
 import { taxonomyLabel } from '~/lib/taxonomy'
@@ -36,6 +28,8 @@ type ProductionRow = {
   category: string | null
   status: ProductionStatus
   updatedAt: string | null
+  /** À la une : avertissement D21 des dialogs (Story 11.5). */
+  isFeatured: boolean
 }
 
 type PaginationMeta = {
@@ -288,46 +282,23 @@ export default function AdminProductionsIndex({
         </>
       )}
 
-      <Dialog
+      <ProductionConfirmDialog
+        kind="unpublish"
         open={!!unpublishTarget}
         onOpenChange={(open) => !open && setUnpublishTarget(null)}
-      >
-        <DialogContent role="alertdialog">
-          <DialogHeader>
-            <DialogTitle>{t('productions.unpublish_modal.title')}</DialogTitle>
-            <DialogDescription>{t('productions.unpublish_modal.description')}</DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="outline">{t('actions.cancel')}</Button>
-            </DialogClose>
-            <Button
-              variant="destructive"
-              disabled={isProcessing}
-              onClick={handleConfirmUnpublish}
-            >
-              {t('productions.unpublish_modal.confirm')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        onConfirm={handleConfirmUnpublish}
+        isFeatured={unpublishTarget?.isFeatured ?? false}
+        processing={isProcessing}
+      />
 
-      <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-        <DialogContent role="alertdialog">
-          <DialogHeader>
-            <DialogTitle>{t('productions.delete_modal.title')}</DialogTitle>
-            <DialogDescription>{t('productions.delete_modal.description')}</DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="outline">{t('actions.cancel')}</Button>
-            </DialogClose>
-            <Button variant="destructive" disabled={isProcessing} onClick={handleConfirmDelete}>
-              {t('productions.delete_modal.confirm')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ProductionConfirmDialog
+        kind="delete"
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        onConfirm={handleConfirmDelete}
+        isFeatured={deleteTarget?.isFeatured ?? false}
+        processing={isProcessing}
+      />
     </div>
   )
 }

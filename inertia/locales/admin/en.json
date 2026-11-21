@@ -43,6 +43,7 @@
     "draft_saved": "Draft saved.",
     "update_success": "Changes saved.",
     "auto_unpublished": "Changes saved. The production was unpublished because it is now incomplete.",
+    "auto_unpublished_featured": "Changes saved. The production was unpublished because it is now incomplete, and removed from the featured banner.",
     "published": "Production published.",
     "unpublish_success": "Production unpublished.",
     "delete_success": "Production deleted.",
@@ -58,6 +59,9 @@
       "title": "Delete this production?",
       "description": "This action is irreversible. The production and its associated files will be permanently deleted.",
       "confirm": "Delete permanently"
+    },
+    "confirm": {
+      "featured_warning": "This production is featured: it will be removed from the banner."
     },
     "form": {
       "sections": {
@@ -484,7 +488,8 @@
       "password_reset": "Password reset",
       "consent_confirm": "Consent confirmed",
       "consent_withdraw": "Consent withdrawn",
-      "featured_update": "Featured selection changed"
+      "featured_update": "Featured selection changed",
+      "featured_auto_remove": "Automatically removed from featured"
     },
     "resource": {
       "author": "Author",

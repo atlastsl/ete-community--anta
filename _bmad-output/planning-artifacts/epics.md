@@ -2741,7 +2741,7 @@ Afin que la bannière ne montre jamais une production indisponible (FR51, D21).
 
 **Given** `FEATURED_AUTO_REMOVE: 'featured_auto_remove'` ajouté à `ActionType`
 **When** `ProductionService.unpublish` ou `ProductionService.delete` s'exécute sur une production à la une
-**Then** `FeaturedService.removeProduction(id, adminId, cause)` est appelé **dans la même transaction** : suppression de l'emplacement et recompactage des positions suivantes (D30) par réécriture de la sélection restante (`DELETE` puis `INSERT` positions 1..n, comme `save` ; jamais `UPDATE position = position - 1`, refusé par la clé primaire non différable)
+**Then** `FeaturedService.removeProduction(id, adminId, cause)` est appelé **dans la même transaction** : suppression de l'emplacement et recompactage des positions suivantes (D30) ; jamais `UPDATE position = position - 1` en une instruction (refusé par la clé primaire non différable) — *amendé le 2026-11-21 (revue 11.5, D-11.5-7)* : `DELETE … WHERE production_id = ?` puis décalage ligne par ligne dans l'ordre croissant (`UPDATE … SET position = k WHERE position = k + 1`, chaque cible étant libre), au lieu d'une réécriture `DELETE` + `INSERT` qui revérifiait la clé étrangère des autres productions à la une (verrou `KEY SHARE` après le verrou de table → interblocage avec un admin tenant l'une d'elles)
 **And** après la validation de la transaction, le journal reçoit `featured_auto_remove` / `production` avec `metadata: { position, cause: 'unpublish' | 'delete' }`
 
 **Given** le dialog de confirmation de dépublication ou de suppression (liste admin et formulaire)

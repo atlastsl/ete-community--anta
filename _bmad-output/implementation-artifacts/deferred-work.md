@@ -161,4 +161,8 @@
 
 ## Deferred from: dev of 11-4-page-admin-a-la-une (2026-11-21)
 
-- **Suppression de la vidéo d'une production à la une sans vignette** : `FilesController.destroy` ne vérifie pas la règle FR50 ; la production reste à la une sans image (question PO de 11.4). Bloquer comme le retrait de vignette (`FeaturedService.assertThumbnailRemovable`) si le PO le souhaite.
+- **Suppression de la vidéo d'une production à la une sans vignette** : `FilesController.destroy` ne vérifie pas la règle FR50 ; la production reste à la une sans image (question PO de 11.4). Bloquer comme le retrait de vignette (`FeaturedService.assertThumbnailRemovable`) si le PO le souhaite. **Revu en 11.5 (D-11.5-6)** : hors FR51 (la production reste publiée), ni bloquée ni retirée automatiquement ; la page « À la une » signale « Vignette manquante » et 11.6 doit tolérer une carte sans image. Question PO maintenue.
+
+## Deferred from: code review of 11-5-retrait-automatique-d-une-production-a-la-une (2026-11-21)
+
+- **Seeder de démo et productions à la une** : `production_demo_seeder.ts` supprime directement les productions `SEED_DEMO` (`Production.query().delete()`) ; le `CASCADE` retire leurs emplacements sans recompactage (trous de positions) ni journal `featured_auto_remove`. Développement seulement (jamais lancé sur la base partagée) ; `removeProduction` tolère les trous (les suivantes remontent depuis la position retirée). Corriger en passant par `FeaturedService.removeProduction` ou en vidant la une avant la purge si le seeder sert encore.

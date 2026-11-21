@@ -200,6 +200,7 @@ test.group('Admin production files | image extraite (11.3)', (group) => {
     assert,
   }) => {
     const fakeDisk = drive.fake('r2')
+    const admin = await createAdminUser()
     const production = await createProduction()
     const file = await ProductionFile.create({
       productionId: production.id,
@@ -221,7 +222,7 @@ test.group('Admin production files | image extraite (11.3)', (group) => {
       return original.call(FileStorageService, key)
     }
     try {
-      await ProductionService.delete(production)
+      await ProductionService.delete(production, admin.id)
     } finally {
       FileStorageService.delete = original
     }
@@ -357,7 +358,7 @@ test.group('Admin production files | image extraite (11.3)', (group) => {
     const posterKey = record.posterKey!
     assert.isString(posterKey)
 
-    await ProductionService.delete(production)
+    await ProductionService.delete(production, admin.id)
 
     for (const key of PosterService.keys(posterKey)) fakeDisk.assertMissing(key)
   }).timeout(30_000)

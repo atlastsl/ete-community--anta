@@ -8,6 +8,8 @@ import ProductionFile from '#models/production_file'
 import PosterService, { type PosterCandidate } from '#services/poster_service'
 import ThumbnailService from '#services/thumbnail_service'
 import ProductionAuthorService from '#services/production_author_service'
+import ActivityLogService from '#services/activity_log_service'
+import ActionType from '#enums/action_type'
 
 /** Number of featured slots (P2.1: `position` CHECK 1..3). */
 export const FEATURED_MAX_SLOTS = 3
@@ -64,6 +66,9 @@ export type FeaturedItem = {
   unavailable: boolean
 }
 
+/** Why a production left the selection automatically (journal `metadata.cause`). */
+export type FeaturedRemovalCause = 'unpublish' | 'delete'
+
 export type FeaturedSaveResult = { before: string[]; after: string[]; changed: boolean }
 
 type DbClient = TransactionClientContract | typeof db
@@ -109,8 +114,8 @@ export default class FeaturedService {
     if (duplicate) throw new FeaturedError('duplicate', duplicate)
     return db.transaction(async (trx) => {
       // Lock order (D-11.4-5), shared with every writer of the selection: production rows
-      // first, then the table. `ProductionService.delete` holds the production row when its
-      // CASCADE needs the table: taking the table first would deadlock with it.
+      // first, then the table. `ProductionService.unpublish` / `.delete` hold the production
+      // row when `removeProduction` takes the table: taking the table first would deadlock.
       await this.assertFeaturable(ids, trx)
       // Self-conflicting, readers allowed: concurrent writers never collide on the PK.
       await trx.rawQuery('LOCK TABLE featured_productions IN SHARE ROW EXCLUSIVE MODE')
@@ -150,6 +155,55 @@ export default class FeaturedService {
     if (this.requiresThumbnail({ files })) {
       throw new FeaturedError('thumbnail_required', productionId)
     }
+  }
+
+  /**
+   * Automatic removal (Story 11.5, FR51, D21): the production leaves the selection inside the
+   * caller's unpublish / delete transaction, which must already hold the production row
+   * (lock order D-11.4-5: row first, then the table) and call this BEFORE deleting the row
+   * (the CASCADE would drop the slot unlogged). The following slots move up (D30) one row at
+   * a time in ascending order (`position = k` where `position = k + 1`): each move targets a
+   * free slot, so the non-deferrable primary key holds (a bulk `position - 1` would not), and
+   * `production_id` is unchanged, so no FK check locks the other featured productions (a
+   * DELETE + INSERT rewrite would take FOR KEY SHARE on them after the table lock and
+   * deadlock with an admin holding one of them FOR UPDATE, D-11.5-7). Rows stay exact
+   * (`created_by_id`, `created_at`).
+   * `featured_auto_remove` is logged once the transaction commits (`ActivityLogService` is
+   * outside the transaction), never on rollback. Returns the removed position, or null.
+   */
+  static async removeProduction(
+    productionId: string,
+    adminId: string,
+    cause: FeaturedRemovalCause,
+    trx: TransactionClientContract
+  ): Promise<number | null> {
+    await trx.rawQuery('LOCK TABLE featured_productions IN SHARE ROW EXCLUSIVE MODE')
+    const rows: { position: number; production_id: string }[] = await trx
+      .from('featured_productions')
+      .select('position', 'production_id')
+      .orderBy('position', 'asc')
+    const removed = rows.find((row) => row.production_id === productionId)
+    if (!removed) return null
+
+    const position = removed.position
+    await trx.from('featured_productions').where('production_id', productionId).delete()
+    const following = rows.filter((row) => row.position > position)
+    for (const [index, row] of following.entries()) {
+      await trx
+        .from('featured_productions')
+        .where('position', row.position)
+        .update({ position: position + index })
+    }
+    trx.after('commit', () =>
+      ActivityLogService.log({
+        adminUserId: adminId,
+        actionType: ActionType.FEATURED_AUTO_REMOVE,
+        resourceType: 'production',
+        resourceId: productionId,
+        metadata: { position, cause },
+      })
+    )
+    return position
   }
 
   /** The current selection as page items, by position. */

@@ -13,6 +13,7 @@ import AuthorService from '#services/author_service'
 import AuthorConversionService from '#services/author_conversion_service'
 import ProductionAuthorService from '#services/production_author_service'
 import ProductionService from '#services/production_service'
+import FeaturedService from '#services/featured_service'
 import StatsService from '#services/stats_service'
 import {
   draftProductionValidator,
@@ -77,6 +78,8 @@ export default class ProductionsController {
     const paginator = await query.paginate(page, PER_PAGE)
     const meta = paginator.getMeta()
     const options = await ProductionService.distinctSuggestions()
+    // Avertissement D21 des dialogs de dépublication / suppression (Story 11.5).
+    const featuredIds = new Set(await FeaturedService.selectionIds())
 
     return inertia.render('admin/Productions/Index', {
       productions: paginator.all().map((p) => ({
@@ -86,6 +89,7 @@ export default class ProductionsController {
         category: p.category,
         status: p.status,
         updatedAt: p.updatedAt?.toISO() ?? null,
+        isFeatured: featuredIds.has(p.id),
       })),
       pagination: {
         currentPage: meta.currentPage,
@@ -150,8 +154,13 @@ export default class ProductionsController {
       production.authors.map((author) => author.searchName)
     )
 
+    // Avertissement D21 du dialog de dépublication (Story 11.5).
+    const featuredIds = await FeaturedService.selectionIds()
+    const isFeatured = featuredIds.includes(production.id)
+
     return inertia.render('admin/Productions/Edit', {
       publishedBy,
+      isFeatured,
       stats,
       legacyAuthorNames: legacy.unlinkedNames,
       legacyAuthorsNonText: legacy.nonText,
@@ -197,7 +206,7 @@ export default class ProductionsController {
 
     // Une seule transaction : métadonnées, auteurs (pivot + colonne dénormalisée) et
     // dépublication automatique ; un auteur inconnu annule tout (erreur de validation).
-    const { production, autoUnpublished } = await db.transaction(async (trx) => {
+    const { production, autoUnpublished, unfeatured } = await db.transaction(async (trx) => {
       const locked = await Production.query({ client: trx })
         .where('id', existing.id)
         .forUpdate()
@@ -231,6 +240,7 @@ export default class ProductionsController {
       // suite à l'édition, on la dépublie automatiquement (sinon le site public — Epic 5 —
       // exposerait un item publié cassé). `status` n'est sinon jamais modifié ici (FR22).
       let unpublished = false
+      let removedFromFeatured = false
       if (locked.status === ProductionStatus.PUBLISHED) {
         await locked.loadCount('files')
         await locked.loadCount('links')
@@ -246,11 +256,20 @@ export default class ProductionsController {
         if (missing.length > 0) {
           locked.status = ProductionStatus.DRAFT
           unpublished = true
+          // Dépublication = retrait de la une (Story 11.5, FR51, D-11.5-3) : ligne déjà
+          // verrouillée (FOR UPDATE), table de la une ensuite (ordre D-11.4-5).
+          const position = await FeaturedService.removeProduction(
+            locked.id,
+            auth.user!.id,
+            'unpublish',
+            trx
+          )
+          removedFromFeatured = position !== null
         }
       }
 
       await locked.save()
-      return { production: locked, autoUnpublished: unpublished }
+      return { production: locked, autoUnpublished: unpublished, unfeatured: removedFromFeatured }
     })
 
     await ActivityLogService.log({
@@ -270,7 +289,11 @@ export default class ProductionsController {
 
     session.flash(
       'success',
-      autoUnpublished ? 'productions.auto_unpublished' : 'productions.update_success'
+      unfeatured
+        ? 'productions.auto_unpublished_featured'
+        : autoUnpublished
+          ? 'productions.auto_unpublished'
+          : 'productions.update_success'
     )
     return response.redirect(`/admin/productions/${production.id}/edit`)
   }
@@ -278,7 +301,8 @@ export default class ProductionsController {
   async unpublish({ params, auth, response, session }: HttpContext) {
     const production = await Production.findOrFail(params.id)
 
-    await ProductionService.unpublish(production)
+    // Retrait automatique de la une dans la même transaction (Story 11.5, FR51).
+    await ProductionService.unpublish(production, auth.user!.id)
 
     await ActivityLogService.log({
       adminUserId: auth.user!.id,
@@ -302,7 +326,8 @@ export default class ProductionsController {
       resourceId: production.id,
     })
 
-    await ProductionService.delete(production)
+    // Retrait automatique de la une dans la transaction de suppression (Story 11.5, FR51).
+    await ProductionService.delete(production, auth.user!.id)
 
     session.flash('success', 'productions.delete_success')
     return response.redirect('/admin/productions')
