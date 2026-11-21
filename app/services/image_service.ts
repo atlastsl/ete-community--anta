@@ -1,11 +1,17 @@
 import { open, stat } from 'node:fs/promises'
 import logger from '@adonisjs/core/services/logger'
-import sharp, { type OutputInfo } from 'sharp'
+import sharp, { type Metadata, type OutputInfo, type Sharp } from 'sharp'
 
 /** Largest accepted upload (defence in depth behind the `vine.file` size rule). */
 export const IMAGE_MAX_BYTES = 5 * 1024 * 1024
 /** Decoding ceiling: larger images are refused before any pixel is processed. */
 export const IMAGE_MAX_PIXELS = 40_000_000
+/**
+ * Widest gap allowed between the source ratio and a salient-region (`attention`) crop ratio:
+ * beyond it, the source is first centre-cropped, because `attention` scores the whole
+ * cover-resized image (a 2×20000 PNG would be scored at 1200×12 000 000 px).
+ */
+const ATTENTION_MAX_RATIO_GAP = 3
 /** Input formats accepted after real decoding (gif, heif, svg, tiff... are refused). */
 const ACCEPTED_FORMATS = new Set(['jpeg', 'png', 'webp'])
 
@@ -14,6 +20,8 @@ type VariantSpec = {
   width: number
   height: number
   format: 'webp' | 'jpeg'
+  /** Cover crop anchor: `centre` by default, `attention` (salient region, faces) for wide crops. */
+  position?: 'centre' | 'attention'
 }
 
 /**
@@ -43,11 +51,15 @@ async function readHead(input: string | Buffer): Promise<Buffer> {
   }
 }
 
-/** Square variants of an author photo (P2.5): list avatar, card avatar, sharing image. */
+/**
+ * Variants of an author photo (P2.5): square list and card avatars, plus the sharing image
+ * at the 1.91:1 ratio of large preview cards, so the photo fills the whole card instead of
+ * being cropped by X or letterboxed (D-10.7-2, amended 2026-11-21).
+ */
 export const AUTHOR_PHOTO_VARIANTS = [
   { name: 'w128.webp', width: 128, height: 128, format: 'webp' },
   { name: 'w384.webp', width: 384, height: 384, format: 'webp' },
-  { name: 'og.jpg', width: 600, height: 600, format: 'jpeg' },
+  { name: 'og.jpg', width: 1200, height: 630, format: 'jpeg', position: 'attention' },
 ] as const satisfies readonly VariantSpec[]
 
 export type ImageErrorCode = 'photo_type' | 'photo_size' | 'photo_dimensions'
@@ -69,59 +81,106 @@ export type ImageVariant = {
 /**
  * Image normalization (P2.5): validation by real decoding, EXIF auto-orientation,
  * metadata stripping (sharp's default output: never `withMetadata` / `keepMetadata`),
- * centred cover crop. Profiles are plain variant lists so the 16:9 thumbnail profile
- * (Epic 11) can be added next to the author photo one.
+ * cover crop (centred; on the salient region for the wide sharing image). Profiles are plain
+ * variant lists so the 16:9 thumbnail profile (Epic 11) can be added next to the author one.
  */
 export default class ImageService {
-  /** Validates by real decoding, auto-orients, strips metadata, renders the 1:1 variants. */
+  /** Validates by real decoding, auto-orients, strips metadata, renders the variants. */
   static async authorPhotoVariants(input: string | Buffer): Promise<ImageVariant[]> {
     return this.render(input, AUTHOR_PHOTO_VARIANTS)
   }
 
   /**
-   * The source is decoded once into the largest variant (raw pixels), then each variant is
-   * encoded from it one after the other: a 40 Mpx source is never held in memory several
-   * times. The variants of one profile share their aspect ratio.
+   * Variants sharing an aspect ratio and crop anchor form a group: the source is decoded once
+   * per group into its largest variant (raw pixels), then each variant of the group is
+   * encoded from it one after the other. Groups are processed one after the other, so a
+   * 40 Mpx source is never held in memory several times. Output keeps the input order.
    */
   private static async render(
     input: string | Buffer,
     variants: readonly VariantSpec[]
   ): Promise<ImageVariant[]> {
-    await this.assertValid(input)
-    const largest = variants.reduce((a, b) => (b.width * b.height > a.width * a.height ? b : a))
-    if (variants.some((v) => v.width * largest.height !== v.height * largest.width)) {
-      throw new Error('ImageService: the variants of a profile must share their aspect ratio')
-    }
+    const oriented = await this.assertValid(input)
 
-    let base: { data: Buffer; info: OutputInfo }
-    try {
-      // No `animated: true`: only the first frame of an animated image is used.
-      base = await sharp(input, { limitInputPixels: IMAGE_MAX_PIXELS })
-        .rotate()
-        .resize(largest.width, largest.height, { fit: 'cover', position: 'centre' })
-        .raw()
-        .toBuffer({ resolveWithObject: true })
-    } catch (error) {
-      throw this.toValidationError(error)
-    }
-
-    const result: ImageVariant[] = []
+    const groups: VariantSpec[][] = []
     for (const variant of variants) {
-      result.push(await this.encodeVariant(base, variant))
+      const group = groups.find(
+        ([first]) =>
+          first.width * variant.height === first.height * variant.width &&
+          (first.position ?? 'centre') === (variant.position ?? 'centre')
+      )
+      if (group) group.push(variant)
+      else groups.push([variant])
     }
-    return result
+
+    const encoded = new Map<string, ImageVariant>()
+    for (const group of groups) {
+      const largest = group.reduce((a, b) => (b.width * b.height > a.width * a.height ? b : a))
+      const position =
+        largest.position === 'attention' ? sharp.strategy.attention : ('centre' as const)
+
+      let base: { data: Buffer; info: OutputInfo }
+      try {
+        // No `animated: true`: only the first frame of an animated image is used.
+        const source =
+          largest.position === 'attention'
+            ? await this.boundAspect(input, oriented, largest)
+            : sharp(input, { limitInputPixels: IMAGE_MAX_PIXELS }).rotate()
+        base = await source
+          .resize(largest.width, largest.height, { fit: 'cover', position })
+          .raw()
+          .toBuffer({ resolveWithObject: true })
+      } catch (error) {
+        throw this.toValidationError(error)
+      }
+
+      for (const variant of group) {
+        encoded.set(variant.name, await this.encodeVariant(base, variant))
+      }
+    }
+    return variants.map((variant) => encoded.get(variant.name)!)
   }
 
-  private static async assertValid(input: string | Buffer): Promise<void> {
+  /**
+   * Auto-oriented source, centre-cropped first when its ratio is more than
+   * `ATTENTION_MAX_RATIO_GAP` times off the target ratio (cost bound of `attention`).
+   */
+  private static async boundAspect(
+    input: string | Buffer,
+    oriented: { width: number; height: number },
+    target: VariantSpec
+  ): Promise<Sharp> {
+    const source = sharp(input, { limitInputPixels: IMAGE_MAX_PIXELS }).rotate()
+    const { width, height } = oriented
+    const ratio = target.width / target.height
+    let crop: { width: number; height: number } | null = null
+    if (width / height < ratio / ATTENTION_MAX_RATIO_GAP) {
+      crop = { width, height: Math.max(1, Math.round((width * ATTENTION_MAX_RATIO_GAP) / ratio)) }
+    } else if (width / height > ratio * ATTENTION_MAX_RATIO_GAP) {
+      crop = { width: Math.max(1, Math.round(height * ratio * ATTENTION_MAX_RATIO_GAP)), height }
+    }
+    if (!crop) return source
+
+    // Same scale, so `cover` is a pure centre crop; raw pixels feed the attention pass.
+    const { data, info } = await source
+      .resize(crop.width, crop.height, { fit: 'cover', position: 'centre' })
+      .raw()
+      .toBuffer({ resolveWithObject: true })
+    return sharp(data, { raw: { width: info.width, height: info.height, channels: info.channels } })
+  }
+
+  /** Validates size, signature, format and pixel count; returns the auto-oriented size. */
+  private static async assertValid(
+    input: string | Buffer
+  ): Promise<{ width: number; height: number }> {
     const info = typeof input === 'string' ? await stat(input) : null
     const bytes = info ? info.size : (input as Buffer).length
     if (bytes > IMAGE_MAX_BYTES) throw new ImageValidationError('photo_size')
     if (!hasAcceptedSignature(await readHead(input))) throw new ImageValidationError('photo_type')
 
-    let format: string | undefined
+    let meta: Metadata
     try {
-      const meta = await sharp(input, { limitInputPixels: IMAGE_MAX_PIXELS }).metadata()
-      format = meta.format
+      meta = await sharp(input, { limitInputPixels: IMAGE_MAX_PIXELS }).metadata()
       // `metadata()` reads the header only: enforce the ceiling here too.
       if ((meta.width ?? 0) * (meta.height ?? 0) > IMAGE_MAX_PIXELS) {
         throw new ImageValidationError('photo_dimensions')
@@ -129,7 +188,14 @@ export default class ImageService {
     } catch (error) {
       throw this.toValidationError(error)
     }
-    if (!format || !ACCEPTED_FORMATS.has(format)) throw new ImageValidationError('photo_type')
+    if (!meta.format || !ACCEPTED_FORMATS.has(meta.format)) {
+      throw new ImageValidationError('photo_type')
+    }
+    // EXIF orientations 5–8 swap the axes once `.rotate()` applies them.
+    const swapped = (meta.orientation ?? 1) >= 5
+    const width = meta.width ?? 1
+    const height = meta.height ?? 1
+    return swapped ? { width: height, height: width } : { width, height }
   }
 
   private static async encodeVariant(

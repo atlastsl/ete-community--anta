@@ -2,6 +2,7 @@ import { test } from '@japa/runner'
 import db from '@adonisjs/lucid/services/db'
 import { DateTime } from 'luxon'
 import Production from '#models/production'
+import Author from '#models/author'
 import StatsView from '#models/stats_view'
 import StatsDownload from '#models/stats_download'
 import SearchService, { EMPTY_FILTERS, type ProductionFilters } from '#services/search_service'
@@ -159,10 +160,37 @@ test.group('SearchService | filtres isolés', (group) => {
     assert.deepEqual(await searchTitles({ filters: { license: ['free_license'] } }), ['B'])
   })
 
-  test('author (jsonb)', async ({ assert }) => {
-    await createProduction({ title: 'A', authors: ['Kofi Annan', 'Autre'] })
-    await createProduction({ title: 'B', authors: ['Personne'] })
-    assert.deepEqual(await searchTitles({ filters: { author: ['Kofi Annan'] } }), ['A'])
+  test('author (slug, pivot — Story 10.6) ; plus de filtre sur les noms jsonb', async ({
+    assert,
+  }) => {
+    const author = await Author.create({
+      firstNames: 'Jeanne',
+      lastNames: 'Unitexemple',
+      consentConfirmedAt: DateTime.now(),
+    })
+    const linked = await createProduction({ title: 'A' })
+    await db
+      .table('production_authors')
+      .insert({ production_id: linked.id, author_id: author.id, position: 1 })
+    await createProduction({ title: 'B', authors: ['Nom Libre'] })
+    assert.deepEqual(await searchTitles({ filters: { author: [author.slug] } }), ['A'])
+    assert.deepEqual(await searchTitles({ filters: { author: ['Nom Libre'] } }), [])
+  })
+
+  test('author : défense en profondeur, un slug non visible ne filtre jamais (10.6)', async ({
+    assert,
+  }) => {
+    const hidden = await Author.create({
+      firstNames: 'Jeanne',
+      lastNames: 'Nonpublique',
+      consentConfirmedAt: null,
+    })
+    const linked = await createProduction({ title: 'Liee' })
+    await db
+      .table('production_authors')
+      .insert({ production_id: linked.id, author_id: hidden.id, position: 1 })
+    // Appel direct sans validation par la facette : aucune production révélée.
+    assert.deepEqual(await searchTitles({ filters: { author: [hidden.slug] } }), [])
   })
 })
 
@@ -236,14 +264,29 @@ test.group('SearchService | facets', (group) => {
     return () => db.rollbackGlobalTransaction()
   })
 
-  test('valeurs distinctes des productions publiées + auteurs aplatis', async ({ assert }) => {
-    await createProduction({ category: 'Livre', language: 'fr', authors: ['Diop'] })
-    await createProduction({ category: 'Article', language: 'fr', authors: ['Diop', 'Senghor'] })
+  test('valeurs distinctes des productions publiées ; auteurs = profils visibles (10.6)', async ({
+    assert,
+  }) => {
+    await db.from('production_authors').delete()
+    const visible = await Author.create({
+      firstNames: 'Awa',
+      lastNames: 'Facetteexemple',
+      consentConfirmedAt: DateTime.now(),
+    })
+    const published = await createProduction({
+      category: 'Livre',
+      language: 'fr',
+      authors: ['Nomlibre'],
+    })
+    await createProduction({ category: 'Article', language: 'fr', authors: ['Autrenom'] })
     await createProduction({ category: 'Livre', status: 'draft', language: 'en' })
+    await db
+      .table('production_authors')
+      .insert({ production_id: published.id, author_id: visible.id, position: 1 })
 
     const facets = await SearchService.facets()
     assert.deepEqual([...facets.category].sort(), ['Article', 'Livre'])
     assert.deepEqual([...facets.language].sort(), ['fr'])
-    assert.sameMembers(facets.author, ['Diop', 'Senghor'])
+    assert.deepEqual(facets.author, [{ value: visible.slug, label: 'Awa FACETTEEXEMPLE' }])
   })
 })

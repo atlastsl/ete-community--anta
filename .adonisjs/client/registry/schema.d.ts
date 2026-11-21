@@ -55,6 +55,30 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/public/productions_controller').default['download']>>>
     }
   }
+  'authors.index': {
+    methods: ["GET","HEAD"]
+    pattern: '/authors'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/public/authors_controller').default['index']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/public/authors_controller').default['index']>>>
+    }
+  }
+  'authors.show': {
+    methods: ["GET","HEAD"]
+    pattern: '/authors/:slug'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { slug: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/public/authors_controller').default['show']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/public/authors_controller').default['show']>>>
+    }
+  }
   'privacy-policy': {
     methods: ["GET","HEAD"]
     pattern: '/privacy-policy'
@@ -65,6 +89,18 @@ export interface Registry {
       query: {}
       response: ExtractResponse<Awaited<ReturnType<import('#controllers/public/pages_controller').default['privacy']>>>
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/public/pages_controller').default['privacy']>>>
+    }
+  }
+  'media.show': {
+    methods: ["GET","HEAD"]
+    pattern: '/media/*'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { '*': ParamValue[] }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/public/media_controller').default['show']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/public/media_controller').default['show']>>>
     }
   }
   'health': {

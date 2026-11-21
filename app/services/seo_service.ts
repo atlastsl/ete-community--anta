@@ -1,3 +1,5 @@
+import { formatAuthorName } from '#helpers/author_name'
+
 export type Locale = 'fr' | 'en'
 
 /**
@@ -12,7 +14,24 @@ export type MetaTags = {
   ogDescription: string
   ogType: string
   ogUrl?: string
+  /**
+   * Absolute URL of the preview image (`og:image`, `twitter:card=summary_large_image`): author
+   * profiles only, the `og.jpg` variant of the public photo (P2.5, P2.7). Productions never
+   * have one (D37).
+   */
+  ogImage?: string
   locale: Locale
+}
+
+/** Prefix of a public author photo base (`MediaService.authorPhotoUrl`). */
+const AUTHOR_PHOTO_PREFIX = '/media/authors/'
+/** Variant of the author photos made for the social previews (1200×630 JPEG, `ImageService`). */
+const AUTHOR_OG_VARIANT = 'og.jpg'
+
+/** `appUrl` (any trailing slash dropped) + `path`, or `undefined` without a configured URL. */
+function absoluteUrl(appUrl: string | null | undefined, path: string): string | undefined {
+  const base = appUrl?.trim().replace(/\/+$/, '')
+  return base ? `${base}${path}` : undefined
 }
 
 /**
@@ -58,6 +77,60 @@ export default class SeoService {
       ogTitle: name,
       ogDescription: description,
       ogType: 'website',
+      locale,
+    }
+  }
+
+  /** Meta de la politique de confidentialité (titre dédié, Story 10.1). */
+  static privacy(locale: Locale): MetaTags {
+    const { name, description } = SITE[locale]
+    const title = `${locale === 'fr' ? 'Politique de confidentialité' : 'Privacy policy'} — ${name}`
+    return {
+      title,
+      description,
+      ogTitle: title,
+      ogDescription: description,
+      ogType: 'website',
+      locale,
+    }
+  }
+
+  /** Meta de la NotFoundPage (statut 404, titre traduit, D36 — Story 10.1). */
+  static notFound(locale: Locale): MetaTags {
+    const { name } = SITE[locale]
+    const title = `${locale === 'fr' ? 'Page introuvable' : 'Page not found'} — ${name}`
+    const description =
+      locale === 'fr'
+        ? "Cette page n'existe pas ou n'est plus disponible."
+        : 'This page does not exist or is no longer available.'
+    return {
+      title,
+      description,
+      ogTitle: title,
+      ogDescription: description,
+      ogType: 'website',
+      locale,
+    }
+  }
+
+  /**
+   * Meta de la liste des auteurs (Story 10.5 ; 10.7 : `ogUrl` absolue `/authors`, sans les
+   * paramètres de filtre, de tri ni de page). Titre et description = phrase d'introduction.
+   */
+  static authorsList(locale: Locale, appUrl?: string | null): MetaTags {
+    const { name } = SITE[locale]
+    const title = `${locale === 'fr' ? 'Auteurs' : 'Authors'} — ${name}`
+    const description =
+      locale === 'fr'
+        ? 'Les auteurs des productions publiées sur Anta.'
+        : 'The authors of the productions published on Anta.'
+    return {
+      title,
+      description,
+      ogTitle: title,
+      ogDescription: description,
+      ogType: 'website',
+      ogUrl: absoluteUrl(appUrl, '/authors'),
       locale,
     }
   }
@@ -109,8 +182,7 @@ export default class SeoService {
     const description = composed.length > 200 ? `${composed.slice(0, 197).trimEnd()}…` : composed
 
     const slug = production.slug?.trim()
-    const baseUrl = appUrl?.replace(/\/$/, '')
-    const ogUrl = slug && baseUrl ? `${baseUrl}/productions/${slug}` : undefined
+    const ogUrl = slug ? absoluteUrl(appUrl, `/productions/${slug}`) : undefined
 
     return {
       title,
@@ -119,6 +191,56 @@ export default class SeoService {
       ogDescription: description,
       ogType: 'article',
       ogUrl,
+      locale,
+    }
+  }
+
+  /**
+   * Meta of a visible author profile (FR36, P2.7; Story 10.3, `ogImage` in 10.7). "Prénom NOM":
+   * the last names are upper-cased for display only (D34), like `formatAuthorName` on the front.
+   * `photoBase` must come from `MediaService.authorPhotoUrl` (photo **and** consent): the
+   * `og.jpg` variant of that public base becomes the absolute `ogImage`.
+   */
+  static forAuthor(
+    locale: Locale,
+    author: {
+      firstNames: string
+      lastNames: string
+      slug?: string | null
+      primaryInstitution?: string | null
+      publishedCount: number
+      photoBase?: string | null
+    },
+    appUrl?: string | null
+  ): MetaTags {
+    const { name } = SITE[locale]
+    const displayName = formatAuthorName(author.firstNames, author.lastNames)
+    const title = `${displayName} — ${name}`
+
+    const n = author.publishedCount
+    const count =
+      locale === 'fr'
+        ? `${n} ${n > 1 ? 'productions publiées' : 'production publiée'} sur ${name}`
+        : `${n} ${n === 1 ? 'production' : 'productions'} published on ${name}`
+    const institution = author.primaryInstitution?.trim()
+    const description = institution ? `${institution} — ${count}` : count
+
+    const slug = author.slug?.trim()
+    const ogUrl = slug ? absoluteUrl(appUrl, `/authors/${slug}`) : undefined
+    const photoBase = author.photoBase
+    const ogImage =
+      photoBase?.startsWith(AUTHOR_PHOTO_PREFIX) && photoBase.length > AUTHOR_PHOTO_PREFIX.length
+        ? absoluteUrl(appUrl, `${photoBase}/${AUTHOR_OG_VARIANT}`)
+        : undefined
+
+    return {
+      title,
+      description,
+      ogTitle: displayName,
+      ogDescription: description,
+      ogType: 'profile',
+      ogUrl,
+      ogImage,
       locale,
     }
   }

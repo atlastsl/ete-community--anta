@@ -1,13 +1,15 @@
 import { Data } from '@generated/data'
 import { toast, Toaster } from 'sonner'
-import { usePage } from '@inertiajs/react'
+import { Head, usePage } from '@inertiajs/react'
 import { Link } from '@adonisjs/inertia/react'
 import { ReactElement, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import { urlFor } from '~/client'
 import LanguageSwitcher from '~/components/shared/LanguageSwitcher'
+import { documentTitle, type SeoMeta } from '~/lib/seo'
 
 export default function PublicLayout({ children }: { children: ReactElement<Data.SharedProps> }) {
-  const { props, url } = usePage<Data.SharedProps>()
+  const { props, url } = usePage<Data.SharedProps & { meta?: SeoMeta }>()
   const flash = props.flash
   const { t } = useTranslation()
 
@@ -24,6 +26,9 @@ export default function PublicLayout({ children }: { children: ReactElement<Data
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-stone-900">
+      {/* Tab title kept in sync with the server meta on load and on Inertia visits (Story 10.4;
+          without it the head manager replaces the edge <title> by « Anta »). */}
+      <Head title={documentTitle(props.meta?.title)} />
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:inline-flex focus:min-h-11 focus:items-center focus:rounded-md focus:bg-green-700 focus:px-4 focus:text-white"
@@ -56,12 +61,21 @@ export default function PublicLayout({ children }: { children: ReactElement<Data
 
           <nav aria-label={t('footer.nav_label')}>
             <h2 className="text-sm font-semibold text-stone-900">{t('footer.explore')}</h2>
+            {/* « Explorer » (D34, FR44, FR60): Home, Advanced search (same `/productions`
+                destination), Authors (Story 10.5), Privacy policy. */}
             <ul className="mt-3 space-y-2 text-sm text-stone-600">
               <li>
                 <Link href="/" className="hover:text-green-700">{t('nav.home')}</Link>
               </li>
               <li>
-                <Link href="/productions" className="hover:text-green-700">{t('nav.search')}</Link>
+                <Link href="/productions" className="hover:text-green-700">
+                  {t('nav.advanced_search')}
+                </Link>
+              </li>
+              <li>
+                <Link href={urlFor('authors.index')} className="hover:text-green-700">
+                  {t('nav.authors')}
+                </Link>
               </li>
               <li>
                 <Link href="/privacy-policy" className="hover:text-green-700">

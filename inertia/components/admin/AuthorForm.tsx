@@ -467,7 +467,7 @@ function PhotoField({
   const describedBy = error ? 'photo-help photo-error' : 'photo-help'
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-      <Avatar src={preview} firstNames={firstNames} lastNames={lastNames} size="lg" />
+      <Avatar src={preview} firstNames={firstNames} lastNames={lastNames} size="lg" loading="eager" />
       <div className="min-w-0 flex-1">
         {/* sr-only but focusable: carries aria-invalid; the label shows its focus ring. */}
         <input

@@ -5,6 +5,6 @@ import SeoService from '#services/seo_service'
 export default class PagesController {
   async privacy({ request, inertia }: HttpContext) {
     const locale = SeoService.localeFromCookieHeader(request.header('cookie'))
-    return inertia.render('privacy-policy', { meta: SeoService.site(locale) })
+    return inertia.render('privacy-policy', { meta: SeoService.privacy(locale) })
   }
 }

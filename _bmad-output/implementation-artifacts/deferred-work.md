@@ -12,7 +12,7 @@
 
 ## Deferred from: code review of Epic 5 (stories 5.1-5.7) (2026-06-01)
 
-- **`<title>`/meta non rafraîchis en navigation SPA — Story 5.5** : les meta SEO vivent uniquement dans l'edge (serveur, `ssr:false`). Objectif SEO crawlers (premier chargement) atteint, mais lors d'un `router.visit` client le titre d'onglet et les og:* restent ceux de la page initiale. Action éventuelle : ajouter `<Head>` Inertia côté pages publiques pour synchroniser titre/meta client-side (amélioration, hors AC 5.5).
+- **`<title>`/meta non rafraîchis en navigation SPA — Story 5.5** — *titre traité en 10.4 (2026-11-19) : `<Head>` de `PublicLayout` ; og:* client non synchronisés (sans effet pour les robots)* : les meta SEO vivent uniquement dans l'edge (serveur, `ssr:false`). Objectif SEO crawlers (premier chargement) atteint, mais lors d'un `router.visit` client le titre d'onglet et les og:* restent ceux de la page initiale. Action éventuelle : ajouter `<Head>` Inertia côté pages publiques pour synchroniser titre/meta client-side (amélioration, hors AC 5.5).
 - **`<title>` de `/privacy-policy` générique « Anta » — Story 5.5** : conforme à la story (meta privacy = bonus). Amélioration mineure : donner un titre/description dédiés à la page de confidentialité.
 - **`Pagination` sans fenêtrage (rappel) — Story 5.4** : déjà listé ci-dessus (revue Epic 4). Exposé désormais sur la page publique `/productions` ; ajouter fenêtrage + ellipses (`1 … 4 5 6 … N`) quand le volume croît. Impacte aussi l'admin.
 
@@ -117,3 +117,28 @@
 - **Fichiers temporaires multipart non supprimés avant le contrôleur** : quand Shield (CSRF) ou l'authentification refusent une requête multipart, le bodyparser a déjà écrit le fichier dans `tmpdir()` et aucun `finally` de contrôleur ne s'exécute. Préexistant, toutes les routes multipart (auteurs, fichiers de production). Action : middleware de nettoyage après réponse, ou `tmpFileName` dans un dossier purgé périodiquement.
 - **Clé d'idempotence pour `POST /admin/authors/quick`** : une perte de réseau après le commit fait renvoyer la fenêtre par l'admin → seconde fiche. Action : en-tête `Idempotency-Key` généré à l'ouverture de la fenêtre, mémorisé quelques minutes côté serveur.
 - **Avertissement d'homonyme avant création** (question PO) : la fenêtre ne signale pas une fiche existante au nom proche ; la liste de résultats du combobox reste la seule aide.
+
+## Deferred from: code review of 10-1-politique-de-confidentialite-des-auteurs-et-page-404-traduite (2026-11-19)
+
+- **Langue serveur / client divergente à la première visite** (préexistant) : sans cookie `i18n_lang`, le serveur rend les meta et `<html lang>` en français alors qu'i18next peut détecter l'anglais du navigateur et afficher la page en anglais (titre de la 404 et de la politique compris). Action : poser le cookie côté serveur depuis `Accept-Language`, ou aligner la détection client sur le cookie seul.
+- **Youch perdu sur les 404 en développement** (décision acceptée) : la NotFoundPage est rendue dans tous les environnements ; une 404 inattendue (`findOrFail`) n'affiche plus la pile en dev, seul l'avertissement journalisé par `report` subsiste.
+
+## Deferred from: dev of 10-2-photos-d-auteurs-publiques-et-composant-avatar (2026-11-19)
+
+- **Avatars de l'admin toujours en URL signées** (suite de « URLs signées des avatars », 9.3) : non mis en cache navigateur ; les profils publics pourraient utiliser `/media` (question PO 10.2), les non publics doivent rester signés.
+
+## Deferred from: code review of 10-3-page-de-profil-d-un-auteur (2026-11-19)
+
+- **Tri « Titre (A → Z) » sensible aux accents** : `lower(title)` suit la collation de la base (un titre en « É » peut se ranger après « Z »). L'extension `unaccent` n'est pas installée (aucune migration) et n'est pas ajoutée (base partagée, P2.1 « normalisation applicative ») : à traiter avec le tri par titre de la liste (12.1), par une clé normalisée (`normalizeKey`) ou une collation ICU.
+- ~~**Titre d'onglet non rafraîchi en navigation interne**~~ — traité en 10.4 (le titre devenait même « Anta » après hydratation sur toutes les pages publiques). Ancien texte (rappel du report Epic 5) : pas de `<Head>` public, le titre du profil n'est juste qu'au premier chargement ; une navigation Inertia vers ou depuis un profil garde l'ancien titre. À traiter avec 10.4 (liens d'auteurs) / 10.7 (SEO).
+- **Slug en majuscules → 404** : `/authors/Jeanne-Exemple` ne retrouve pas `jeanne-exemple` (comparaison exacte), comme `/productions/:slug`. Accepté (slugs générés en minuscules) ; une redirection 301 vers le slug canonique reste possible.
+
+## Deferred from: code review of 10-6-filtre-auteur-du-listing-par-profil-public (2026-11-19)
+
+- **Facette auteur non bornée** : `facets.author` liste tous les auteurs visibles à chaque `GET /productions` (une requête, toutes les lignes dans les props Inertia). Acceptable à quelques centaines d'auteurs ; au-delà, plafonner (auteurs les plus productifs + auteurs cochés) ou charger la facette à la demande (endpoint JSON paresseux à l'ouverture du groupe « Auteur »).
+
+## Deferred from: dev of 10-8-tests-auteurs-sur-le-site-public (2026-11-19)
+
+- **Lighthouse mobile 4G sur le staging (AC 3 de 10.8, NFR17)** : `/authors` et un profil, LCP < 3 s, à lancer par Aurélien après déploiement de l'Epic 10 et à consigner dans la story 10.8 (services distants hors des sessions de dev).
+- ~~**Suite `browser` + axe (architecture P2.8)**~~ — **refusée par Aurélien le 2026-11-21** : pas de dépendance `@axe-core/playwright` ni de suite `browser` ; accessibilité couverte par les tests de source et l'audit Lighthouse manuel.
+- **`/media` sert la photo d'un auteur consentant sans production publiée** (question PO 10.8) : conforme à 10.2 (public = consentement), clé jamais exposée tant que le profil n'est pas visible ; aligner sur `visibleOnSite` si le PO le souhaite (le test de matrice l'indique).

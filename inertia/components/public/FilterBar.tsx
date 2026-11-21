@@ -4,10 +4,12 @@ import { Link } from '@adonisjs/inertia/react'
 import FilterChip from './FilterChip'
 import {
   FILTER_DIMENSIONS,
+  facetOptions,
   toggleFilter,
   clearFilters,
-  hasActiveFilters,
+  hasClearableFilters,
   isFilterActive,
+  withActiveAuthors,
   type Facets,
   type ProductionFilters,
 } from '~/lib/search_query'
@@ -34,6 +36,8 @@ export default function FilterBar({
 
   // --- Mode listing (/productions) : multi-dimensions + toggle + effacer ---
   if (facets && activeFilters) {
+    // Slugs d'auteurs ignorés par le serveur non recopiés dans les liens (10.6).
+    const listingSearch = withActiveAuthors(search, activeFilters.author)
     const dimensions = FILTER_DIMENSIONS.filter((dim) => (facets[dim]?.length ?? 0) > 0)
     if (dimensions.length === 0) return null
 
@@ -49,20 +53,23 @@ export default function FilterBar({
             <span className="text-xs font-medium uppercase tracking-wide text-stone-600">
               {t(`filters.dimensions.${dim}`)}
             </span>
-            {facets[dim].map((value) => (
+            {facetOptions(facets, dim, (d, value) => facetValueLabel(t, d, value)).map((option) => (
               <FilterChip
-                key={value}
-                label={facetValueLabel(t, dim, value)}
-                href={`/productions${toggleFilter(search, dim, value)}`}
-                active={isFilterActive(activeFilters, dim, value)}
+                key={option.value}
+                label={option.label}
+                href={`/productions${toggleFilter(listingSearch, dim, option.value)}`}
+                active={isFilterActive(activeFilters, dim, option.value)}
+                preserveState
               />
             ))}
           </div>
         ))}
 
-        {hasActiveFilters(activeFilters) && (
+        {hasClearableFilters(activeFilters) && (
           <Link
-            href={`/productions${clearFilters(search)}`}
+            href={`/productions${clearFilters(listingSearch)}`}
+            preserveState
+            preserveScroll
             className="text-sm text-green-700 hover:underline"
           >
             {t('actions.clear_filters')}

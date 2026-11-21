@@ -12,22 +12,9 @@ import SeoService from '#services/seo_service'
 import FileStorageService from '#services/file_storage_service'
 import StatsService from '#services/stats_service'
 import env from '#start/env'
-
-/** Sérialisation plate d'une production pour les ProductionCard. */
-function serialize(p: Production) {
-  return {
-    id: p.id,
-    slug: p.slug,
-    title: p.title,
-    authors: p.authorNames ?? [],
-    category: p.category,
-    domain: p.domain,
-    summary: p.summary,
-    viewsCount: Number(p.$extras.viewsCount ?? 0),
-    downloadsCount: Number(p.$extras.downloadsCount ?? 0),
-    publishedAt: p.antaPublishedAt?.toISO() ?? null,
-  }
-}
+import ProductionCardTransformer from '#transformers/production_card_transformer'
+import PublicBylineService from '#services/public_byline_service'
+import PublicAuthorService from '#services/public_author_service'
 
 /** Sérialisation complète pour la page détail (toutes métadonnées publiques + fichiers/liens). */
 function serializeDetail(p: Production) {
@@ -36,7 +23,8 @@ function serializeDetail(p: Production) {
     slug: p.slug,
     title: p.title,
     summary: p.summary,
-    authors: p.authorNames ?? [],
+    // Byline computed by `PublicBylineService.attach` (Story 10.4): `{ name, slug | null }[]`.
+    authors: PublicBylineService.of(p),
     tags: p.tags ?? [],
     category: p.category,
     domain: p.domain,
@@ -102,24 +90,33 @@ export default class ProductionsController {
       category: asArray(request.input('category')),
       domain: asArray(request.input('domain')),
       subdomain: asArray(request.input('subdomain')),
-      author: asArray(request.input('author')),
+      author: [], // résolu ci-dessous contre la facette (slugs visibles seulement, 10.6)
       language: asArray(request.input('language')),
       country: asArray(request.input('country')),
       // license validé contre l'enum (pas de valeur arbitraire dans le WHERE)
       license: asArray(request.input('license')).filter((v) => LICENSE_VALUES.includes(v)),
     }
 
+    // Facettes d'abord : `author=<slug>` n'est retenu que pour un auteur visible de la facette
+    // (Story 10.6, D12) ; slug inconnu, non public ou ancien nom libre → ignoré, sans erreur.
+    const facets = await SearchService.facets()
+    filters.author = PublicAuthorService.knownAuthorSlugs(
+      PublicAuthorService.parseAuthorParam(request.input('author')),
+      facets.author
+    )
+
     const paginator = await SearchService.search({ q, filters, sort, page, perPage: PER_PAGE })
     const meta = paginator.getMeta()
-    const facets = await SearchService.facets()
 
+    await PublicBylineService.attach(paginator.all())
     // Résultats approchants : si la recherche exacte ne renvoie rien, proposer les plus proches.
-    let results = paginator.all().map(serialize)
+    let results = ProductionCardTransformer.transform(paginator.all())
     let approximate = false
     if (meta.total === 0 && q) {
       const approx = await SearchService.approximate({ q, filters })
       if (approx.length) {
-        results = approx.map(serialize)
+        await PublicBylineService.attach(approx)
+        results = ProductionCardTransformer.transform(approx)
         approximate = true
       }
     }
@@ -161,8 +158,11 @@ export default class ProductionsController {
 
     if (!production) {
       response.status(404)
-      return inertia.render('errors/not_found', { meta: SeoService.site(locale) })
+      return inertia.render('errors/not_found', { meta: SeoService.notFound(locale) })
     }
+
+    await PublicBylineService.attach([production])
+    const detail = serializeDetail(production)
 
     // URL signée R2 (TTL 1h) par fichier, générée serveur (jamais la clé brute exposée).
     // Repli par fichier : un échec R2 → url null (lecteur en "aperçu indisponible"), sans 500 (NFR12).
@@ -186,14 +186,15 @@ export default class ProductionsController {
     )
 
     return inertia.render('production', {
-      production: { ...serializeDetail(production), files },
+      production: { ...detail, files },
       meta: SeoService.forProduction(
         locale,
         {
           title: production.title,
           summary: production.summary,
           slug: production.slug,
-          authors: production.authorNames,
+          // Names shown on the page (byline), nothing else about the authors (P2.7).
+          authors: detail.authors.map((author) => author.name),
         },
         env.get('APP_URL')
       ),
@@ -205,20 +206,21 @@ export default class ProductionsController {
    * Enregistre le téléchargement puis redirige (302) vers l'URL signée R2 (attachment).
    * 404 si production non publiée / fichier étranger ou inexistant (NFR12).
    */
-  async download({ params, request, response, session }: HttpContext) {
+  async download(ctx: HttpContext) {
+    const { params, request, response, session } = ctx
     const production = await Production.query()
       .where('slug', params.slug)
       .where('status', ProductionStatus.PUBLISHED)
       .first()
 
     if (!production) {
-      return response.notFound('Production introuvable')
+      return this.notFound(ctx)
     }
 
     const file = await production.related('files').query().where('id', params.fileId).first()
 
     if (!file) {
-      return response.notFound('Fichier introuvable')
+      return this.notFound(ctx)
     }
 
     // Générer l'URL signée AVANT d'enregistrer : si R2 échoue, on n'enregistre pas (AC#4).
@@ -233,5 +235,16 @@ export default class ProductionsController {
 
     await StatsService.recordDownload(production.id, request.ip())
     return response.redirect(signedUrl)
+  }
+
+  /**
+   * 404 d'un lien de téléchargement : NotFoundPage traduite (comme `show`) pour un navigateur ;
+   * 404 sans corps pour un client qui n'accepte pas le HTML (Story 10.1, revue).
+   */
+  private notFound({ request, response, inertia }: HttpContext) {
+    response.status(404)
+    if (request.accepts(['html', 'json']) !== 'html') return response.notFound()
+    const locale = SeoService.localeFromCookieHeader(request.header('cookie'))
+    return inertia.render('errors/not_found', { meta: SeoService.notFound(locale) })
   }
 }

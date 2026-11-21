@@ -13,6 +13,8 @@ type PaginationProps = {
    * multi-valeurs et ne tiennent pas dans `queryParams`). Prioritaire sur `queryParams`.
    */
   buildHref?: (page: number) => string
+  /** `touch`: 44 px targets of the public lists (authors, profile — Story 10.5); admin: `default`. */
+  size?: 'default' | 'touch'
 }
 
 function defaultBuildHref(page: number, queryParams: Record<string, string | undefined> = {}) {
@@ -31,6 +33,7 @@ export default function Pagination({
   lastPage,
   queryParams,
   buildHref,
+  size = 'default',
 }: PaginationProps) {
   const { t } = useTranslation()
 
@@ -42,8 +45,10 @@ export default function Pagination({
   const isFirst = currentPage <= 1
   const isLast = currentPage >= lastPage
 
-  const baseLink =
-    'inline-flex h-9 min-w-9 items-center justify-center rounded-md border px-3 text-sm transition-colors'
+  const baseLink = cn(
+    'inline-flex items-center justify-center rounded-md border px-3 text-sm transition-colors',
+    size === 'touch' ? 'h-11 min-w-11' : 'h-9 min-w-9'
+  )
 
   return (
     <nav aria-label={t('pagination.label')} className="mt-6 flex items-center justify-center gap-1">

@@ -27,7 +27,7 @@ test.group('FilterChip | source analysis', () => {
   test('activable au clavier (Espace) + reste un Link', ({ assert }) => {
     assert.include(chipSource, 'Link')
     assert.include(chipSource, 'onKeyDown')
-    assert.include(chipSource, "event.key === ' '")
+    assert.include(chipSource, 'spaceToggle(event)') // Espace simple (10.6 : répétition, modificateurs)
   })
 
   test('cible tactile >= 44px (min-h-11)', ({ assert }) => {
