@@ -31,7 +31,7 @@ afin de retrouver toutes les productions d'un auteur (FR5, D12, D28, flux 5).
 3. **Approchants** — avec `q` sans résultat exact, les résultats approchants (OU relâché, puis `pg_trgm`) respectent le filtre auteur.
 4. **Facette** — `facets.author` = `{ value: slug, label: "Prénom NOM" }[]` des seuls auteurs visibles (consentement confirmé **et** ≥ 1 production publiée liée, D12), triés nom, prénom, `id` ; aucun champ interne (ni `id`, ni consentement) ; les noms jsonb non convertis n'y figurent plus.
 5. **UI** — `FilterSidebar` (dimension « Auteur ») affiche les libellés « Prénom NOM », filtre la liste par la recherche de facette (insensible à la casse et aux accents), coche/décoche via l'URL (`author=<slug>`) ; chaque ligne est opérable au clavier (Entrée **et** Espace, `aria-pressed`) ; le compteur de résultats est annoncé (`aria-live="polite"`). `FilterBar` (mode listing) accepte la même forme de facette.
-6. **Paramètres conservés** — la pagination (`setPage`) et les autres filtres/tri/recherche conservent `author` ; « Effacer filtres » (en-tête du panneau et état vide) retire `author` avec les autres dimensions et conserve `q` (D-10.6-2).
+6. **Paramètres conservés** — la pagination (`setPage`) et les autres filtres/tri/recherche conservent `author` ; « Effacer filtres » (en-tête du panneau) retire les autres dimensions et conserve `author` et `q` ; il n'apparaît que si un filtre hors auteur est actif ; l'état vide garde `author`, sauf s'il est le seul filtre (sortie) (D-10.6-2, amendée le 2026-11-21).
 7. **i18n** — inchangée (libellé « Auteur » / « Author » et `filters.author_search` existants).
 
 ## Tasks / Subtasks
@@ -80,7 +80,7 @@ afin de retrouver toutes les productions d'un auteur (FR5, D12, D28, flux 5).
 ### Décisions par défaut (D-10.6-x)
 
 - **D-10.6-1** Slug non visible / inconnu / nom libre → ignoré **silencieusement** (aucun message), `activeFilters.author` ne contient que les slugs résolus (puces cohérentes).
-- **D-10.6-2** L'AC « le bouton Effacer filtres … conserve le paramètre `author` » est lu comme « le prend en compte » : « Effacer filtres » **retire** `author` (c'est un filtre ; flux 5 « aucun résultat → Effacer les filtres » doit rendre des résultats) ; la pagination le **conserve**.
+- **D-10.6-2** ~~« Effacer filtres » retire `author`~~ — **amendée le 2026-11-21 (Aurélien)** : « Effacer filtres » **conserve** `author` (et `q`), conformément à l'epic ; le lien n'est affiché que si un filtre hors auteur est actif (`hasClearableFilters`). À l'état vide, « Réinitialiser les filtres » garde `author` ; si l'auteur est le seul filtre actif, il est retiré (`clearFilters(search, { includeAuthor: true })`) pour qu'une sortie existe. La pagination le conserve.
 - **D-10.6-3** Validation contre la facette chargée (aucune requête supplémentaire) plutôt qu'une requête de résolution dédiée.
 - **D-10.6-4** Ordre de la facette = nom de famille, prénom, `id` (comme `/authors` tri `name`).
 - **D-10.6-5** Pas de repli sur le jsonb pour les productions non converties : seules les productions liées par le pivot sont filtrées (après la bascule 9.7, toutes le sont).
@@ -100,7 +100,7 @@ afin de retrouver toutes les productions d'un auteur (FR5, D12, D28, flux 5).
 - [x] [Review][Patch] Espace [keyboard.ts, FilterSidebar.tsx, FilterChip.tsx] — `spaceToggle` : répétition avalée sans nouvelle visite, modificateurs laissés au navigateur ; appliqué aussi à `FilterChip` ; test de comportement.
 - [x] [Review][Patch] Valeurs `author` ignorées recopiées [search_query.ts, productions.tsx, FilterSidebar.tsx, FilterBar.tsx] — `withActiveAuthors(search, activeFilters.author)` reconstruit les paramètres `author` avant bascule, pagination, tri et recherche.
 - [x] [Review][Defer] Facette auteur non bornée → `deferred-work.md`.
-- [ ] [Review][PO] D-10.6-2 (« Effacer filtres » retire `author`) : à confirmer par Aurélien.
+- [x] [Review][PO] D-10.6-2 : tranchée le 2026-11-21 — « Effacer filtres » conserve le filtre auteur.
 
 ### Références
 
@@ -151,7 +151,7 @@ Claude Opus 5.5 (claude-opus-5-5)
 
 ## Questions ouvertes (non bloquantes, défauts retenus)
 
-- AC « Effacer filtres … conserve le paramètre `author` » : lu comme « le prend en compte » ; « Effacer filtres » retire `author` (D-10.6-2). À confirmer par Aurélien.
+- AC « Effacer filtres … conserve le paramètre `author` » : appliqué tel quel après décision d'Aurélien (2026-11-21, D-10.6-2 amendée).
 - Les productions non converties (noms seulement dans le jsonb) ne sont plus filtrables par auteur (D-10.6-5) ; sans objet après `authors:apply` + `verify` à 100 %.
 - Faut-il un lien « Toutes ses productions » (`/productions?author=<slug>`) sur le profil ? Non prévu par les epics.
 

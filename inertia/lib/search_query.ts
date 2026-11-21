@@ -121,10 +121,16 @@ export function toggleFilter(search: string, dimension: FilterDimension, value: 
   return toQueryString(params)
 }
 
-/** Retire toutes les dimensions de filtre + `page`. Conserve `q`. */
-export function clearFilters(search: string): string {
+/**
+ * « Effacer les filtres » : retire les dimensions de filtre + `page`, conserve `q` et le
+ * filtre auteur (la vue « productions de cet auteur » survit, D-10.6-2 amendée le
+ * 2026-11-21). `includeAuthor` retire aussi `author` (sortie de l'état vide).
+ */
+export function clearFilters(search: string, { includeAuthor = false } = {}): string {
   const params = parse(search)
-  for (const dimension of FILTER_DIMENSIONS) params.delete(dimension)
+  for (const dimension of FILTER_DIMENSIONS) {
+    if (dimension !== 'author' || includeAuthor) params.delete(dimension)
+  }
   params.delete('page')
   return toQueryString(params)
 }
@@ -155,6 +161,13 @@ export function setPage(search: string, page: number): string {
 
 export function hasActiveFilters(activeFilters: ProductionFilters): boolean {
   return FILTER_DIMENSIONS.some((dimension) => (activeFilters[dimension]?.length ?? 0) > 0)
+}
+
+/** Un filtre que `clearFilters` retire est actif (toute dimension sauf `author`). */
+export function hasClearableFilters(activeFilters: ProductionFilters): boolean {
+  return FILTER_DIMENSIONS.some(
+    (dimension) => dimension !== 'author' && (activeFilters[dimension]?.length ?? 0) > 0
+  )
 }
 
 export function isFilterActive(

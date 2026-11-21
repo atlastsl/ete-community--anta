@@ -12,7 +12,7 @@ import {
   matchesFacetQuery,
   toggleFilter,
   clearFilters,
-  hasActiveFilters,
+  hasClearableFilters,
   isFilterActive,
   withActiveAuthors,
   type FacetOption,
@@ -214,7 +214,7 @@ export default function FilterSidebar({
       >
         <div className="flex items-center justify-between">
           <h2 className="font-display text-base text-stone-900">{t('filters.title')}</h2>
-          {hasActiveFilters(activeFilters) && (
+          {hasClearableFilters(activeFilters) && (
             <Link
               href={`/productions${clearFilters(search)}`}
               {...SAME_PAGE}

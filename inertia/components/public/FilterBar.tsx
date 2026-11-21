@@ -7,7 +7,7 @@ import {
   facetOptions,
   toggleFilter,
   clearFilters,
-  hasActiveFilters,
+  hasClearableFilters,
   isFilterActive,
   withActiveAuthors,
   type Facets,
@@ -65,7 +65,7 @@ export default function FilterBar({
           </div>
         ))}
 
-        {hasActiveFilters(activeFilters) && (
+        {hasClearableFilters(activeFilters) && (
           <Link
             href={`/productions${clearFilters(listingSearch)}`}
             preserveState

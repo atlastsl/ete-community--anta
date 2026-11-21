@@ -20,6 +20,7 @@ import {
   setPage,
   clearFilters,
   hasActiveFilters,
+  hasClearableFilters,
   withActiveAuthors,
   type Facets,
   type ProductionFilters,
@@ -128,9 +129,12 @@ export default function Productions({
               <p className="text-stone-500">
                 {q ? t('productions.no_results_for', { term: q }) : t('productions.no_results')}
               </p>
+              {/* Le filtre auteur reste, sauf s'il est le seul : il faut alors une sortie. */}
               {hasActiveFilters(activeFilters) && (
                 <Link
-                  href={`/productions${clearFilters(search)}`}
+                  href={`/productions${clearFilters(search, {
+                    includeAuthor: !hasClearableFilters(activeFilters),
+                  })}`}
                   className="mt-3 inline-block text-sm text-green-700 hover:underline"
                 >
                   {t('productions.reset_filters')}

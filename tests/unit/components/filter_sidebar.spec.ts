@@ -69,6 +69,21 @@ test.group('FilterSidebar | facette auteur (10.6)', () => {
     }
   })
 
+  test('« Effacer les filtres » : visible seulement si un filtre effaçable (hors auteur) est actif', ({
+    assert,
+  }) => {
+    // D-10.6-2 amendée (2026-11-21) : le filtre auteur survit à « Effacer les filtres ».
+    for (const source of [sidebar, filterBar]) {
+      assert.include(source, '{hasClearableFilters(activeFilters) && (')
+      assert.notInclude(source, 'hasActiveFilters(')
+    }
+  })
+
+  test('état vide : la sortie garde l’auteur, sauf s’il est le seul filtre actif', ({ assert }) => {
+    assert.include(productionsPage, '{hasActiveFilters(activeFilters) && (')
+    assert.include(productionsPage, 'includeAuthor: !hasClearableFilters(activeFilters)')
+  })
+
   test('FilterBar (mode listing) lit la même forme de facette', ({ assert }) => {
     assert.include(filterBar, 'facetOptions(facets, dim')
     assert.include(filterBar, 'label={option.label}')

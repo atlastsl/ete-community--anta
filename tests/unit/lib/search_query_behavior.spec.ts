@@ -16,7 +16,9 @@ type SearchQueryModule = {
   ) => FacetOption[]
   matchesFacetQuery: (label: string, query: string) => boolean
   toggleFilter: (search: string, dimension: string, value: string) => string
-  clearFilters: (search: string) => string
+  clearFilters: (search: string, options?: { includeAuthor?: boolean }) => string
+  hasActiveFilters: (active: Record<string, string[]>) => boolean
+  hasClearableFilters: (active: Record<string, string[]>) => boolean
   setPage: (search: string, page: number) => string
   setSort: (search: string, value: string) => string
   withActiveAuthors: (search: string, authors: string[]) => string
@@ -89,7 +91,30 @@ test.group('search_query | facette auteur par slug (10.6)', () => {
     const { setPage, setSort, clearFilters } = await load()
     assert.equal(setPage('?author=a-b&author=c-d', 2), '?author=a-b&author=c-d&page=2')
     assert.equal(setSort('?author=a-b&page=2', 'views'), '?author=a-b&sort=views')
-    assert.equal(clearFilters('?q=x&author=a-b&category=Livre&page=2'), '?q=x')
+    // D-10.6-2 amendée (2026-11-21) : « Effacer les filtres » garde la vue de l'auteur.
+    assert.equal(
+      clearFilters('?q=x&author=a-b&author=c-d&category=Livre&page=2'),
+      '?q=x&author=a-b&author=c-d'
+    )
+    assert.equal(clearFilters('?author=a-b&category=Livre', { includeAuthor: true }), '')
+  })
+
+  test('hasClearableFilters : le filtre auteur seul ne rend rien effaçable', async ({ assert }) => {
+    const { hasActiveFilters, hasClearableFilters } = await load()
+    const none = {
+      category: [],
+      domain: [],
+      subdomain: [],
+      author: [],
+      language: [],
+      country: [],
+      license: [],
+    }
+    const authorOnly = { ...none, author: ['a-b'] }
+    assert.isTrue(hasActiveFilters(authorOnly))
+    assert.isFalse(hasClearableFilters(authorOnly))
+    assert.isTrue(hasClearableFilters({ ...authorOnly, language: ['fr'] }))
+    assert.isFalse(hasClearableFilters(none))
   })
 })
 
