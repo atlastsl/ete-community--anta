@@ -71,6 +71,10 @@ export interface ApiDefinition {
       confirmConsent: typeof routes['admin.authors.confirm-consent']
       withdrawConsent: typeof routes['admin.authors.withdraw-consent']
     }
+    featured: typeof routes['admin.featured'] & {
+      candidates: typeof routes['admin.featured.candidates']
+      update: typeof routes['admin.featured.update']
+    }
     stats: typeof routes['admin.stats']
     users: typeof routes['admin.users'] & {
       create: typeof routes['admin.users.create']

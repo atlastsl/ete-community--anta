@@ -146,8 +146,8 @@
 ## Deferred from: code review of 11-1-vignette-d-une-production-dans-le-panel-admin (2026-11-21)
 
 - **Erreurs serveur de `FileUploader` jamais affichées** : `files_controller.ts` utilise `session.flashErrors` (sac `errorsBag`), or seul `inputErrorsBag` devient la prop Inertia `errors` (`@adonisjs/inertia`, `getValidationErrors`) → `props.errors.file` reste vide (MIME falsifié, fichier absent). Corriger comme `thumbnails_controller.ts` (`flashValidationErrors`) dans une story de l'Epic 4/11.
-- **Envois simultanés de vignettes (11.4)** : Inertia annule la visite synchrone en cours ; `FeaturedSlot` doit utiliser `async: true` ou un verrou « occupé » au niveau de la page.
-- **Aperçu du poster vidéo dans `ThumbnailField` (11.3)** : prop poster + mention « Image extraite de la vidéo » (DESIGN.md).
+- ~~**Envois simultanés de vignettes (11.4)**~~ — **résolu** en 11.4 : verrou de page (`onBusyChange` de `ThumbnailField`, D-11.4-1).
+- ~~**Aperçu du poster vidéo dans `ThumbnailField` (11.3)**~~ — **résolu** en 11.3 (`posterPreviewUrl`), monté par `FeaturedSlot` en 11.4.
 
 ## Deferred from: dev of 11-2-diffusion-publique-des-images-de-la-banniere (2026-11-21)
 
@@ -158,3 +158,7 @@
 ## Deferred from: code review of 11-3-image-extraite-des-videos-hebergees (2026-11-21)
 
 - **Plafond mémoire d'ffmpeg** : l'extraction est bornée en temps (20 s, `SIGKILL`), en threads (`-threads 1`) et en taille d'image (réduction à 1600×900 minimum couvrant), mais pas en mémoire ; une vidéo malveillante pourrait faire grimper la RSS du décodeur. À poser au niveau du conteneur (`mem_limit` / `deploy.resources.limits.memory` dans `compose.yaml`) ou par processus (`prlimit --as`), selon la mémoire du VPS de production (8.6).
+
+## Deferred from: dev of 11-4-page-admin-a-la-une (2026-11-21)
+
+- **Suppression de la vidéo d'une production à la une sans vignette** : `FilesController.destroy` ne vérifie pas la règle FR50 ; la production reste à la une sans image (question PO de 11.4). Bloquer comme le retrait de vignette (`FeaturedService.assertThumbnailRemovable`) si le PO le souhaite.

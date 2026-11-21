@@ -12,6 +12,7 @@ import ImageService, {
   type ImageVariant,
 } from '#services/image_service'
 import ThumbnailService from '#services/thumbnail_service'
+import FeaturedService, { FeaturedError } from '#services/featured_service'
 import { thumbnailValidator } from '#validators/admin/thumbnail_validator'
 
 /** UUID guard: a non-UUID id passed to `where` would make Postgres throw (500). */
@@ -78,8 +79,14 @@ export default class ThumbnailsController {
 
     let removed: boolean
     try {
-      removed = await ThumbnailService.remove(production)
+      // FR50 (Story 11.4): checked inside the locked transaction of the removal.
+      removed = await ThumbnailService.remove(production, {
+        guard: (trx) => FeaturedService.assertThumbnailRemovable(production.id, trx),
+      })
     } catch (error) {
+      if (error instanceof FeaturedError) {
+        return this.fail(session, response, 'required_for_featured')
+      }
       return this.storageFailure(error, production.id, session, response)
     }
     if (removed) {
@@ -103,7 +110,7 @@ export default class ThumbnailsController {
   private fail(
     session: HttpContext['session'],
     response: HttpContext['response'],
-    code: 'not_found' | 'storage'
+    code: 'not_found' | 'storage' | 'required_for_featured'
   ) {
     // Flashed like a validation error (`inputErrorsBag`): the only bag shared as the Inertia
     // `errors` prop, so the field's visit gets it in `onError` (`flashErrors` is not shared).

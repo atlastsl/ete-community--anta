@@ -9,6 +9,7 @@ export const controllers = {
     Auth: () => import('#controllers/admin/auth_controller'),
     Authors: () => import('#controllers/admin/authors_controller'),
     Dashboard: () => import('#controllers/admin/dashboard_controller'),
+    Featured: () => import('#controllers/admin/featured_controller'),
     Files: () => import('#controllers/admin/files_controller'),
     Links: () => import('#controllers/admin/links_controller'),
     Productions: () => import('#controllers/admin/productions_controller'),

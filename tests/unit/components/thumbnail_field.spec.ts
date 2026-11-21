@@ -83,7 +83,11 @@ test.group('ThumbnailField | image extraite de la vidéo (11.3)', () => {
     assert.include(field, 'posterPreviewUrl?: string | null')
     assert.include(field, "t('thumbnail.extracted')")
     // La vignette prime ; le poster ne s'affiche que sans vignette.
-    assert.match(field, /const showPoster =\s*!hasThumbnail && posterPreviewUrl !== null/)
+    // 11.4 : aperçu masquable (`showPreview`), même règle sinon.
+    assert.match(
+      field,
+      /const showPoster =\s*showPreview && !hasThumbnail && posterPreviewUrl !== null/
+    )
     // Échec de chargement du poster : la figure et sa légende restent, avec le repli (revue 11.3).
     assert.include(field, 'const posterLoaded = showPoster && failedSrc !== posterPreviewUrl')
     assert.isAtLeast(field.split("t('thumbnail.preview_unavailable')").length - 1, 2)
@@ -98,5 +102,19 @@ test.group('ThumbnailField | image extraite de la vidéo (11.3)', () => {
     const en = JSON.parse(read('inertia/locales/admin/en.json'))
     assert.equal(fr.thumbnail.extracted, 'Image extraite de la vidéo')
     assert.equal(en.thumbnail.extracted, 'Frame extracted from the video')
+  })
+
+  test('11.4 : verrou de page signalé avant la visite, aperçu masquable', ({ assert }) => {
+    assert.include(field, 'onBusyChange?: (busy: boolean) => void')
+    assert.include(field, 'showPreview = true')
+    // Signalé avant `router.post` / `router.delete` : la page ignore ses propres visites.
+    assert.isBelow(field.indexOf('onBusyChange?.(true)'), field.indexOf('router.post('))
+    assert.isAtLeast(field.split('onBusyChange?.(true)').length - 1, 2)
+    assert.isAtLeast(field.split('onBusyChange?.(false)').length - 1, 2)
+    assert.include(field, '{showPreview && hasThumbnail && (')
+    assert.include(
+      field,
+      'const showPoster = showPreview && !hasThumbnail && posterPreviewUrl !== null'
+    )
   })
 })

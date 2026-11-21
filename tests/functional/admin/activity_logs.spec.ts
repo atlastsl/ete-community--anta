@@ -41,8 +41,12 @@ test.group('Admin activity logs (7.3)', (group) => {
     const props = extractProps(response.text())
     assert.properties(props, ['logs', 'pagination', 'admins', 'actionTypes'])
     assert.equal(props.pagination.perPage, 20)
-    assert.lengthOf(props.actionTypes, 9)
-    assert.includeMembers(props.actionTypes, ['consent_confirm', 'consent_withdraw'])
+    assert.lengthOf(props.actionTypes, 10)
+    assert.includeMembers(props.actionTypes, [
+      'consent_confirm',
+      'consent_withdraw',
+      'featured_update',
+    ])
   })
 
   test('entrée auteur → resourceName issu de metadata ; null sans metadata', async ({

@@ -140,6 +140,11 @@ router
         router
           .post('authors/:id/withdraw-consent', [controllers.admin.Authors, 'withdrawConsent'])
           .as('admin.authors.withdraw-consent')
+        router
+          .get('featured/candidates', [controllers.admin.Featured, 'candidates'])
+          .as('admin.featured.candidates')
+        router.get('featured', [controllers.admin.Featured, 'index']).as('admin.featured')
+        router.put('featured', [controllers.admin.Featured, 'update']).as('admin.featured.update')
         router.get('stats', [controllers.admin.Dashboard, 'stats']).as('admin.stats')
 
         // Sous-groupe super_admin uniquement

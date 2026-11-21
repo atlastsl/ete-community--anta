@@ -29,6 +29,16 @@ type Props = {
   posterPreviewUrl?: string | null
   /** Called after a successful upload or removal (the page props are already refreshed). */
   onChange?: () => void
+  /**
+   * Page-level lock (Story 11.4, D-11.4-1): `true` right **before** this field starts a visit,
+   * `false` once it is over (the other fields, the slot actions and the save wait).
+   */
+  onBusyChange?: (busy: boolean) => void
+  /**
+   * `false`: no preview (thumbnail or extracted frame), only the actions, help, progress and
+   * errors — the featured slot shows the image itself (D-11.4-10).
+   */
+  showPreview?: boolean
   disabled?: boolean
 }
 
@@ -74,6 +84,8 @@ export default function ThumbnailField({
   hasThumbnail = !!previewUrl,
   posterPreviewUrl = null,
   onChange,
+  onBusyChange,
+  showPreview = true,
   disabled = false,
 }: Props) {
   const { t } = useTranslation()
@@ -90,9 +102,9 @@ export default function ThumbnailField({
   const helpId = `${id}-help`
   const errorId = `${id}-error`
   const describedBy = error ? `${helpId} ${errorId}` : helpId
-  const showPreview = hasThumbnail && previewUrl !== null && failedSrc !== previewUrl
+  const thumbnailLoaded = hasThumbnail && previewUrl !== null && failedSrc !== previewUrl
   // The figure and its caption stay when the poster fails to load (placeholder instead).
-  const showPoster = !hasThumbnail && posterPreviewUrl !== null
+  const showPoster = showPreview && !hasThumbnail && posterPreviewUrl !== null
   const posterLoaded = showPoster && failedSrc !== posterPreviewUrl
 
   function resetInput() {
@@ -109,6 +121,7 @@ export default function ThumbnailField({
     }
     setError(null)
     const { trace, stop } = traceVisit()
+    onBusyChange?.(true)
     router.post(
       urlFor('admin.productions.thumbnail.store', { productionId }),
       { thumbnail: file },
@@ -135,6 +148,7 @@ export default function ThumbnailField({
           stop()
           setProgress(null)
           resetInput()
+          onBusyChange?.(false)
           settle(trace, 'thumbnail.uploaded')
         },
       }
@@ -158,6 +172,7 @@ export default function ThumbnailField({
     if (busy) return
     setError(null)
     const { trace, stop } = traceVisit()
+    onBusyChange?.(true)
     router.delete(urlFor('admin.productions.thumbnail.destroy', { productionId }), {
       preserveState: true,
       preserveScroll: true,
@@ -177,6 +192,7 @@ export default function ThumbnailField({
       onFinish: () => {
         stop()
         setRemoving(false)
+        onBusyChange?.(false)
         settle(trace, 'thumbnail.removed')
       },
     })
@@ -203,9 +219,9 @@ export default function ThumbnailField({
       )}
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-        {hasThumbnail && (
+        {showPreview && hasThumbnail && (
           <div className="aspect-video w-full shrink-0 overflow-hidden rounded-md bg-stone-100 sm:w-48">
-            {showPreview ? (
+            {thumbnailLoaded ? (
               <img
                 src={previewUrl!}
                 alt=""

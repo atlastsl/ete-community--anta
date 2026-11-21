@@ -270,6 +270,24 @@ const routes = {
     tokens: [{"old":"/admin/authors/:id/withdraw-consent","type":0,"val":"admin","end":""},{"old":"/admin/authors/:id/withdraw-consent","type":0,"val":"authors","end":""},{"old":"/admin/authors/:id/withdraw-consent","type":1,"val":"id","end":""},{"old":"/admin/authors/:id/withdraw-consent","type":0,"val":"withdraw-consent","end":""}],
     types: placeholder as Registry['admin.authors.withdraw-consent']['types'],
   },
+  'admin.featured.candidates': {
+    methods: ["GET","HEAD"],
+    pattern: '/admin/featured/candidates',
+    tokens: [{"old":"/admin/featured/candidates","type":0,"val":"admin","end":""},{"old":"/admin/featured/candidates","type":0,"val":"featured","end":""},{"old":"/admin/featured/candidates","type":0,"val":"candidates","end":""}],
+    types: placeholder as Registry['admin.featured.candidates']['types'],
+  },
+  'admin.featured': {
+    methods: ["GET","HEAD"],
+    pattern: '/admin/featured',
+    tokens: [{"old":"/admin/featured","type":0,"val":"admin","end":""},{"old":"/admin/featured","type":0,"val":"featured","end":""}],
+    types: placeholder as Registry['admin.featured']['types'],
+  },
+  'admin.featured.update': {
+    methods: ["PUT"],
+    pattern: '/admin/featured',
+    tokens: [{"old":"/admin/featured","type":0,"val":"admin","end":""},{"old":"/admin/featured","type":0,"val":"featured","end":""}],
+    types: placeholder as Registry['admin.featured.update']['types'],
+  },
   'admin.stats': {
     methods: ["GET","HEAD"],
     pattern: '/admin/stats',

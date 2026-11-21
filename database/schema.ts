@@ -103,6 +103,19 @@ export class AuthorSchema extends BaseModel {
   declare updatedAt: DateTime | null
 }
 
+export class FeaturedProductionSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdById', 'position', 'productionId'] as const
+  $columns = FeaturedProductionSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdById: string | null
+  @column({ isPrimary: true })
+  declare position: number
+  @column()
+  declare productionId: string
+}
+
 export class ProductionAuthorSchema extends BaseModel {
   static $columns = ['authorId', 'position', 'productionId'] as const
   $columns = ProductionAuthorSchema.$columns

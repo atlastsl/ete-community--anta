@@ -51,12 +51,19 @@ export default class ThumbnailService {
   /**
    * Removes the thumbnail: `thumbnail_key` set to NULL, then the variants deleted after the
    * commit (best-effort). Returns `false` (nothing written) when there was no thumbnail.
+   * `guard` runs inside the transaction once the row is locked and may refuse by throwing
+   * (featured production that requires its thumbnail, Story 11.4: `FeaturedService.
+   * assertThumbnailRemovable`); nothing is written then.
    */
-  static async remove(production: Production): Promise<boolean> {
+  static async remove(
+    production: Production,
+    options: { guard?: (trx: TransactionClientContract) => Promise<void> } = {}
+  ): Promise<boolean> {
     const previous = await db.transaction(async (trx) => {
       const locked = await this.lock(production.id, trx)
       const key = locked.thumbnailKey
       if (key === null) return null
+      if (options.guard) await options.guard(trx)
       locked.thumbnailKey = null
       await locked.save()
       return key

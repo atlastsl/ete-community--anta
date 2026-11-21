@@ -39,6 +39,19 @@ test.group('AdminLayout | structure', () => {
     assert.isBelow(authors, statistics)
   })
 
+  test('entrée « À la une » (Star) juste après Auteurs, visible pour tous les admins (11.4)', ({
+    assert,
+  }) => {
+    const src = adminLayoutSource
+    const authors = src.indexOf("labelKey: 'nav.authors'")
+    const featured = src.indexOf(
+      "{ labelKey: 'nav.featured', href: '/admin/featured', icon: Star }"
+    )
+    const statistics = src.indexOf("labelKey: 'nav.statistics'")
+    assert.isAbove(featured, authors)
+    assert.isBelow(featured, statistics)
+  })
+
   test("affiche un message d'avertissement sur mobile (< lg)", ({ assert }) => {
     assert.include(adminLayoutSource, 'lg:hidden', 'doit avoir un bloc lg:hidden pour mobile')
     assert.include(
