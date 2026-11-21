@@ -4,6 +4,7 @@ import logger from '@adonisjs/core/services/logger'
 import ProductionStatus from '#enums/production_status'
 import FileStorageService from '#services/file_storage_service'
 import ThumbnailService from '#services/thumbnail_service'
+import PosterService from '#services/poster_service'
 import Production from '#models/production'
 import { slugify } from '#helpers/slug'
 
@@ -163,8 +164,40 @@ export default class ProductionService {
         )
       }
     }
-    await production.delete()
-    // Variantes de la vignette (Story 11.1) : après la suppression, best-effort (journalisé).
-    await ThumbnailService.discard(production.thumbnailKey)
+    // Clés réellement supprimées (`RETURNING`), pas celles lues plus haut : une vignette, un
+    // poster ou un fichier enregistrés entre-temps ne restent pas orphelins dans R2 (revue
+    // 11.3). Une écriture concurrente verrouille la ligne : le DELETE attend puis renvoie la
+    // version écrite ; une écriture postérieure ne trouve plus de ligne (poster jeté par
+    // `PosterService.attach`).
+    const deleted = await db.transaction(async (trx) => {
+      const files = await trx.rawQuery(
+        'DELETE FROM production_files WHERE production_id = ? RETURNING file_key, poster_key',
+        [production.id]
+      )
+      const rows = await trx.rawQuery(
+        'DELETE FROM productions WHERE id = ? RETURNING thumbnail_key',
+        [production.id]
+      )
+      return {
+        files: files.rows as { file_key: string; poster_key: string | null }[],
+        thumbnailKey: (rows.rows[0]?.thumbnail_key ?? null) as string | null,
+      }
+    })
+    production.$isDeleted = true
+
+    const alreadyDeleted = new Set(production.files.map((file) => file.fileKey))
+    for (const file of deleted.files) {
+      if (alreadyDeleted.has(file.file_key)) continue
+      await FileStorageService.delete(file.file_key).catch((error) =>
+        logger.error(
+          { err: error, fileKey: file.file_key },
+          'R2 delete failed during production delete'
+        )
+      )
+    }
+    // Variantes de la vignette (Story 11.1) et images extraites des vidéos (Story 11.3) :
+    // après la suppression, best-effort (journalisé).
+    await ThumbnailService.discard(deleted.thumbnailKey)
+    for (const file of deleted.files) await PosterService.discard(file.poster_key)
   }
 }

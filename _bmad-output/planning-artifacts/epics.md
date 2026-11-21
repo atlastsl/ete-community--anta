@@ -29,6 +29,8 @@ editHistory:
     changes: 'Corrections du rapport implementation-readiness-report-2026-11-16.md : 9.7 (colonne authors plus écrite depuis la requête, seeder de démo avec auteurs et pivot, photoUrl du combobox), 9.6 (COALESCE, doublons dans une production), 9.1 (alias #helpers), 11.3 (poster après création de la ligne), 11.5 (recompactage DELETE + INSERT, journal après commit), 12.5 (stats de démo datées), FR5 précisée (D12).'
   - date: '2026-11-18'
     changes: 'Décision D37 (amende D1/D2, Aurélien) : vignette réservée aux productions à la une. FR50 et D37 dans l inventaire, Epic 11 (11.1 ThumbnailField sur la page « À la une » seulement, sans og.jpg ; 11.2 recentrée sur /media et srcset de la bannière, cartes sans image, pas d og:image de production ; 11.3, 11.4, 11.7), 12.2, 12.4, 13.2, 13.4, couverture FR36/FR50. Toujours 33 stories.'
+  - date: '2026-11-21'
+    changes: 'Story 11.3 amendée (revue) : rattrapage sur copie temporaire du flux R2, fichier rempli entre-temps compté « déjà traité » (D-11.3-1) ; image de la bannière = premier video/mp4 pourvu d un poster (D-11.3-2).'
 ---
 
 # anta - Epic Breakdown
@@ -2568,7 +2570,7 @@ Afin de garantir qu'aucun profil non consenti n'est exposé.
 
 Les administrateurs illustrent les productions par une vignette (ou l'image extraite d'une vidéo hébergée) et mettent jusqu'à 3 productions à la une ; les visiteurs voient la bannière à la une en tête de l'accueil. La vignette n'apparaît que dans la bannière (D37).
 
-**Image de la bannière (P2.1)** : `productions.thumbnail_key` sinon `poster_key` du premier fichier `video/mp4` (ordre de création) ; aucune largeur/hauteur stockée (variantes à dimensions fixes).
+**Image de la bannière (P2.1)** : `productions.thumbnail_key` sinon `poster_key` du premier fichier `video/mp4` pourvu d'un poster (ordre de création ; amendé le 2026-11-21, D-11.3-2) ; aucune largeur/hauteur stockée (variantes à dimensions fixes).
 
 ### Story 11.1 : Vignette d'une production dans le panel admin
 
@@ -2668,7 +2670,7 @@ Afin de pouvoir la mettre à la une sans préparer d'image (FR50, D10).
 
 **Given** la commande `node ace thumbnails:extract-video-frames [--dry-run]`
 **When** elle est exécutée
-**Then** elle traite les vidéos hébergées sans poster (ffmpeg lit l'URL signée R2 par requêtes de plage), affiche un rapport (traitées, échecs) et n'écrit rien en `--dry-run`
+**Then** elle traite les vidéos hébergées sans poster (flux R2 copié dans un fichier temporaire supprimé après usage, ffmpeg limité aux fichiers locaux — amendé le 2026-11-21, D-11.3-1 ; un fichier rempli entre-temps est compté « déjà traité »), affiche un rapport (traitées, échecs) et n'écrit rien en `--dry-run`
 **And** **porte manuelle** : son exécution réelle (écriture en base partagée et dans R2) a lieu une seule fois, sur le VPS de dev en `atlas` via `doppler run`, **avec l'accord explicite d'Aurélien**, `--dry-run` d'abord ; le résultat (comptages) est consigné dans la story
 
 **Notes techniques :** P2.5 « Image extraite », P2-09 ; règle d'image affichée de P2.1. i18n admin `thumbnail.extracted`.

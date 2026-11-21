@@ -3,6 +3,7 @@ import { DateTime } from 'luxon'
 import db from '@adonisjs/lucid/services/db'
 import Author from '#models/author'
 import Production from '#models/production'
+import ProductionFile from '#models/production_file'
 import MediaService from '#services/media_service'
 import { isStorageNotFound } from '#controllers/public/media_controller'
 
@@ -183,6 +184,100 @@ test.group('MediaService | productionImageUrl', () => {
     }
     assert.isNull(MediaService.productionImageUrl({ status: 'published', thumbnailKey: null }))
   })
+
+  // Story 11.3 : repli sur l'image extraite (P2.1, D-11.3-2).
+  const at = (minutes: number) => DateTime.fromISO('2026-01-01T00:00:00Z').plus({ minutes })
+  const video = (
+    id: string,
+    posterKey: string | null,
+    minutes: number,
+    mimeType = 'video/mp4'
+  ) => ({
+    id,
+    mimeType,
+    posterKey,
+    createdAt: at(minutes),
+  })
+
+  test('sans vignette : poster du premier MP4 pourvu d’un poster (ordre de création)', ({
+    assert,
+  }) => {
+    const files = [
+      video('b', `posters/b/${TOKEN}`, 5),
+      video('a', null, 0),
+      video('p', `posters/p/${TOKEN}`, -5, 'application/pdf'),
+      video('c', `posters/c/${OTHER}`, 2),
+    ]
+    assert.equal(
+      MediaService.productionImageUrl({ status: 'published', thumbnailKey: null, files }),
+      `/media/posters/c/${OTHER}`
+    )
+  })
+
+  test('la vignette prime ; la retirer fait réapparaître le poster sans retraitement', ({
+    assert,
+  }) => {
+    const files = [video('c', `posters/c/${OTHER}`, 0)]
+    const thumbnailKey = `thumbnails/${ID}/${TOKEN}`
+    assert.equal(
+      MediaService.productionImageUrl({ status: 'published', thumbnailKey, files }),
+      `/media/${thumbnailKey}`
+    )
+    assert.equal(
+      MediaService.productionImageUrl({ status: 'published', thumbnailKey: null, files }),
+      `/media/posters/c/${OTHER}`
+    )
+  })
+
+  test('null : non publiée (même avec poster), aucun MP4 pourvu d’un poster', ({ assert }) => {
+    const files = [video('c', `posters/c/${OTHER}`, 0)]
+    for (const status of ['draft', 'unpublished'] as const) {
+      assert.isNull(MediaService.productionImageUrl({ status, thumbnailKey: null, files }))
+    }
+    assert.isNull(
+      MediaService.productionImageUrl({
+        status: 'published',
+        thumbnailKey: null,
+        files: [video('a', null, 0), video('p', `posters/p/${TOKEN}`, 1, 'audio/mpeg')],
+      })
+    )
+  })
+
+  test('posterUrl : variante w1600 du poster, null sans poster', ({ assert }) => {
+    assert.equal(
+      MediaService.posterUrl({ posterKey: `posters/${ID}/${TOKEN}` }),
+      `/media/posters/${ID}/${TOKEN}/w1600.webp`
+    )
+    assert.isNull(MediaService.posterUrl({ posterKey: null }))
+  })
+})
+
+test.group('MediaService | parsePosterKey (11.3)', () => {
+  test('clé valide → id du fichier, préfixe, variante 16:9, webp', ({ assert }) => {
+    assert.deepEqual(MediaService.parsePosterKey(['posters', ID, TOKEN, 'w800.webp']), {
+      fileId: ID,
+      prefix: `posters/${ID}/${TOKEN}`,
+      key: `posters/${ID}/${TOKEN}/w800.webp`,
+      contentType: 'image/webp',
+    })
+  })
+
+  test('clés refusées', ({ assert }) => {
+    const refused: string[][] = [
+      [],
+      ['posters'],
+      ['thumbnails', ID, TOKEN, 'w400.webp'],
+      ['posters', 'not-a-uuid', TOKEN, 'w400.webp'],
+      ['posters', ID, 'short', 'w400.webp'],
+      ['posters', ID, TOKEN, 'w128.webp'],
+      ['posters', ID, TOKEN, 'og.jpg'],
+      ['posters', ID, TOKEN, '..'],
+      ['posters', ID, TOKEN, 'w400.webp', 'extra'],
+    ]
+    for (const segments of refused) {
+      assert.isNull(MediaService.parsePosterKey(segments), segments.join('/'))
+    }
+  })
 })
 
 test.group('MediaService | resolve (vignettes)', (group) => {
@@ -263,7 +358,11 @@ test.group('MediaService | resolve (vignettes)', (group) => {
 })
 
 test.group('MediaService | resolve sans requête pour une clé mal formée (revue 11.2)', (group) => {
-  const originals = { production: Production.query, author: Author.query }
+  const originals = {
+    production: Production.query,
+    author: Author.query,
+    file: ProductionFile.query,
+  }
   let queries = 0
   group.each.setup(() => {
     queries = 0
@@ -275,9 +374,14 @@ test.group('MediaService | resolve sans requête pour une clé mal formée (revu
       queries++
       return originals.author.apply(this, args as any)
     } as typeof Author.query
+    ProductionFile.query = function (this: typeof ProductionFile, ...args: any[]) {
+      queries++
+      return originals.file.apply(this, args as any)
+    } as typeof ProductionFile.query
     return () => {
       Production.query = originals.production
       Author.query = originals.author
+      ProductionFile.query = originals.file
     }
   })
 
@@ -290,7 +394,9 @@ test.group('MediaService | resolve sans requête pour une clé mal formée (revu
       ['thumbnails', ID, TOKEN, 'w128.webp'],
       ['thumbnails', ID, TOKEN, 'w400%2Ewebp'],
       ['thumbnails', ID, TOKEN, 'w400.webp', 'extra'],
-      ['posters', ID, TOKEN, 'w400.webp'],
+      ['posters', ID, TOKEN, 'w128.webp'],
+      ['posters', 'not-a-uuid', TOKEN, 'w400.webp'],
+      ['posters', ID, TOKEN, 'w400.webp', 'extra'],
       ['productions', ID, TOKEN, 'w400.webp'],
       ['authors', ID, TOKEN, 'w400.webp'],
     ]
@@ -303,6 +409,8 @@ test.group('MediaService | resolve sans requête pour une clé mal formée (revu
   test('témoin : une clé bien formée interroge la base', async ({ assert }) => {
     await MediaService.resolve(['thumbnails', ID, TOKEN, 'w400.webp'])
     assert.equal(queries, 1)
+    await MediaService.resolve(['posters', ID, TOKEN, 'w400.webp'])
+    assert.equal(queries, 2)
   })
 })
 

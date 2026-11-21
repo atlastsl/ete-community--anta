@@ -777,6 +777,7 @@
     "drop_hint": "ou glissez une image ici",
     "uploading": "Envoi de la vignette… {{percent}} %",
     "preview_unavailable": "Aperçu indisponible",
+    "extracted": "Image extraite de la vidéo",
     "uploaded": "Vignette enregistrée.",
     "removed": "Vignette retirée.",
     "errors": {

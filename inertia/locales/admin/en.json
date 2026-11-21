@@ -777,6 +777,7 @@
     "drop_hint": "or drop an image here",
     "uploading": "Uploading thumbnail… {{percent}}%",
     "preview_unavailable": "Preview unavailable",
+    "extracted": "Frame extracted from the video",
     "uploaded": "Thumbnail saved.",
     "removed": "Thumbnail removed.",
     "errors": {

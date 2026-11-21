@@ -5,8 +5,10 @@ import db from '@adonisjs/lucid/services/db'
 import drive from '@adonisjs/drive/services/main'
 import Author from '#models/author'
 import Production from '#models/production'
+import ProductionFile from '#models/production_file'
 import AuthorService from '#services/author_service'
 import ThumbnailService from '#services/thumbnail_service'
+import PosterService from '#services/poster_service'
 import ProductionAuthorService from '#services/production_author_service'
 
 // Noms fictifs uniquement (dépôt public). Octets factices : le contrôleur ne décode pas l'image.
@@ -665,5 +667,151 @@ test.group('Public media | X-Content-Type-Options', (group) => {
       assert.equal(refused.status, 404, url)
       assert.equal(refused.headers['x-content-type-options'], 'nosniff', url)
     }
+  })
+})
+
+// Story 11.3 — image extraite d'une vidéo hébergée : poster courant d'un fichier vidéo d'une
+// production publiée, même cache que les vignettes.
+async function createVideoFile(
+  production: Production,
+  options: { token?: string | null; mimeType?: string } = {}
+): Promise<ProductionFile> {
+  const file = await ProductionFile.create({
+    productionId: production.id,
+    fileKey: `productions/${production.id}/video-${sequence++}.mp4`,
+    originalName: 'video.mp4',
+    mimeType: options.mimeType ?? 'video/mp4',
+    sizeBytes: 10,
+    storageProvider: 'r2',
+  })
+  if (options.token !== null) {
+    file.posterKey = `posters/${file.id}/${options.token ?? TOKEN}`
+    await file.save()
+  }
+  return file
+}
+
+async function putPoster(prefix: string) {
+  const disk = drive.use('r2')
+  for (const key of PosterService.keys(prefix)) {
+    await disk.put(key, Buffer.from(`bytes of ${key}`), { contentType: 'image/webp' })
+  }
+}
+
+test.group('Public media | image extraite des vidéos (Story 11.3)', (group) => {
+  group.each.setup(async () => {
+    await db.beginGlobalTransaction()
+    return async () => {
+      drive.restore('r2')
+      await db.rollbackGlobalTransaction()
+    }
+  })
+
+  test('production publiée : 3 variantes en image/webp, cache d’un an immutable, ETag, HEAD', async ({
+    client,
+    assert,
+  }) => {
+    drive.fake('r2')
+    const production = await createProduction({ withThumbnail: false })
+    const file = await createVideoFile(production)
+    await putPoster(file.posterKey!)
+
+    for (const variant of ['w400.webp', 'w800.webp', 'w1600.webp']) {
+      const response = await client.get(`/media/${file.posterKey}/${variant}`)
+      response.assertStatus(200)
+      response.assertHeader('content-type', 'image/webp')
+      response.assertHeader('cache-control', YEAR)
+      assert.equal(
+        Buffer.from(response.response.body ?? response.text()).toString(),
+        `bytes of ${file.posterKey}/${variant}`
+      )
+    }
+    const first = await rawRequest(`/media/${file.posterKey}/w800.webp`)
+    assert.isString(first.headers['etag'])
+    const head = await rawRequest(`/media/${file.posterKey}/w800.webp`, 'HEAD')
+    assert.equal(head.status, 200)
+    assert.equal(head.body, '')
+  })
+
+  test('brouillon, dépubliée, ancienne clé, fichier supprimé, non vidéo → 404 no-store', async ({
+    assert,
+  }) => {
+    drive.fake('r2')
+    const draft = await createProduction({ status: 'draft', withThumbnail: false })
+    const unpublished = await createProduction({ status: 'unpublished', withThumbnail: false })
+    const published = await createProduction({ withThumbnail: false })
+    const draftFile = await createVideoFile(draft)
+    const unpublishedFile = await createVideoFile(unpublished)
+    const replaced = await createVideoFile(published, { token: OTHER_TOKEN })
+    const removed = await createVideoFile(published)
+    const pdf = await createVideoFile(published, { mimeType: 'application/pdf' })
+    const removedKey = removed.posterKey!
+    await removed.delete()
+    const oldKey = `posters/${replaced.id}/${TOKEN}`
+    for (const prefix of [
+      draftFile.posterKey!,
+      unpublishedFile.posterKey!,
+      oldKey,
+      removedKey,
+      pdf.posterKey!,
+    ]) {
+      await putPoster(prefix)
+      const response = await rawRequest(`/media/${prefix}/w400.webp`)
+      assert.equal(response.status, 404, prefix)
+      assert.equal(response.headers['cache-control'], 'no-store', prefix)
+      assert.equal(response.body, '', prefix)
+    }
+  })
+
+  test('variante inconnue, jeton d’un autre fichier, clé mal formée → 404', async ({ assert }) => {
+    drive.fake('r2')
+    const production = await createProduction({ withThumbnail: false })
+    const file = await createVideoFile(production)
+    const other = await createVideoFile(production, { token: OTHER_TOKEN })
+    await putPoster(file.posterKey!)
+    await putPoster(other.posterKey!)
+    const base = `/media/${file.posterKey}`
+    const paths = [
+      `${base}/w128.webp`,
+      `${base}/og.jpg`,
+      `${base}/w400.webp/extra`,
+      `/media/posters/${file.id}/${OTHER_TOKEN}/w400.webp`,
+      `/media/posters/${other.id}/${TOKEN}/w400.webp`,
+      `/media/posters/not-a-uuid/${TOKEN}/w400.webp`,
+      `/media/posters/${file.id}/short/w400.webp`,
+      `${base}/w400%2Ewebp`,
+      `/media/posters/${production.id}/${TOKEN}/w400.webp`,
+    ]
+    for (const path of paths) {
+      const response = await rawRequest(path)
+      assert.equal(response.status, 404, path)
+      assert.equal(response.headers['cache-control'], 'no-store', path)
+    }
+    const ok = await rawRequest(`${base}/w400.webp`)
+    assert.equal(ok.status, 200)
+    const otherOk = await rawRequest(`/media/${other.posterKey}/w400.webp`)
+    assert.equal(otherOk.status, 200)
+  })
+
+  test('page de détail : posterUrl du lecteur vidéo (w1600), null sans poster', async ({
+    client,
+    assert,
+  }) => {
+    const production = await createProduction({ withThumbnail: false })
+    const withPoster = await createVideoFile(production)
+    const withoutPoster = await createVideoFile(production, { token: null })
+
+    drive.fake('r2')
+    const response = await client.get(`/productions/${production.slug}`)
+    response.assertStatus(200)
+    const match = response.text().match(/data-page="([^"]*)"/)
+    const props = JSON.parse(match![1].replace(/&quot;/g, '"')).props
+    const files = props.production.files as {
+      id: string
+      posterUrl: string | null
+    }[]
+    const byId = new Map(files.map((file) => [file.id, file.posterUrl]))
+    assert.equal(byId.get(withPoster.id), `/media/${withPoster.posterKey}/w1600.webp`)
+    assert.isNull(byId.get(withoutPoster.id))
   })
 })

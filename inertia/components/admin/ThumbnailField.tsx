@@ -21,6 +21,12 @@ type Props = {
   previewUrl: string | null
   /** A thumbnail is saved (from `thumbnail_key`: true even when its URL could not be signed). */
   hasThumbnail?: boolean
+  /**
+   * Signed preview (`w800`) of the frame extracted from the production's hosted video
+   * (`PosterService.signedUrl` of `PosterService.displayed`, Story 11.3); shown only without
+   * a thumbnail, with the « Image extraite de la vidéo » caption (D10).
+   */
+  posterPreviewUrl?: string | null
   /** Called after a successful upload or removal (the page props are already refreshed). */
   onChange?: () => void
   disabled?: boolean
@@ -57,11 +63,16 @@ function traceVisit(): { trace: VisitTrace; stop: () => void } {
  * props, so several fields on one page do not show each other's errors. The success toast
  * comes from the visit too (the server flashes none). Only a request without any HTTP
  * response (`inertia:exception`) is a network failure: persistent error toast.
+ *
+ * Without a thumbnail, a hosted video's extracted frame is previewed with its caption
+ * (Story 11.3, D10); it cannot be removed (it follows the video), only covered by uploading
+ * a thumbnail (D-11.3-6).
  */
 export default function ThumbnailField({
   productionId,
   previewUrl,
   hasThumbnail = !!previewUrl,
+  posterPreviewUrl = null,
   onChange,
   disabled = false,
 }: Props) {
@@ -80,6 +91,9 @@ export default function ThumbnailField({
   const errorId = `${id}-error`
   const describedBy = error ? `${helpId} ${errorId}` : helpId
   const showPreview = hasThumbnail && previewUrl !== null && failedSrc !== previewUrl
+  // The figure and its caption stay when the poster fails to load (placeholder instead).
+  const showPoster = !hasThumbnail && posterPreviewUrl !== null
+  const posterLoaded = showPoster && failedSrc !== posterPreviewUrl
 
   function resetInput() {
     if (inputRef.current) inputRef.current.value = ''
@@ -206,6 +220,30 @@ export default function ThumbnailField({
               </span>
             )}
           </div>
+        )}
+
+        {showPoster && (
+          <figure className="w-full shrink-0 sm:w-48">
+            <div className="aspect-video overflow-hidden rounded-md bg-stone-100">
+              {posterLoaded ? (
+                <img
+                  src={posterPreviewUrl!}
+                  alt=""
+                  width={800}
+                  height={450}
+                  className="size-full object-cover"
+                  onError={() => setFailedSrc(posterPreviewUrl)}
+                />
+              ) : (
+                <span className="flex size-full items-center justify-center text-xs text-stone-500">
+                  {t('thumbnail.preview_unavailable')}
+                </span>
+              )}
+            </div>
+            <figcaption className="mt-1 text-xs text-stone-500">
+              {t('thumbnail.extracted')}
+            </figcaption>
+          </figure>
         )}
 
         <div className="min-w-0 flex-1">

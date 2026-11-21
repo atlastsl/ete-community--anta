@@ -7,6 +7,12 @@ export const IMAGE_MAX_BYTES = 5 * 1024 * 1024
 /** Decoding ceiling: larger images are refused before any pixel is processed. */
 export const IMAGE_MAX_PIXELS = 40_000_000
 /**
+ * Byte ceiling of a frame extracted from a hosted video (Story 11.3, D-11.3-3): the PNG comes
+ * from our own ffmpeg call, not from a user upload, and a 4K frame exceeds `IMAGE_MAX_BYTES`;
+ * the pixel ceiling still applies (an 8K frame is 33 Mpx).
+ */
+export const VIDEO_FRAME_MAX_BYTES = 64 * 1024 * 1024
+/**
  * Widest gap allowed between the source ratio and a target crop ratio: beyond it, the source
  * is first centre-cropped (same scale). `attention` scores the whole cover-resized image (a
  * 2×20000 PNG would be scored at 1200×12 000 000 px), and libvips refuses the affine transform
@@ -107,9 +113,17 @@ export default class ImageService {
     return this.render(input, AUTHOR_PHOTO_VARIANTS)
   }
 
-  /** Same validation and normalization, 16:9 variants (production thumbnail, video poster). */
+  /** Same validation and normalization, 16:9 variants (production thumbnail). */
   static async thumbnailVariants(input: string | Buffer): Promise<ImageVariant[]> {
     return this.render(input, THUMBNAIL_VARIANTS)
+  }
+
+  /**
+   * 16:9 variants of a frame extracted from a hosted video (Story 11.3): same profile as the
+   * thumbnail, byte ceiling `VIDEO_FRAME_MAX_BYTES` instead of the upload limit.
+   */
+  static async posterVariants(input: string | Buffer): Promise<ImageVariant[]> {
+    return this.render(input, THUMBNAIL_VARIANTS, VIDEO_FRAME_MAX_BYTES)
   }
 
   /**
@@ -120,9 +134,10 @@ export default class ImageService {
    */
   private static async render(
     input: string | Buffer,
-    variants: readonly VariantSpec[]
+    variants: readonly VariantSpec[],
+    maxBytes: number = IMAGE_MAX_BYTES
   ): Promise<ImageVariant[]> {
-    const oriented = await this.assertValid(input)
+    const oriented = await this.assertValid(input, maxBytes)
 
     const groups: VariantSpec[][] = []
     for (const variant of variants) {
@@ -190,11 +205,12 @@ export default class ImageService {
 
   /** Validates size, signature, format and pixel count; returns the auto-oriented size. */
   private static async assertValid(
-    input: string | Buffer
+    input: string | Buffer,
+    maxBytes: number
   ): Promise<{ width: number; height: number }> {
     const info = typeof input === 'string' ? await stat(input) : null
     const bytes = info ? info.size : (input as Buffer).length
-    if (bytes > IMAGE_MAX_BYTES) throw new ImageValidationError('photo_size')
+    if (bytes > maxBytes) throw new ImageValidationError('photo_size')
     if (!hasAcceptedSignature(await readHead(input))) throw new ImageValidationError('photo_type')
 
     let meta: Metadata

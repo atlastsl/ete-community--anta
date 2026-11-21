@@ -10,6 +10,7 @@ import LicenseStatus from '#enums/license_status'
 import ProductionStatus from '#enums/production_status'
 import SeoService from '#services/seo_service'
 import FileStorageService from '#services/file_storage_service'
+import MediaService from '#services/media_service'
 import StatsService from '#services/stats_service'
 import env from '#start/env'
 import ProductionCardTransformer from '#transformers/production_card_transformer'
@@ -180,6 +181,8 @@ export default class ProductionsController {
           mimeType: f.mimeType,
           sizeBytes: f.sizeBytes,
           url,
+          // Image extraite de la vidéo (Story 11.3) : attribut `poster` du lecteur.
+          posterUrl: MediaService.posterUrl(f),
           downloadUrl: `/productions/${production.slug}/files/${f.id}/download`,
         }
       })

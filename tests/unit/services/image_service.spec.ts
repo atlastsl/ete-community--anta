@@ -346,3 +346,28 @@ test.group('ImageService | ratios extrêmes (revue 11.1)', () => {
     // Wall-clock budget well above a loaded full suite; the unbounded path OOMs or takes far longer.
     .timeout(30_000)
 })
+
+test.group('ImageService | image extraite d’une vidéo (Story 11.3)', () => {
+  test('PNG > 5 Mo : refusé comme vignette, accepté comme poster (D-11.3-3), variantes 16:9', async ({
+    assert,
+  }) => {
+    const width = 1600
+    const height = 1200
+    const noise = Buffer.alloc(width * height * 3)
+    for (let i = 0; i < noise.length; i++) noise[i] = (i * 2654435761) >>> 24
+    const png = await sharp(noise, { raw: { width, height, channels: 3 } })
+      .png({ compressionLevel: 0 })
+      .toBuffer()
+    assert.isAbove(png.length, 5 * 1024 * 1024)
+
+    await assert.rejects(() => ImageService.thumbnailVariants(png), ImageValidationError)
+    const variants = await ImageService.posterVariants(png)
+    assert.deepEqual(
+      variants.map((variant) => variant.name),
+      ['w400.webp', 'w800.webp', 'w1600.webp']
+    )
+    const meta = await sharp(variants[2].body).metadata()
+    assert.equal(meta.width, 1600)
+    assert.equal(meta.height, 900)
+  }).timeout(30_000)
+})

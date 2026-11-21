@@ -154,3 +154,7 @@
 - ~~**Test « ratios extrêmes » d'`image_service.spec.ts` (11.1) instable sous charge**~~ — **résolu** à la revue de 11.2 : budgets 15 s + `.timeout(30_000)`.
 - **Cache `immutable` des vignettes** : une image dépubliée reste affichée depuis le cache navigateur (jusqu'à un an) chez qui l'a chargée — accepté (P2-10), information PO ; évolution possible : `max-age` plus court sans `immutable`.
 - **`sizes` de l'emplacement `lead` (11.6)** : l'image étirée de la bannière à 3 éléments (`lg:aspect-auto lg:flex-1`) n'est pas prise en compte → recalculer dans `FeaturedBanner`.
+
+## Deferred from: code review of 11-3-image-extraite-des-videos-hebergees (2026-11-21)
+
+- **Plafond mémoire d'ffmpeg** : l'extraction est bornée en temps (20 s, `SIGKILL`), en threads (`-threads 1`) et en taille d'image (réduction à 1600×900 minimum couvrant), mais pas en mémoire ; une vidéo malveillante pourrait faire grimper la RSS du décodeur. À poser au niveau du conteneur (`mem_limit` / `deploy.resources.limits.memory` dans `compose.yaml`) ou par processus (`prlimit --as`), selon la mémoire du VPS de production (8.6).

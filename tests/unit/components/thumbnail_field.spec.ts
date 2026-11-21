@@ -75,3 +75,28 @@ test.group('ThumbnailField (11.1)', () => {
     }
   })
 })
+
+test.group('ThumbnailField | image extraite de la vidéo (11.3)', () => {
+  test('sans vignette, aperçu du poster avec la mention « Image extraite de la vidéo »', ({
+    assert,
+  }) => {
+    assert.include(field, 'posterPreviewUrl?: string | null')
+    assert.include(field, "t('thumbnail.extracted')")
+    // La vignette prime ; le poster ne s'affiche que sans vignette.
+    assert.match(field, /const showPoster =\s*!hasThumbnail && posterPreviewUrl !== null/)
+    // Échec de chargement du poster : la figure et sa légende restent, avec le repli (revue 11.3).
+    assert.include(field, 'const posterLoaded = showPoster && failedSrc !== posterPreviewUrl')
+    assert.isAtLeast(field.split("t('thumbnail.preview_unavailable')").length - 1, 2)
+    // Aperçu 16:9 décoratif, comme la vignette ; pas de « Retirer » pour l'image extraite.
+    assert.isAtLeast(field.split('aspect-video').length - 1, 2)
+    assert.isAtLeast(field.split('alt=""').length - 1, 2)
+    assert.include(field, '{hasThumbnail && (\n              <Button')
+  })
+
+  test('i18n thumbnail.extracted en fr et en (libellés d’EXPERIENCE.md)', ({ assert }) => {
+    const fr = JSON.parse(read('inertia/locales/admin/fr.json'))
+    const en = JSON.parse(read('inertia/locales/admin/en.json'))
+    assert.equal(fr.thumbnail.extracted, 'Image extraite de la vidéo')
+    assert.equal(en.thumbnail.extracted, 'Frame extracted from the video')
+  })
+})

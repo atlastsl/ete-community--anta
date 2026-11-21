@@ -25,6 +25,10 @@ ENV ANTA_REVISION=$GIT_SHA \
     HOST=0.0.0.0 \
     PORT=3333 \
     TZ=UTC
+# ffmpeg (paquet Debian) : image extraite à t = 1 s des vidéos hébergées (Story 11.3, P2.5).
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
 RUN chown node:node /app
 USER node
 COPY --from=build --chown=node:node /app/build ./
