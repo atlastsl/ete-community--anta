@@ -10,6 +10,8 @@ import ThumbnailService from '#services/thumbnail_service'
 import ProductionAuthorService from '#services/production_author_service'
 import ActivityLogService from '#services/activity_log_service'
 import ActionType from '#enums/action_type'
+import MediaService from '#services/media_service'
+import PublicBylineService, { type AuthorCredit } from '#services/public_byline_service'
 
 /** Number of featured slots (P2.1: `position` CHECK 1..3). */
 export const FEATURED_MAX_SLOTS = 3
@@ -65,6 +67,23 @@ export type FeaturedItem = {
   /** Not published (any more): cannot be saved as is, never shown by the banner. */
   unavailable: boolean
 }
+
+/**
+ * A card of the public home banner (Story 11.6, FR49): strictly the image base (public
+ * `/media/…` URL, never a key or a signed URL), the title, the public byline and the totals.
+ */
+export type FeaturedBannerItem = {
+  id: string
+  slug: string
+  title: string
+  authors: AuthorCredit[]
+  imageUrl: string
+  viewsCount: number
+  downloadsCount: number
+}
+
+/** A featured production of the banner with its displayed image base (before bylines). */
+export type FeaturedBannerRow = { production: Production; imageUrl: string }
 
 /** Why a production left the selection automatically (journal `metadata.cause`). */
 export type FeaturedRemovalCause = 'unpublish' | 'delete'
@@ -204,6 +223,48 @@ export default class FeaturedService {
       })
     )
     return position
+  }
+
+  /**
+   * Public banner of the home page (Story 11.6, FR48, FR49), read on every request (never
+   * cached, P2.3): the **published** featured productions, by position, with their totals and
+   * displayed image (thumbnail, else extracted frame, P2.1). A production without any
+   * displayable image (video removed, D-11.5-6) is left out (D-11.6-2), like the admin
+   * preview. Two queries (selection with its aggregates as subqueries, then the MP4 files
+   * with a poster). The bylines are **not** attached here: the caller attaches them once for
+   * every production of the page (`PublicBylineService.attach`), then calls `bannerItems`.
+   */
+  static async bannerRows(): Promise<FeaturedBannerRow[]> {
+    const productions = await Production.query()
+      .select('productions.*')
+      .join('featured_productions', 'featured_productions.production_id', 'productions.id')
+      .where('productions.status', ProductionStatus.PUBLISHED)
+      .withAggregate('statsViews', (q) => q.count('*').as('viewsCount'))
+      .withAggregate('statsDownloads', (q) => q.count('*').as('downloadsCount'))
+      .preload('files', (q) => q.where('mime_type', 'video/mp4').whereNotNull('poster_key'))
+      .orderBy('featured_productions.position', 'asc')
+
+    return productions.flatMap((production) => {
+      const imageUrl = MediaService.productionImageUrl({
+        status: production.status,
+        thumbnailKey: production.thumbnailKey,
+        files: production.files,
+      })
+      return imageUrl ? [{ production, imageUrl }] : []
+    })
+  }
+
+  /** Public cards of the banner rows; their bylines must already be attached. */
+  static bannerItems(rows: FeaturedBannerRow[]): FeaturedBannerItem[] {
+    return rows.map(({ production, imageUrl }) => ({
+      id: production.id,
+      slug: production.slug,
+      title: production.title,
+      authors: PublicBylineService.of(production),
+      imageUrl,
+      viewsCount: Number(production.$extras.viewsCount ?? 0),
+      downloadsCount: Number(production.$extras.downloadsCount ?? 0),
+    }))
   }
 
   /** The current selection as page items, by position. */

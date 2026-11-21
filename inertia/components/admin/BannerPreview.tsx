@@ -14,8 +14,12 @@ type Props = {
   items: FeaturedItem[]
 }
 
-/** Width of the public container (`container-public`, 1152 px) and preview scale. */
-const PUBLIC_WIDTH = 1152
+/**
+ * Content width of the public home (`max-w-7xl` 1280 px minus `px-6`: 1232 px, the width the
+ * banner `sizes` are computed on) and preview scale (1232 × 0.62 ≈ 764 px, fits the admin
+ * container `max-w-5xl`). Corrected in the review of 11.6 (was 1152 px).
+ */
+const PUBLIC_WIDTH = 1232
 const SCALE = 0.62
 
 /**

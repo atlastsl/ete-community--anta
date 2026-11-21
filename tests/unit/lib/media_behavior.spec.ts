@@ -19,6 +19,7 @@ type MediaModule = {
   THUMBNAIL_WIDTHS: readonly number[]
   BANNER_IMAGE_SIZES: Record<BannerSlot, string>
   bannerImage: (imageUrl: string, slot: BannerSlot) => ResponsiveImage | null
+  bannerSlot: (index: number, count: number) => BannerSlot
   authorPhotoImage: (photoBase: string, sizePx: number, sizes?: string) => ResponsiveImage | null
 }
 
@@ -62,7 +63,7 @@ test.group('media | bannerImage (11.2)', () => {
     )
     assert.equal(
       bannerImage(BASE, 'lead')!.sizes,
-      '(min-width: 1280px) 815px, (min-width: 1024px) calc((100vw - 88px) * 2 / 3 + 20px), calc(100vw - 48px)'
+      '(min-width: 1280px) 1195px, (min-width: 1024px) calc((100vw - 88px) * 2 / 3 + 400px), calc(100vw - 48px)'
     )
     assert.equal(
       bannerImage(BASE, 'side')!.sizes,
@@ -92,5 +93,29 @@ test.group('media | bannerImage (11.2)', () => {
       width: 56,
       height: 56,
     })
+  })
+})
+
+test.group('media | bannière de l’accueil (11.6)', () => {
+  test('bannerSlot : 1 → full, 2 → half, 3 → lead puis side', async ({ assert }) => {
+    const { bannerSlot } = await load()
+    assert.equal(bannerSlot(0, 1), 'full')
+    assert.deepEqual([bannerSlot(0, 2), bannerSlot(1, 2)], ['half', 'half'])
+    assert.deepEqual(
+      [0, 1, 2].map((i) => bannerSlot(i, 3)),
+      ['lead', 'side', 'side']
+    )
+  })
+
+  test('sizes de lead : image étirée plus large que sa colonne (report 11.2, D-11.6-3)', async ({
+    assert,
+  }) => {
+    const { BANNER_IMAGE_SIZES } = await load()
+    // Largeur rendue mesurée au navigateur (object-cover sur la hauteur des deux cartes
+    // empilées) : 1137 px à 1440 px de large, 966 px à 1024 px → jamais sous-estimée.
+    const at1280 = Number(/^\(min-width: 1280px\) (\d+)px/.exec(BANNER_IMAGE_SIZES.lead)![1])
+    assert.isAtLeast(at1280, 1137)
+    const lgOffset = Number(/\* 2 \/ 3 \+ (\d+)px\)/.exec(BANNER_IMAGE_SIZES.lead)![1])
+    assert.isAtLeast(((1024 - 88) * 2) / 3 + lgOffset, 966)
   })
 })

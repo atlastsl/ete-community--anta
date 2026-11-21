@@ -104,7 +104,7 @@ afin que **l'accueil reste rapide** (FR50, D37, NFR17).
 - [x] [Review][Patch] Test « ratios extrêmes » instable sous charge [tests/unit/services/image_service.spec.ts] — budgets portés à 15 s et `.timeout(30_000)` sur les 3 tests de formats extrêmes (délai unitaire par défaut 2 s).
 - [x] [Review][Patch] Story : T1.5 corrigée, suggestions reportées à l'Epic 12, signature future de `productionImageUrl` (D-11.2-5).
 - [ ] [Review][Defer] Image d'une production dépubliée encore visible depuis le cache navigateur (jusqu'à un an) pour qui l'a chargée — information PO, accepté selon l'architecture (P2-10) ; évolution possible : `max-age` plus court sans `immutable`.
-- [ ] [Review][Defer] 11.6 : les `sizes` et `width`/`height` de l'emplacement `lead` ignorent l'image étirée (DESIGN.md:338, home.html:54 `lg:aspect-auto lg:flex-1`) → à recalculer avec le composant `FeaturedBanner`.
+- [x] [Review][Defer] 11.6 (résolu en 11.6, D-11.6-3) : les `sizes` et `width`/`height` de l'emplacement `lead` ignorent l'image étirée (DESIGN.md:338, home.html:54 `lg:aspect-auto lg:flex-1`) → à recalculer avec le composant `FeaturedBanner`.
 
 ## Questions ouvertes (non bloquantes, défauts retenus)
 

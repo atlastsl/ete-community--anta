@@ -153,7 +153,7 @@
 
 - ~~**Test « ratios extrêmes » d'`image_service.spec.ts` (11.1) instable sous charge**~~ — **résolu** à la revue de 11.2 : budgets 15 s + `.timeout(30_000)`.
 - **Cache `immutable` des vignettes** : une image dépubliée reste affichée depuis le cache navigateur (jusqu'à un an) chez qui l'a chargée — accepté (P2-10), information PO ; évolution possible : `max-age` plus court sans `immutable`.
-- **`sizes` de l'emplacement `lead` (11.6)** : l'image étirée de la bannière à 3 éléments (`lg:aspect-auto lg:flex-1`) n'est pas prise en compte → recalculer dans `FeaturedBanner`.
+- ~~**`sizes` de l'emplacement `lead` (11.6)**~~ — **résolu** en 11.6 (D-11.6-3) : image étirée en position absolue à partir de `lg`, `sizes` = largeur rendue par `object-cover` mesurée au navigateur (2 colonnes latérales + 400 px).
 
 ## Deferred from: code review of 11-3-image-extraite-des-videos-hebergees (2026-11-21)
 
@@ -161,7 +161,7 @@
 
 ## Deferred from: dev of 11-4-page-admin-a-la-une (2026-11-21)
 
-- **Suppression de la vidéo d'une production à la une sans vignette** : `FilesController.destroy` ne vérifie pas la règle FR50 ; la production reste à la une sans image (question PO de 11.4). Bloquer comme le retrait de vignette (`FeaturedService.assertThumbnailRemovable`) si le PO le souhaite. **Revu en 11.5 (D-11.5-6)** : hors FR51 (la production reste publiée), ni bloquée ni retirée automatiquement ; la page « À la une » signale « Vignette manquante » et 11.6 doit tolérer une carte sans image. Question PO maintenue.
+- **Suppression de la vidéo d'une production à la une sans vignette** : `FilesController.destroy` ne vérifie pas la règle FR50 ; la production reste à la une sans image (question PO de 11.4). Bloquer comme le retrait de vignette (`FeaturedService.assertThumbnailRemovable`) si le PO le souhaite. **Revu en 11.5 (D-11.5-6)** : hors FR51 (la production reste publiée), ni bloquée ni retirée automatiquement ; la page « À la une » signale « Vignette manquante » et 11.6 doit tolérer une carte sans image. **11.6 (D-11.6-2)** : la production sans image affichable est écartée de la bannière publique (comme l'aperçu admin), disposition recalculée. Question PO maintenue.
 
 ## Deferred from: code review of 11-5-retrait-automatique-d-une-production-a-la-une (2026-11-21)
 

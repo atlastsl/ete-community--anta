@@ -70,6 +70,15 @@
 }
 
 @layer components {
+  /* Bannière à la une (Story 11.6, DESIGN.md:360) : le focus du titre (lien étiré) est
+   * dessiné sur toute la carte via `:has()` ; le contour propre du lien n'est retiré que si
+   * `:has()` est pris en charge, sinon il reste visible (repli). */
+  @supports selector(:has(*)) {
+    [data-featured-link]:focus-visible {
+      outline: none;
+    }
+  }
+
   /* Police de titre (Playfair Display) pour les éléments hors h1/h2 — ex. titres de ProductionCard. */
   .font-display {
     font-family: 'Playfair Display', Georgia, serif;
