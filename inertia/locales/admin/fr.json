@@ -768,5 +768,25 @@
     "home": "Accueil",
     "search": "Recherche avancée",
     "authors": "Auteurs"
+  },
+  "thumbnail": {
+    "upload": "Téléverser une vignette",
+    "replace": "Remplacer la vignette",
+    "remove": "Retirer la vignette",
+    "help": "JPEG, PNG ou WebP · 5 Mo max · format 16:9 conseillé (recadrage automatique)",
+    "drop_hint": "ou glissez une image ici",
+    "uploading": "Envoi de la vignette… {{percent}} %",
+    "preview_unavailable": "Aperçu indisponible",
+    "uploaded": "Vignette enregistrée.",
+    "removed": "Vignette retirée.",
+    "errors": {
+      "no_file": "Aucune image reçue.",
+      "invalid_type": "Choisissez une image JPEG, PNG ou WebP valide.",
+      "too_large": "La vignette ne doit pas dépasser 5 Mo.",
+      "dimensions": "L'image est trop grande (40 mégapixels au maximum).",
+      "not_found": "Cette production n'existe plus.",
+      "storage": "La vignette n'a pas pu être modifiée. Réessayez dans un instant.",
+      "network": "La requête a échoué. Vérifiez votre connexion puis réessayez."
+    }
   }
 }

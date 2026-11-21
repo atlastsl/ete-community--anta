@@ -3,6 +3,7 @@ import db from '@adonisjs/lucid/services/db'
 import logger from '@adonisjs/core/services/logger'
 import ProductionStatus from '#enums/production_status'
 import FileStorageService from '#services/file_storage_service'
+import ThumbnailService from '#services/thumbnail_service'
 import Production from '#models/production'
 import { slugify } from '#helpers/slug'
 
@@ -163,5 +164,7 @@ export default class ProductionService {
       }
     }
     await production.delete()
+    // Variantes de la vignette (Story 11.1) : après la suppression, best-effort (journalisé).
+    await ThumbnailService.discard(production.thumbnailKey)
   }
 }

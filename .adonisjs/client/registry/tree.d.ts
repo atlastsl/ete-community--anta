@@ -55,6 +55,10 @@ export interface ApiDefinition {
         store: typeof routes['admin.productions.links.store']
         destroy: typeof routes['admin.productions.links.destroy']
       }
+      thumbnail: {
+        store: typeof routes['admin.productions.thumbnail.store']
+        destroy: typeof routes['admin.productions.thumbnail.destroy']
+      }
     }
     authors: typeof routes['admin.authors'] & {
       create: typeof routes['admin.authors.create']

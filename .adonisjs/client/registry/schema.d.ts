@@ -391,6 +391,30 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/links_controller').default['destroy']>>>
     }
   }
+  'admin.productions.thumbnail.store': {
+    methods: ["POST"]
+    pattern: '/admin/productions/:productionId/thumbnail'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/admin/thumbnail_validator').thumbnailValidator)>>
+      paramsTuple: [ParamValue]
+      params: { productionId: ParamValue }
+      query: ExtractQuery<InferInput<(typeof import('#validators/admin/thumbnail_validator').thumbnailValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/thumbnails_controller').default['store']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/thumbnails_controller').default['store']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'admin.productions.thumbnail.destroy': {
+    methods: ["DELETE"]
+    pattern: '/admin/productions/:productionId/thumbnail'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { productionId: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/thumbnails_controller').default['destroy']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/thumbnails_controller').default['destroy']>>>
+    }
+  }
   'admin.authors.create': {
     methods: ["GET","HEAD"]
     pattern: '/admin/authors/create'

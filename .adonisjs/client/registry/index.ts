@@ -198,6 +198,18 @@ const routes = {
     tokens: [{"old":"/admin/productions/:productionId/links/:linkId","type":0,"val":"admin","end":""},{"old":"/admin/productions/:productionId/links/:linkId","type":0,"val":"productions","end":""},{"old":"/admin/productions/:productionId/links/:linkId","type":1,"val":"productionId","end":""},{"old":"/admin/productions/:productionId/links/:linkId","type":0,"val":"links","end":""},{"old":"/admin/productions/:productionId/links/:linkId","type":1,"val":"linkId","end":""}],
     types: placeholder as Registry['admin.productions.links.destroy']['types'],
   },
+  'admin.productions.thumbnail.store': {
+    methods: ["POST"],
+    pattern: '/admin/productions/:productionId/thumbnail',
+    tokens: [{"old":"/admin/productions/:productionId/thumbnail","type":0,"val":"admin","end":""},{"old":"/admin/productions/:productionId/thumbnail","type":0,"val":"productions","end":""},{"old":"/admin/productions/:productionId/thumbnail","type":1,"val":"productionId","end":""},{"old":"/admin/productions/:productionId/thumbnail","type":0,"val":"thumbnail","end":""}],
+    types: placeholder as Registry['admin.productions.thumbnail.store']['types'],
+  },
+  'admin.productions.thumbnail.destroy': {
+    methods: ["DELETE"],
+    pattern: '/admin/productions/:productionId/thumbnail',
+    tokens: [{"old":"/admin/productions/:productionId/thumbnail","type":0,"val":"admin","end":""},{"old":"/admin/productions/:productionId/thumbnail","type":0,"val":"productions","end":""},{"old":"/admin/productions/:productionId/thumbnail","type":1,"val":"productionId","end":""},{"old":"/admin/productions/:productionId/thumbnail","type":0,"val":"thumbnail","end":""}],
+    types: placeholder as Registry['admin.productions.thumbnail.destroy']['types'],
+  },
   'admin.authors.create': {
     methods: ["GET","HEAD"],
     pattern: '/admin/authors/create',

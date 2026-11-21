@@ -12,6 +12,7 @@ export const controllers = {
     Files: () => import('#controllers/admin/files_controller'),
     Links: () => import('#controllers/admin/links_controller'),
     Productions: () => import('#controllers/admin/productions_controller'),
+    Thumbnails: () => import('#controllers/admin/thumbnails_controller'),
     Users: () => import('#controllers/admin/users_controller'),
   },
   NewAccount: () => import('#controllers/new_account_controller'),

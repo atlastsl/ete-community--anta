@@ -111,6 +111,13 @@ router
         router
           .delete('productions/:productionId/links/:linkId', [controllers.admin.Links, 'destroy'])
           .as('admin.productions.links.destroy')
+        // Vignette d'une production (Story 11.1, D37) : téléversement / retrait immédiats.
+        router
+          .post('productions/:productionId/thumbnail', [controllers.admin.Thumbnails, 'store'])
+          .as('admin.productions.thumbnail.store')
+        router
+          .delete('productions/:productionId/thumbnail', [controllers.admin.Thumbnails, 'destroy'])
+          .as('admin.productions.thumbnail.destroy')
         router
           .get('authors/create', [controllers.admin.Authors, 'create'])
           .as('admin.authors.create')

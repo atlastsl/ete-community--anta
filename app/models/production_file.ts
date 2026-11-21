@@ -27,6 +27,10 @@ export default class ProductionFile extends BaseModel {
   @column()
   declare storageProvider: string
 
+  /** Prefix of the frame extracted from a hosted video (`posters/<id>/<token>`, Story 11.3). */
+  @column()
+  declare posterKey: string | null
+
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
 

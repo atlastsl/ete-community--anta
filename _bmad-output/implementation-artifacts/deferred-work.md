@@ -142,3 +142,9 @@
 - **Lighthouse mobile 4G sur le staging (AC 3 de 10.8, NFR17)** : `/authors` et un profil, LCP < 3 s, à lancer par Aurélien après déploiement de l'Epic 10 et à consigner dans la story 10.8 (services distants hors des sessions de dev).
 - ~~**Suite `browser` + axe (architecture P2.8)**~~ — **refusée par Aurélien le 2026-11-21** : pas de dépendance `@axe-core/playwright` ni de suite `browser` ; accessibilité couverte par les tests de source et l'audit Lighthouse manuel.
 - **`/media` sert la photo d'un auteur consentant sans production publiée** (question PO 10.8) : conforme à 10.2 (public = consentement), clé jamais exposée tant que le profil n'est pas visible ; aligner sur `visibleOnSite` si le PO le souhaite (le test de matrice l'indique).
+
+## Deferred from: code review of 11-1-vignette-d-une-production-dans-le-panel-admin (2026-11-21)
+
+- **Erreurs serveur de `FileUploader` jamais affichées** : `files_controller.ts` utilise `session.flashErrors` (sac `errorsBag`), or seul `inputErrorsBag` devient la prop Inertia `errors` (`@adonisjs/inertia`, `getValidationErrors`) → `props.errors.file` reste vide (MIME falsifié, fichier absent). Corriger comme `thumbnails_controller.ts` (`flashValidationErrors`) dans une story de l'Epic 4/11.
+- **Envois simultanés de vignettes (11.4)** : Inertia annule la visite synchrone en cours ; `FeaturedSlot` doit utiliser `async: true` ou un verrou « occupé » au niveau de la page.
+- **Aperçu du poster vidéo dans `ThumbnailField` (11.3)** : prop poster + mention « Image extraite de la vidéo » (DESIGN.md).

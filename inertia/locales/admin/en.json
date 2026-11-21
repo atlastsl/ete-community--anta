@@ -768,5 +768,25 @@
     "home": "Home",
     "search": "Advanced search",
     "authors": "Authors"
+  },
+  "thumbnail": {
+    "upload": "Upload a thumbnail",
+    "replace": "Replace thumbnail",
+    "remove": "Remove thumbnail",
+    "help": "JPEG, PNG or WebP · 5 MB max · 16:9 recommended (automatic cropping)",
+    "drop_hint": "or drop an image here",
+    "uploading": "Uploading thumbnail… {{percent}}%",
+    "preview_unavailable": "Preview unavailable",
+    "uploaded": "Thumbnail saved.",
+    "removed": "Thumbnail removed.",
+    "errors": {
+      "no_file": "No image received.",
+      "invalid_type": "Choose a valid JPEG, PNG or WebP image.",
+      "too_large": "The thumbnail must not exceed 5 MB.",
+      "dimensions": "The image is too large (40 megapixels maximum).",
+      "not_found": "This production no longer exists.",
+      "storage": "The thumbnail could not be updated. Try again in a moment.",
+      "network": "The request failed. Check your connection and try again."
+    }
   }
 }
