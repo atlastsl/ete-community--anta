@@ -103,6 +103,19 @@ export class AuthorSchema extends BaseModel {
   declare updatedAt: DateTime | null
 }
 
+export class FeaturedProductionSchema extends BaseModel {
+  static $columns = ['createdAt', 'createdById', 'position', 'productionId'] as const
+  $columns = FeaturedProductionSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare createdById: string | null
+  @column({ isPrimary: true })
+  declare position: number
+  @column()
+  declare productionId: string
+}
+
 export class ProductionAuthorSchema extends BaseModel {
   static $columns = ['authorId', 'position', 'productionId'] as const
   $columns = ProductionAuthorSchema.$columns
@@ -115,7 +128,7 @@ export class ProductionAuthorSchema extends BaseModel {
 }
 
 export class ProductionFileSchema extends BaseModel {
-  static $columns = ['createdAt', 'fileKey', 'id', 'mimeType', 'originalName', 'productionId', 'sizeBytes', 'storageProvider', 'updatedAt'] as const
+  static $columns = ['createdAt', 'fileKey', 'id', 'mimeType', 'originalName', 'posterKey', 'productionId', 'sizeBytes', 'storageProvider', 'updatedAt'] as const
   $columns = ProductionFileSchema.$columns
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
@@ -127,6 +140,8 @@ export class ProductionFileSchema extends BaseModel {
   declare mimeType: string
   @column()
   declare originalName: string
+  @column()
+  declare posterKey: string | null
   @column()
   declare productionId: string
   @column()
@@ -157,7 +172,7 @@ export class ProductionLinkSchema extends BaseModel {
 }
 
 export class ProductionSchema extends BaseModel {
-  static $columns = ['antaPublishedAt', 'authors', 'category', 'createdAt', 'createdById', 'domain', 'id', 'institution', 'isbnDoiIssn', 'journal', 'language', 'licenseStatus', 'publicationCountry', 'publisher', 'searchVector', 'slug', 'status', 'subdomain', 'summary', 'tags', 'title', 'updatedAt', 'workPublishedAt'] as const
+  static $columns = ['antaPublishedAt', 'authors', 'category', 'createdAt', 'createdById', 'domain', 'id', 'institution', 'isbnDoiIssn', 'journal', 'language', 'licenseStatus', 'publicationCountry', 'publisher', 'searchVector', 'slug', 'status', 'subdomain', 'summary', 'tags', 'thumbnailKey', 'title', 'updatedAt', 'workPublishedAt'] as const
   $columns = ProductionSchema.$columns
   @column.dateTime()
   declare antaPublishedAt: DateTime | null
@@ -199,6 +214,8 @@ export class ProductionSchema extends BaseModel {
   declare summary: string | null
   @column()
   declare tags: any
+  @column()
+  declare thumbnailKey: string | null
   @column()
   declare title: string
   @column.dateTime({ autoCreate: true, autoUpdate: true })

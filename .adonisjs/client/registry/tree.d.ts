@@ -55,6 +55,10 @@ export interface ApiDefinition {
         store: typeof routes['admin.productions.links.store']
         destroy: typeof routes['admin.productions.links.destroy']
       }
+      thumbnail: {
+        store: typeof routes['admin.productions.thumbnail.store']
+        destroy: typeof routes['admin.productions.thumbnail.destroy']
+      }
     }
     authors: typeof routes['admin.authors'] & {
       create: typeof routes['admin.authors.create']
@@ -66,6 +70,10 @@ export interface ApiDefinition {
       destroy: typeof routes['admin.authors.destroy']
       confirmConsent: typeof routes['admin.authors.confirm-consent']
       withdrawConsent: typeof routes['admin.authors.withdraw-consent']
+    }
+    featured: typeof routes['admin.featured'] & {
+      candidates: typeof routes['admin.featured.candidates']
+      update: typeof routes['admin.featured.update']
     }
     stats: typeof routes['admin.stats']
     users: typeof routes['admin.users'] & {

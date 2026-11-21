@@ -8,6 +8,8 @@ const ActionType = {
   PASSWORD_RESET: 'password_reset',
   CONSENT_CONFIRM: 'consent_confirm',
   CONSENT_WITHDRAW: 'consent_withdraw',
+  FEATURED_UPDATE: 'featured_update',
+  FEATURED_AUTO_REMOVE: 'featured_auto_remove',
 } as const
 
 export type ActionType = (typeof ActionType)[keyof typeof ActionType]

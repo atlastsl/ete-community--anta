@@ -5,6 +5,7 @@ import SeoService from '#services/seo_service'
 import { PRODUCTION_CATEGORIES } from '#constants/production_taxonomy'
 import ProductionCardTransformer from '#transformers/production_card_transformer'
 import PublicBylineService from '#services/public_byline_service'
+import FeaturedService from '#services/featured_service'
 
 const SECTION_SIZE = 6
 
@@ -30,9 +31,19 @@ export default class HomeController {
       .orderBy('id', 'asc')
       .limit(SECTION_SIZE)
 
-    await PublicBylineService.attach([...mostViewedRows, ...recentRows])
+    // Featured banner (Story 11.6): read on every request, never cached (P2.3, journey 5).
+    const featuredRows = await FeaturedService.bannerRows()
+
+    // One byline pass for every production of the page (blocks and banner).
+    await PublicBylineService.attach([
+      ...mostViewedRows,
+      ...recentRows,
+      ...featuredRows.map((row) => row.production),
+    ])
+    const featured = FeaturedService.bannerItems(featuredRows)
 
     return inertia.render('home', {
+      featured,
       mostViewed: ProductionCardTransformer.transform(mostViewedRows),
       recent: ProductionCardTransformer.transform(recentRows),
       categories: [...PRODUCTION_CATEGORIES],

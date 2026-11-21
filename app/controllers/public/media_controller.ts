@@ -28,7 +28,9 @@ export function isStorageNotFound(error: unknown): boolean {
 /**
  * Public images backed by R2 (P2.5, P2-10): `GET|HEAD /media/*`, called by `MediaMiddleware`
  * before the router (no session, no cookies). The bucket stays private; only the current
- * key of a visible owner is streamed (author photos: public profiles).
+ * key of a visible owner is streamed (author photos: public profiles, one hour of cache;
+ * banner thumbnails: published productions, one year `immutable`, Story 11.2). The
+ * `Content-Type` and `Cache-Control` come from `MediaService.resolve`.
  *
  * Every refusal is an empty response with `Cache-Control: no-store` (404, or 503 when the
  * storage fails): never throw (`findOrFail`, `abort`…), the exception handler would answer
@@ -36,6 +38,9 @@ export function isStorageNotFound(error: unknown): boolean {
  */
 export default class MediaController {
   async show({ params, request, response }: HttpContext) {
+    // `MediaMiddleware` runs before the router, so shield never adds this header: set it on
+    // every `/media` response (served, 304, refused).
+    response.header('X-Content-Type-Options', 'nosniff')
     const refuse = (status: 404 | 503) => {
       for (const header of ['Content-Type', 'Content-Length', 'ETag']) response.removeHeader(header)
       response.header('Cache-Control', 'no-store')

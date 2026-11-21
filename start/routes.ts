@@ -111,6 +111,13 @@ router
         router
           .delete('productions/:productionId/links/:linkId', [controllers.admin.Links, 'destroy'])
           .as('admin.productions.links.destroy')
+        // Vignette d'une production (Story 11.1, D37) : téléversement / retrait immédiats.
+        router
+          .post('productions/:productionId/thumbnail', [controllers.admin.Thumbnails, 'store'])
+          .as('admin.productions.thumbnail.store')
+        router
+          .delete('productions/:productionId/thumbnail', [controllers.admin.Thumbnails, 'destroy'])
+          .as('admin.productions.thumbnail.destroy')
         router
           .get('authors/create', [controllers.admin.Authors, 'create'])
           .as('admin.authors.create')
@@ -133,6 +140,11 @@ router
         router
           .post('authors/:id/withdraw-consent', [controllers.admin.Authors, 'withdrawConsent'])
           .as('admin.authors.withdraw-consent')
+        router
+          .get('featured/candidates', [controllers.admin.Featured, 'candidates'])
+          .as('admin.featured.candidates')
+        router.get('featured', [controllers.admin.Featured, 'index']).as('admin.featured')
+        router.put('featured', [controllers.admin.Featured, 'update']).as('admin.featured.update')
         router.get('stats', [controllers.admin.Dashboard, 'stats']).as('admin.stats')
 
         // Sous-groupe super_admin uniquement

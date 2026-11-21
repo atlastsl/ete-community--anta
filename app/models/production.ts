@@ -110,6 +110,13 @@ export default class Production extends BaseModel {
   @column.dateTime()
   declare antaPublishedAt: DateTime | null
 
+  /**
+   * Prefix of the banner thumbnail variants (`thumbnails/<id>/<token>`, Story 11.1, D37):
+   * shown in the featured banner only, kept when the production leaves it.
+   */
+  @column()
+  declare thumbnailKey: string | null
+
   @column()
   declare createdById: string | null
 

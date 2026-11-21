@@ -36,6 +36,8 @@ export type ScannedRoutes = {
     'admin.productions.files.destroy': { paramsTuple: [ParamValue,ParamValue]; params: {'productionId': ParamValue,'fileId': ParamValue} }
     'admin.productions.links.store': { paramsTuple: [ParamValue]; params: {'productionId': ParamValue} }
     'admin.productions.links.destroy': { paramsTuple: [ParamValue,ParamValue]; params: {'productionId': ParamValue,'linkId': ParamValue} }
+    'admin.productions.thumbnail.store': { paramsTuple: [ParamValue]; params: {'productionId': ParamValue} }
+    'admin.productions.thumbnail.destroy': { paramsTuple: [ParamValue]; params: {'productionId': ParamValue} }
     'admin.authors.create': { paramsTuple?: []; params?: {} }
     'admin.authors.search': { paramsTuple?: []; params?: {} }
     'admin.authors.quick-store': { paramsTuple?: []; params?: {} }
@@ -46,6 +48,9 @@ export type ScannedRoutes = {
     'admin.authors.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'admin.authors.confirm-consent': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'admin.authors.withdraw-consent': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'admin.featured.candidates': { paramsTuple?: []; params?: {} }
+    'admin.featured': { paramsTuple?: []; params?: {} }
+    'admin.featured.update': { paramsTuple?: []; params?: {} }
     'admin.stats': { paramsTuple?: []; params?: {} }
     'admin.users.create': { paramsTuple?: []; params?: {} }
     'admin.users': { paramsTuple?: []; params?: {} }
@@ -76,6 +81,8 @@ export type ScannedRoutes = {
     'admin.authors.search': { paramsTuple?: []; params?: {} }
     'admin.authors.edit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'admin.authors': { paramsTuple?: []; params?: {} }
+    'admin.featured.candidates': { paramsTuple?: []; params?: {} }
+    'admin.featured': { paramsTuple?: []; params?: {} }
     'admin.stats': { paramsTuple?: []; params?: {} }
     'admin.users.create': { paramsTuple?: []; params?: {} }
     'admin.users': { paramsTuple?: []; params?: {} }
@@ -102,6 +109,8 @@ export type ScannedRoutes = {
     'admin.authors.search': { paramsTuple?: []; params?: {} }
     'admin.authors.edit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'admin.authors': { paramsTuple?: []; params?: {} }
+    'admin.featured.candidates': { paramsTuple?: []; params?: {} }
+    'admin.featured': { paramsTuple?: []; params?: {} }
     'admin.stats': { paramsTuple?: []; params?: {} }
     'admin.users.create': { paramsTuple?: []; params?: {} }
     'admin.users': { paramsTuple?: []; params?: {} }
@@ -120,6 +129,7 @@ export type ScannedRoutes = {
     'admin.productions.publish': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'admin.productions.files.store': { paramsTuple: [ParamValue]; params: {'productionId': ParamValue} }
     'admin.productions.links.store': { paramsTuple: [ParamValue]; params: {'productionId': ParamValue} }
+    'admin.productions.thumbnail.store': { paramsTuple: [ParamValue]; params: {'productionId': ParamValue} }
     'admin.authors.quick-store': { paramsTuple?: []; params?: {} }
     'admin.authors.store': { paramsTuple?: []; params?: {} }
     'admin.authors.confirm-consent': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -130,11 +140,13 @@ export type ScannedRoutes = {
   PUT: {
     'admin.productions.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'admin.authors.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'admin.featured.update': { paramsTuple?: []; params?: {} }
   }
   DELETE: {
     'admin.productions.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'admin.productions.files.destroy': { paramsTuple: [ParamValue,ParamValue]; params: {'productionId': ParamValue,'fileId': ParamValue} }
     'admin.productions.links.destroy': { paramsTuple: [ParamValue,ParamValue]; params: {'productionId': ParamValue,'linkId': ParamValue} }
+    'admin.productions.thumbnail.destroy': { paramsTuple: [ParamValue]; params: {'productionId': ParamValue} }
     'admin.authors.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'admin.users.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
   }

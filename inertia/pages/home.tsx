@@ -3,9 +3,12 @@ import { useTranslation } from 'react-i18next'
 import SearchBar from '~/components/public/SearchBar'
 import FilterBar from '~/components/public/FilterBar'
 import ProductionCard, { ProductionCardData } from '~/components/public/ProductionCard'
+import FeaturedBanner, { type FeaturedBannerItem } from '~/components/public/FeaturedBanner'
 import type { SeoMeta } from '~/lib/seo'
 
 type HomeProps = {
+  /** Featured banner (Story 11.6): published featured productions, in order; `[]` → no banner. */
+  featured: FeaturedBannerItem[]
   mostViewed: ProductionCardData[]
   recent: ProductionCardData[]
   categories: string[]
@@ -36,7 +39,7 @@ function Section({ title, productions }: { title: string; productions: Productio
   )
 }
 
-export default function Home({ mostViewed, recent, categories }: HomeProps) {
+export default function Home({ featured, mostViewed, recent, categories }: HomeProps) {
   const { t } = useTranslation()
 
   return (
@@ -56,6 +59,8 @@ export default function Home({ mostViewed, recent, categories }: HomeProps) {
           <FilterBar categories={categories} />
         </div>
       </section>
+
+      <FeaturedBanner items={featured} />
 
       <Section title={t('home.sections.most_viewed')} productions={mostViewed} />
       <Section title={t('home.sections.recent')} productions={recent} />

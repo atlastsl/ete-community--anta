@@ -9,6 +9,8 @@ export type MediaFile = {
   mimeType: string
   sizeBytes: number
   url: string | null
+  /** Image extraite de la vidéo (Story 11.3) : attribut `poster` du lecteur, `null` sans. */
+  posterUrl?: string | null
   downloadUrl: string
 }
 
@@ -35,7 +37,7 @@ export default function MediaViewer({
   onDownload?: () => void
 }) {
   const { t } = useTranslation()
-  const { originalName, mimeType, url, downloadUrl } = file
+  const { originalName, mimeType, url, posterUrl, downloadUrl } = file
   const formatLabel = FORMAT_LABELS[mimeType] ?? mimeType
 
   const header = (
@@ -86,7 +88,13 @@ export default function MediaViewer({
     viewer = <PdfViewer url={url} name={originalName} />
   } else if (mimeType === 'video/mp4') {
     viewer = (
-      <video controls preload="metadata" src={url} className="w-full rounded-lg">
+      <video
+        controls
+        preload="metadata"
+        src={url}
+        poster={posterUrl ?? undefined}
+        className="w-full rounded-lg"
+      >
         {t('media.video_fallback')}
       </video>
     )

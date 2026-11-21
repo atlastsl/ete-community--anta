@@ -7,11 +7,19 @@ export const IMAGE_MAX_BYTES = 5 * 1024 * 1024
 /** Decoding ceiling: larger images are refused before any pixel is processed. */
 export const IMAGE_MAX_PIXELS = 40_000_000
 /**
- * Widest gap allowed between the source ratio and a salient-region (`attention`) crop ratio:
- * beyond it, the source is first centre-cropped, because `attention` scores the whole
- * cover-resized image (a 2×20000 PNG would be scored at 1200×12 000 000 px).
+ * Byte ceiling of a frame extracted from a hosted video (Story 11.3, D-11.3-3): the PNG comes
+ * from our own ffmpeg call, not from a user upload, and a 4K frame exceeds `IMAGE_MAX_BYTES`;
+ * the pixel ceiling still applies (an 8K frame is 33 Mpx).
  */
-const ATTENTION_MAX_RATIO_GAP = 3
+export const VIDEO_FRAME_MAX_BYTES = 64 * 1024 * 1024
+/**
+ * Widest gap allowed between the source ratio and a target crop ratio: beyond it, the source
+ * is first centre-cropped (same scale). `attention` scores the whole cover-resized image (a
+ * 2×20000 PNG would be scored at 1200×12 000 000 px), and libvips refuses the affine transform
+ * of an extreme cover resize ("output coordinates out of range", e.g. 4×10 000 000). For a
+ * centre crop, centre-cropping first gives the same result.
+ */
+const MAX_RATIO_GAP = 3
 /** Input formats accepted after real decoding (gif, heif, svg, tiff... are refused). */
 const ACCEPTED_FORMATS = new Set(['jpeg', 'png', 'webp'])
 
@@ -62,9 +70,24 @@ export const AUTHOR_PHOTO_VARIANTS = [
   { name: 'og.jpg', width: 1200, height: 630, format: 'jpeg', position: 'attention' },
 ] as const satisfies readonly VariantSpec[]
 
+/**
+ * Variants of a production thumbnail (Story 11.1) and, from Story 11.3, of the frame extracted
+ * from a hosted video (P2.5): 16:9, centre crop like the banner's `object-cover`. One group
+ * (same ratio and anchor): the source is decoded once.
+ */
+export const THUMBNAIL_VARIANTS = [
+  { name: 'w400.webp', width: 400, height: 225, format: 'webp' },
+  { name: 'w800.webp', width: 800, height: 450, format: 'webp' },
+  { name: 'w1600.webp', width: 1600, height: 900, format: 'webp' },
+] as const satisfies readonly VariantSpec[]
+
+/**
+ * Refusal reason. Suffix of the `authors.form.errors.*` keys; the thumbnail controller maps
+ * it to its own `thumbnail.errors.*` keys.
+ */
 export type ImageErrorCode = 'photo_type' | 'photo_size' | 'photo_dimensions'
 
-/** Refused image; `code` is the suffix of the `authors.form.errors.*` i18n key. */
+/** Refused image (see `ImageErrorCode`). */
 export class ImageValidationError extends Error {
   constructor(readonly code: ImageErrorCode) {
     super(`Invalid image: ${code}`)
@@ -82,12 +105,25 @@ export type ImageVariant = {
  * Image normalization (P2.5): validation by real decoding, EXIF auto-orientation,
  * metadata stripping (sharp's default output: never `withMetadata` / `keepMetadata`),
  * cover crop (centred; on the salient region for the wide sharing image). Profiles are plain
- * variant lists so the 16:9 thumbnail profile (Epic 11) can be added next to the author one.
+ * variant lists: author photo (1:1 + 1.91:1) and production thumbnail (16:9).
  */
 export default class ImageService {
   /** Validates by real decoding, auto-orients, strips metadata, renders the variants. */
   static async authorPhotoVariants(input: string | Buffer): Promise<ImageVariant[]> {
     return this.render(input, AUTHOR_PHOTO_VARIANTS)
+  }
+
+  /** Same validation and normalization, 16:9 variants (production thumbnail). */
+  static async thumbnailVariants(input: string | Buffer): Promise<ImageVariant[]> {
+    return this.render(input, THUMBNAIL_VARIANTS)
+  }
+
+  /**
+   * 16:9 variants of a frame extracted from a hosted video (Story 11.3): same profile as the
+   * thumbnail, byte ceiling `VIDEO_FRAME_MAX_BYTES` instead of the upload limit.
+   */
+  static async posterVariants(input: string | Buffer): Promise<ImageVariant[]> {
+    return this.render(input, THUMBNAIL_VARIANTS, VIDEO_FRAME_MAX_BYTES)
   }
 
   /**
@@ -98,9 +134,10 @@ export default class ImageService {
    */
   private static async render(
     input: string | Buffer,
-    variants: readonly VariantSpec[]
+    variants: readonly VariantSpec[],
+    maxBytes: number = IMAGE_MAX_BYTES
   ): Promise<ImageVariant[]> {
-    const oriented = await this.assertValid(input)
+    const oriented = await this.assertValid(input, maxBytes)
 
     const groups: VariantSpec[][] = []
     for (const variant of variants) {
@@ -122,10 +159,7 @@ export default class ImageService {
       let base: { data: Buffer; info: OutputInfo }
       try {
         // No `animated: true`: only the first frame of an animated image is used.
-        const source =
-          largest.position === 'attention'
-            ? await this.boundAspect(input, oriented, largest)
-            : sharp(input, { limitInputPixels: IMAGE_MAX_PIXELS }).rotate()
+        const source = await this.boundAspect(input, oriented, largest)
         base = await source
           .resize(largest.width, largest.height, { fit: 'cover', position })
           .raw()
@@ -143,7 +177,7 @@ export default class ImageService {
 
   /**
    * Auto-oriented source, centre-cropped first when its ratio is more than
-   * `ATTENTION_MAX_RATIO_GAP` times off the target ratio (cost bound of `attention`).
+   * `MAX_RATIO_GAP` times off the target ratio (cost of `attention`, affine range).
    */
   private static async boundAspect(
     input: string | Buffer,
@@ -154,14 +188,14 @@ export default class ImageService {
     const { width, height } = oriented
     const ratio = target.width / target.height
     let crop: { width: number; height: number } | null = null
-    if (width / height < ratio / ATTENTION_MAX_RATIO_GAP) {
-      crop = { width, height: Math.max(1, Math.round((width * ATTENTION_MAX_RATIO_GAP) / ratio)) }
-    } else if (width / height > ratio * ATTENTION_MAX_RATIO_GAP) {
-      crop = { width: Math.max(1, Math.round(height * ratio * ATTENTION_MAX_RATIO_GAP)), height }
+    if (width / height < ratio / MAX_RATIO_GAP) {
+      crop = { width, height: Math.max(1, Math.round((width * MAX_RATIO_GAP) / ratio)) }
+    } else if (width / height > ratio * MAX_RATIO_GAP) {
+      crop = { width: Math.max(1, Math.round(height * ratio * MAX_RATIO_GAP)), height }
     }
     if (!crop) return source
 
-    // Same scale, so `cover` is a pure centre crop; raw pixels feed the attention pass.
+    // Same scale, so `cover` is a pure centre crop; raw pixels feed the cover pass.
     const { data, info } = await source
       .resize(crop.width, crop.height, { fit: 'cover', position: 'centre' })
       .raw()
@@ -171,11 +205,12 @@ export default class ImageService {
 
   /** Validates size, signature, format and pixel count; returns the auto-oriented size. */
   private static async assertValid(
-    input: string | Buffer
+    input: string | Buffer,
+    maxBytes: number
   ): Promise<{ width: number; height: number }> {
     const info = typeof input === 'string' ? await stat(input) : null
     const bytes = info ? info.size : (input as Buffer).length
-    if (bytes > IMAGE_MAX_BYTES) throw new ImageValidationError('photo_size')
+    if (bytes > maxBytes) throw new ImageValidationError('photo_size')
     if (!hasAcceptedSignature(await readHead(input))) throw new ImageValidationError('photo_type')
 
     let meta: Metadata

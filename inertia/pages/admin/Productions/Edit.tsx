@@ -29,6 +29,8 @@ type Props = {
   legacyAuthorNames: string[]
   /** Valeur non textuelle dans la colonne dénormalisée (Story 9.7). */
   legacyAuthorsNonText: boolean
+  /** Production à la une : avertissement D21 du dialog de dépublication (Story 11.5). */
+  isFeatured: boolean
 }
 
 export default function AdminProductionsEdit({
@@ -40,6 +42,7 @@ export default function AdminProductionsEdit({
   stats,
   legacyAuthorNames,
   legacyAuthorsNonText,
+  isFeatured,
 }: Props) {
   const { t, i18n } = useTranslation()
   const { id, status, ...formData } = production
@@ -96,6 +99,7 @@ export default function AdminProductionsEdit({
           productionId={id}
           status={status}
           saveLabelKey="productions.form.save"
+          isFeatured={isFeatured}
         />
       </form>
     </div>

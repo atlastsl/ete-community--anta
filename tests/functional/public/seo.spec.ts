@@ -287,6 +287,24 @@ test.group('Public SEO | pages auteurs (Story 10.7)', (group) => {
     assert.notInclude(head, 'Institut Secret')
   })
 
+  test('production avec vignette : toujours aucune og:image, twitter:card summary (11.2, D37)', async ({
+    client,
+    assert,
+  }) => {
+    const production = await createProduction()
+    production.thumbnailKey = `thumbnails/${production.id}/${TOKEN}`
+    await production.save()
+
+    const response = await client.get(`/productions/${production.slug}`)
+    response.assertStatus(200)
+    const head = headOf(response.text())
+
+    assert.isNull(metaContent(head, 'property', 'og:image'))
+    assert.isNull(metaContent(head, 'property', 'og:image:width'))
+    assert.equal(metaContent(head, 'name', 'twitter:card'), 'summary')
+    assert.notInclude(response.text(), 'thumbnails/')
+  })
+
   test('pages génériques : twitter:card summary, pas d’og:image', async ({ client, assert }) => {
     for (const url of ['/', '/productions', '/privacy-policy']) {
       const response = await client.get(url)

@@ -3,6 +3,9 @@ import db from '@adonisjs/lucid/services/db'
 import logger from '@adonisjs/core/services/logger'
 import ProductionStatus from '#enums/production_status'
 import FileStorageService from '#services/file_storage_service'
+import ThumbnailService from '#services/thumbnail_service'
+import PosterService from '#services/poster_service'
+import FeaturedService from '#services/featured_service'
 import Production from '#models/production'
 import { slugify } from '#helpers/slug'
 
@@ -139,10 +142,21 @@ export default class ProductionService {
   /**
    * Dépublie : retour en brouillon. `anta_published_at` est CONSERVÉ (FR35 —
    * c'est la date de première mise en ligne, pas l'état courant).
+   * Une production à la une quitte la sélection dans la même transaction (Story 11.5, FR51) :
+   * ligne verrouillée d'abord (`FOR NO KEY UPDATE`, colonne non clé), table de la une ensuite
+   * (ordre D-11.4-5) ; le retrait est journalisé après le commit par `FeaturedService`.
    */
-  static async unpublish(production: Production): Promise<void> {
-    production.status = ProductionStatus.DRAFT
-    await production.save()
+  static async unpublish(production: Production, adminId: string): Promise<void> {
+    await db.transaction(async (trx) => {
+      const query = Production.query({ client: trx }).where('id', production.id)
+      query.knexQuery.forNoKeyUpdate()
+      const locked = await query.firstOrFail()
+      await FeaturedService.removeProduction(locked.id, adminId, 'unpublish', trx)
+      locked.status = ProductionStatus.DRAFT
+      await locked.save()
+      production.status = locked.status
+      production.updatedAt = locked.updatedAt
+    })
   }
 
   /**
@@ -150,7 +164,7 @@ export default class ProductionService {
    * un fichier déjà absent ne doit pas bloquer la suppression RGPD), puis la
    * production (CASCADE supprime `production_files` + `production_links`).
    */
-  static async delete(production: Production): Promise<void> {
+  static async delete(production: Production, adminId: string): Promise<void> {
     await production.load('files')
     for (const file of production.files) {
       try {
@@ -162,6 +176,48 @@ export default class ProductionService {
         )
       }
     }
-    await production.delete()
+    // Clés réellement supprimées (`RETURNING`), pas celles lues plus haut : une vignette, un
+    // poster ou un fichier enregistrés entre-temps ne restent pas orphelins dans R2 (revue
+    // 11.3). Une écriture concurrente verrouille la ligne : le DELETE attend puis renvoie la
+    // version écrite ; une écriture postérieure ne trouve plus de ligne (poster jeté par
+    // `PosterService.attach`).
+    const deleted = await db.transaction(async (trx) => {
+      // Story 11.5 (FR51) : ligne verrouillée d'abord, puis retrait de la une (verrou de table,
+      // ordre D-11.4-5), AVANT le DELETE : le CASCADE retirerait l'emplacement sans journal.
+      const locked = await trx.rawQuery('SELECT id FROM productions WHERE id = ? FOR UPDATE', [
+        production.id,
+      ])
+      if (locked.rows.length > 0) {
+        await FeaturedService.removeProduction(production.id, adminId, 'delete', trx)
+      }
+      const files = await trx.rawQuery(
+        'DELETE FROM production_files WHERE production_id = ? RETURNING file_key, poster_key',
+        [production.id]
+      )
+      const rows = await trx.rawQuery(
+        'DELETE FROM productions WHERE id = ? RETURNING thumbnail_key',
+        [production.id]
+      )
+      return {
+        files: files.rows as { file_key: string; poster_key: string | null }[],
+        thumbnailKey: (rows.rows[0]?.thumbnail_key ?? null) as string | null,
+      }
+    })
+    production.$isDeleted = true
+
+    const alreadyDeleted = new Set(production.files.map((file) => file.fileKey))
+    for (const file of deleted.files) {
+      if (alreadyDeleted.has(file.file_key)) continue
+      await FileStorageService.delete(file.file_key).catch((error) =>
+        logger.error(
+          { err: error, fileKey: file.file_key },
+          'R2 delete failed during production delete'
+        )
+      )
+    }
+    // Variantes de la vignette (Story 11.1) et images extraites des vidéos (Story 11.3) :
+    // après la suppression, best-effort (journalisé).
+    await ThumbnailService.discard(deleted.thumbnailKey)
+    for (const file of deleted.files) await PosterService.discard(file.poster_key)
   }
 }

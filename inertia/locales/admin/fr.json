@@ -2,6 +2,7 @@
   "nav": {
     "productions": "Productions",
     "authors": "Auteurs",
+    "featured": "À la une",
     "statistics": "Statistiques",
     "users": "Utilisateurs",
     "logout": "Se déconnecter",
@@ -42,6 +43,7 @@
     "draft_saved": "Brouillon enregistré.",
     "update_success": "Modifications enregistrées.",
     "auto_unpublished": "Modifications enregistrées. La production a été dépubliée car elle est désormais incomplète.",
+    "auto_unpublished_featured": "Modifications enregistrées. La production a été dépubliée car elle est désormais incomplète, et retirée de la bannière à la une.",
     "published": "Production publiée.",
     "unpublish_success": "Production dépubliée.",
     "delete_success": "Production supprimée.",
@@ -57,6 +59,9 @@
       "title": "Supprimer cette production ?",
       "description": "Cette action est irréversible. La production et ses fichiers associés seront supprimés définitivement.",
       "confirm": "Supprimer définitivement"
+    },
+    "confirm": {
+      "featured_warning": "Cette production est à la une : elle sera retirée de la bannière."
     },
     "form": {
       "sections": {
@@ -482,10 +487,13 @@
       "delete": "Suppression",
       "password_reset": "Réinit. mot de passe",
       "consent_confirm": "Consentement confirmé",
-      "consent_withdraw": "Consentement retiré"
+      "consent_withdraw": "Consentement retiré",
+      "featured_update": "Sélection à la une modifiée",
+      "featured_auto_remove": "Retrait automatique de la une"
     },
     "resource": {
-      "author": "Auteur"
+      "author": "Auteur",
+      "featured_selection": "Sélection à la une"
     }
   },
   "taxonomy": {
@@ -768,5 +776,107 @@
     "home": "Accueil",
     "search": "Recherche avancée",
     "authors": "Auteurs"
+  },
+  "thumbnail": {
+    "upload": "Téléverser une vignette",
+    "replace": "Remplacer la vignette",
+    "remove": "Retirer la vignette",
+    "help": "JPEG, PNG ou WebP · 5 Mo max · format 16:9 conseillé (recadrage automatique)",
+    "drop_hint": "ou glissez une image ici",
+    "uploading": "Envoi de la vignette… {{percent}} %",
+    "preview_unavailable": "Aperçu indisponible",
+    "extracted": "Image extraite de la vidéo",
+    "uploaded": "Vignette enregistrée.",
+    "removed": "Vignette retirée.",
+    "errors": {
+      "no_file": "Aucune image reçue.",
+      "invalid_type": "Choisissez une image JPEG, PNG ou WebP valide.",
+      "too_large": "La vignette ne doit pas dépasser 5 Mo.",
+      "dimensions": "L'image est trop grande (40 mégapixels au maximum).",
+      "not_found": "Cette production n'existe plus.",
+      "storage": "La vignette n'a pas pu être modifiée. Réessayez dans un instant.",
+      "network": "La requête a échoué. Vérifiez votre connexion puis réessayez.",
+      "required_for_featured": "Vignette requise pour une production à la une."
+    }
+  },
+  "featured": {
+    "heading": "À la une",
+    "intro": "Jusqu'à 3 productions publiées, affichées dans cet ordre en tête de l'accueil. Les changements ne s'appliquent à l'accueil qu'après « Enregistrer ».",
+    "count": "{{count}} / 3 emplacements",
+    "slots_heading": "Emplacements",
+    "position": "Position {{n}}",
+    "empty_slot": "Emplacement libre",
+    "by": "Par {{names}}",
+    "badges": {
+      "shown": "Affichée",
+      "missing": "Vignette manquante",
+      "unavailable": "Non publiée"
+    },
+    "missing_notice": "Cette production n'a pas de vignette. Ajoutez-en une pour pouvoir enregistrer la sélection.",
+    "actions": {
+      "move_up": "Monter « {{title}} »",
+      "move_down": "Descendre « {{title}} »",
+      "remove": "Retirer",
+      "remove_label": "Retirer « {{title}} » de la une"
+    },
+    "announce": {
+      "moved": "« {{title}} » déplacée en position {{n}}.",
+      "removed": "« {{title}} » retirée de la sélection.",
+      "added": "« {{title}} » ajoutée en position {{n}}."
+    },
+    "unsaved": "Modifications non enregistrées",
+    "save": "Enregistrer",
+    "saving": "Enregistrement…",
+    "save_blocked": "Enregistrement impossible : l'emplacement {{n}} n'a pas de vignette.",
+    "saved": "Sélection à la une enregistrée.",
+    "leave_confirm": "Les changements de la sélection à la une ne sont pas enregistrés. Quitter la page quand même ?",
+    "preview": {
+      "heading": "Aperçu de la bannière",
+      "none": "Aucune bannière sur l'accueil",
+      "shown_one": "{{count}} production affichée",
+      "shown_other": "{{count}} productions affichées",
+      "waiting_one": "l'emplacement {{slots}} attend sa vignette",
+      "waiting_other": "les emplacements {{slots}} attendent leur vignette",
+      "layouts": "Disposition : 1 production = pleine largeur ; 2 = deux colonnes ; 3 = la première sur 2/3, les deux suivantes empilées.",
+      "by": "Par",
+      "views": "Vues :",
+      "downloads": "Téléchargements :"
+    },
+    "picker": {
+      "label": "Production publiée",
+      "placeholder": "Titre ou auteur…",
+      "help": "Seules les productions publiées sont proposées.",
+      "loading": "Recherche…",
+      "no_results": "Aucune production publiée trouvée.",
+      "error": "Recherche indisponible, réessayez.",
+      "results_count_one": "{{count}} production trouvée.",
+      "results_count_other": "{{count}} productions trouvées."
+    },
+    "state": {
+      "thumbnail": "Vignette",
+      "poster": "Vidéo hébergée — image extraite",
+      "missing": "Sans vignette — à téléverser"
+    },
+    "errors": {
+      "invalid": "Sélection invalide. Rechargez la page puis réessayez.",
+      "too_many": "Jusqu'à 3 productions peuvent être mises à la une.",
+      "duplicate": "Une production ne peut occuper qu'un seul emplacement.",
+      "not_found": "Une production choisie n'existe plus. Retirez-la puis réessayez.",
+      "not_published": "Seules les productions publiées peuvent être mises à la une.",
+      "thumbnail_required": "Une production choisie n'a pas la vignette requise.",
+      "storage": "La sélection n'a pas pu être enregistrée. Réessayez dans un instant.",
+      "network": "La requête a échoué. Vérifiez votre connexion puis réessayez.",
+      "refresh": "L'état des vignettes n'a pas pu être actualisé.",
+      "not_saved": "La sélection n'a pas été enregistrée (session expirée ?). Rechargez la page puis réessayez.",
+      "not_found_slot": "La production de l'emplacement {{n}} n'existe plus. Retirez-la puis réessayez.",
+      "not_published_slot": "La production de l'emplacement {{n}} n'est pas publiée.",
+      "thumbnail_required_slot": "La production de l'emplacement {{n}} n'a pas la vignette requise."
+    },
+    "add_heading": "Ajouter une production à la une",
+    "thumbnail_required": "Vignette requise",
+    "unavailable_notice": "Cette production n'est plus publiée : retirez-la de la sélection.",
+    "save_blocked_unavailable": "Enregistrement impossible : la production de l'emplacement {{n}} n'est plus publiée.",
+    "save_blocked_refresh": "Enregistrement impossible tant que l'état des vignettes n'est pas actualisé.",
+    "retry": "Réessayer"
   }
 }

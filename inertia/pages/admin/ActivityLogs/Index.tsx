@@ -74,6 +74,8 @@ export default function AdminActivityLogsIndex({
       const label = t('activity.resource.author')
       return log.resourceName ? `${label} — ${log.resourceName}` : `${label} ${shortId}`
     }
+    // Story 11.4: the featured selection is a single resource, without id.
+    if (log.resourceType === 'featured_selection') return t('activity.resource.featured_selection')
     return `${log.resourceType} ${shortId}`
   }
 
@@ -85,7 +87,10 @@ export default function AdminActivityLogsIndex({
       </h1>
 
       <div className="mt-6 flex flex-wrap items-center gap-3">
-        <Select value={currentAdminId ?? ALL_VALUE} onValueChange={(v) => selectValue(v, 'adminId')}>
+        <Select
+          value={currentAdminId ?? ALL_VALUE}
+          onValueChange={(v) => selectValue(v, 'adminId')}
+        >
           <SelectTrigger className="w-64" aria-label={t('activity.filter_admin')}>
             <SelectValue placeholder={t('activity.filter_admin')} />
           </SelectTrigger>
