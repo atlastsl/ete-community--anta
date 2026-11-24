@@ -7,8 +7,8 @@ export const RANKING_SIZE = 3
 /** Lifetime of a cached ranking (P2.3, P2-06). */
 export const RANKING_TTL_MS = 10 * 60 * 1000
 
-/** Cached rankings; `topAuthors` joins in Story 12.3 (same cache, same invalidation). */
-export type RankingKey = 'mostViewed' | 'mostDownloaded'
+/** Cached rankings: productions (Story 12.2) and authors (Story 12.3), same invalidation. */
+export type RankingKey = 'mostViewed' | 'mostDownloaded' | 'topAuthors'
 
 type Entry = { ids: string[]; expiresAt: number }
 
@@ -85,13 +85,13 @@ const cache = new RankingCache(RANKING_TTL_MS)
 const WINDOWS = {
   mostViewed: { table: 'stats_views', column: 'recorded_at' },
   mostDownloaded: { table: 'stats_downloads', column: 'downloaded_at' },
-} as const satisfies Record<RankingKey, { table: string; column: string }>
+} as const satisfies Record<'mostViewed' | 'mostDownloaded', { table: string; column: string }>
 
 /**
  * Home rankings (Story 12.2, P2.3, FR45, FR46, D4, D5): views or downloads of the last 365
  * rolling days, computed by Postgres. Only ordered ids are cached; the cards are hydrated on
- * every render with the totals (`HomeController`). No model or service import: the mutation
- * services import this one (no cycle).
+ * every render with the totals (`HomeController`). No static model or service import: the
+ * mutation services import this one (no cycle); `topAuthorIds` loads its query lazily.
  */
 export default class RankingService {
   /** Published productions most viewed over 365 days (0 in the window: excluded). */
@@ -102,6 +102,19 @@ export default class RankingService {
   /** Published productions most downloaded over 365 days (0 in the window: excluded). */
   static mostDownloadedIds(): Promise<string[]> {
     return cache.get('mostDownloaded', () => this.windowRanking('mostDownloaded'))
+  }
+
+  /**
+   * Visible authors most viewed over 365 days (Story 12.3, D36). The query lives with the
+   * visibility rule (`PublicAuthorService.topViewedAuthorIds`, `Author.visibleOnSite`), imported
+   * lazily: a static import would close the cycle `PublicAuthorService` → `AuthorService` → here
+   * (D-12.3-1).
+   */
+  static topAuthorIds(): Promise<string[]> {
+    return cache.get('topAuthors', async () => {
+      const { default: PublicAuthorService } = await import('#services/public_author_service')
+      return PublicAuthorService.topViewedAuthorIds(RANKING_SIZE)
+    })
   }
 
   /** Empties every cached ranking now. Prefer `invalidateAfterCommit` inside a transaction. */
@@ -148,7 +161,7 @@ export default class RankingService {
    * Inner join on the window (D5), order: window count ↓, `anta_published_at` ↓, `id` ↑
    * (P2.3). Table and column names come from `WINDOWS`, never from input.
    */
-  private static async windowRanking(key: RankingKey): Promise<string[]> {
+  private static async windowRanking(key: keyof typeof WINDOWS): Promise<string[]> {
     const { table, column } = WINDOWS[key]
     const result = await db.rawQuery(
       `SELECT p.id, count(*) AS window_count

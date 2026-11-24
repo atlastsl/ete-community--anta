@@ -177,3 +177,7 @@
 
 - **Cache des classements et commandes Ace** : `authors:apply` (et le seeder) tournent dans un autre processus que le serveur web ; leur `RankingService.invalidate()` ne vide pas le cache du serveur. Après la conversion, `topAuthors` (12.3) et les blocs peuvent rester périmés jusqu'à 10 min (TTL). Accepté (P2.3, D-12.2-4) ; à confirmer par le PO (redémarrer l'application après `authors:apply` si l'accueil doit être juste tout de suite).
 - **Savepoints et `after('commit')`** : Lucid exécute le hook d'une transaction imbriquée à la libération du savepoint. `invalidateAfterCommit` invalide aussi à la fin de la transaction la plus externe via les champs knex `parentTransaction` (non documenté) et `executionPromise` ; si une mise à jour de knex les retire, seul le hook du savepoint reste (test `ranking_service.spec.ts` « savepoint relâché puis COMMIT externe » pour le détecter).
+
+## Deferred from: code review of 12-3-bloc-auteurs-les-plus-consultes (2026-11-24)
+
+- **[PO] Départage du tri par défaut de `/authors`** : le tri `views` (fenêtre 365 j) départage les ex æquo par nom seulement, sans le départage D36 (dernière production publiée sur Anta) du bloc « Auteurs les plus consultés ». Après « Voir plus », deux auteurs ex æquo sur les vues peuvent apparaître dans un ordre différent de celui de l'accueil. À trancher : aligner `/authors` sur D36 (ajout de `last_published_at` dans `PublicAuthorService.list`) ou accepter l'écart.

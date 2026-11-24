@@ -6,6 +6,7 @@ import SearchBar from '~/components/public/SearchBar'
 import ProductionCard, { type ProductionCardData } from '~/components/public/ProductionCard'
 import FeaturedBanner, { type FeaturedBannerItem } from '~/components/public/FeaturedBanner'
 import HomeBlock from '~/components/public/HomeBlock'
+import AuthorCard, { type AuthorCardData } from '~/components/public/AuthorCard'
 import { homeSearchHref } from '~/lib/search_query'
 import type { SeoMeta } from '~/lib/seo'
 
@@ -17,6 +18,8 @@ type HomeProps = {
   /** Ranked on the views / downloads of the last 365 days (D4, D5). */
   mostViewed: ProductionCardData[]
   mostDownloaded: ProductionCardData[]
+  /** Visible authors most viewed over 365 days (Story 12.3, D36), total views on the cards (D3). */
+  topAuthors: AuthorCardData[]
   meta?: SeoMeta
 }
 
@@ -24,13 +27,21 @@ const productionKey = (production: ProductionCardData) => production.id
 const productionCard = (production: ProductionCardData) => (
   <ProductionCard production={production} />
 )
+const authorKey = (author: AuthorCardData) => author.slug
+const authorCard = (author: AuthorCardData) => <AuthorCard author={author} headingLevel="h3" />
 
 /** Soumission → `/productions?q=…` ; barre vide → `/productions` (12.1, D8). */
 function handleSearch(query: string) {
   router.visit(homeSearchHref(query))
 }
 
-export default function Home({ featured, recent, mostViewed, mostDownloaded }: HomeProps) {
+export default function Home({
+  featured,
+  recent,
+  mostViewed,
+  mostDownloaded,
+  topAuthors,
+}: HomeProps) {
   const { t } = useTranslation()
 
   return (
@@ -86,6 +97,15 @@ export default function Home({ featured, recent, mostViewed, mostDownloaded }: H
         items={mostDownloaded}
         itemKey={productionKey}
         renderItem={productionCard}
+      />
+      {/* 12.3 : « Voir plus » → liste des auteurs, tri par défaut (FR45, D-12.3-6). */}
+      <HomeBlock
+        title={t('home.blocks.authors')}
+        windowed
+        seeMoreHref="/authors"
+        items={topAuthors}
+        itemKey={authorKey}
+        renderItem={authorCard}
       />
     </div>
   )

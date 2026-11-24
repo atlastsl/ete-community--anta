@@ -69,8 +69,8 @@ test.group('Accueil | blocs (12.2)', () => {
     assert.include(home, 'seeMoreHref="/productions?sort=date"')
     assert.include(home, 'seeMoreHref="/productions?sort=views"')
     assert.include(home, 'seeMoreHref="/productions?sort=downloads"')
-    // `windowed` on the two ranked blocks only.
-    assert.lengthOf(home.match(/\bwindowed\b/g) ?? [], 2)
+    // `windowed` on the three ranked blocks only (12.2 + authors 12.3).
+    assert.lengthOf(home.match(/\bwindowed\b/g) ?? [], 3)
     assert.notInclude(home.slice(recent, viewed), 'windowed')
   })
 
@@ -87,6 +87,7 @@ test.group('Accueil | blocs (12.2)', () => {
       window: 'sur les 12 derniers mois',
       see_more: 'Voir plus',
       see_more_named: 'Voir plus : {{title}}',
+      authors: 'Auteurs les plus consultés',
     })
     assert.deepEqual(en.home.blocks, {
       recent: 'Recently published',
@@ -95,10 +96,53 @@ test.group('Accueil | blocs (12.2)', () => {
       window: 'over the last 12 months',
       see_more: 'See more',
       see_more_named: 'See more: {{title}}',
+      authors: 'Most viewed authors',
     })
     for (const locale of [fr, en]) {
       assert.notProperty(locale.home, 'sections')
       assert.notProperty(locale.home, 'empty')
     }
+  })
+})
+
+// Story 12.3 — bloc « Auteurs les plus consultés » (FR45, D3, D36), lecture de source.
+const authorCard = read('inertia/components/public/AuthorCard.tsx')
+
+test.group('Accueil | bloc auteurs (12.3)', () => {
+  test('prop topAuthors : cartes AuthorCard', ({ assert }) => {
+    assert.include(home, 'topAuthors: AuthorCardData[]')
+    assert.include(
+      home,
+      "import AuthorCard, { type AuthorCardData } from '~/components/public/AuthorCard'"
+    )
+    assert.include(home, '<AuthorCard author={author} headingLevel="h3" />')
+  })
+
+  test('4e bloc après « Les plus téléchargées », classé, « Voir plus » → /authors', ({
+    assert,
+  }) => {
+    const downloaded = home.indexOf("title={t('home.blocks.most_downloaded')}")
+    const authors = home.indexOf("title={t('home.blocks.authors')}")
+    assert.isTrue(downloaded > 0 && downloaded < authors)
+    const authorsBlock = home.slice(
+      authors,
+      home.indexOf('/>', home.indexOf('renderItem', authors))
+    )
+    assert.include(authorsBlock, 'windowed')
+    assert.include(authorsBlock, 'seeMoreHref="/authors"')
+    assert.include(authorsBlock, 'items={topAuthors}')
+  })
+})
+
+test.group('AuthorCard | niveau de titre (12.3)', () => {
+  test('h2 par défaut (/authors), h3 possible (accueil, sous le h2 du bloc)', ({ assert }) => {
+    assert.include(authorCard, "headingLevel?: 'h2' | 'h3'")
+    assert.include(authorCard, "headingLevel = 'h2'")
+    assert.include(authorCard, 'const Heading = headingLevel')
+    assert.include(
+      authorCard,
+      '<Heading className="font-display text-lg leading-snug text-stone-900">'
+    )
+    assert.notInclude(authorCard, '<h2')
   })
 })

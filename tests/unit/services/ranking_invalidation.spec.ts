@@ -17,6 +17,7 @@ let counter = 0
 async function primeCache() {
   await RankingService.mostViewedIds()
   await RankingService.mostDownloadedIds()
+  await RankingService.topAuthorIds()
 }
 
 const isPrimed = () => RankingService.cachedKeys().length > 0
@@ -139,6 +140,16 @@ test.group('RankingService | invalidation par les mutations', (group) => {
     await primeCache()
     assert.equal(await AuthorService.withdrawConsent(author), 'unchanged')
     assert.isTrue(isPrimed())
+  })
+
+  test('topAuthors (12.3) : même cache, vidé par le retrait du consentement', async ({
+    assert,
+  }) => {
+    const author = await createAuthor(true)
+    await primeCache()
+    assert.sameMembers(RankingService.cachedKeys(), ['mostViewed', 'mostDownloaded', 'topAuthors'])
+    await AuthorService.withdrawConsent(author)
+    assert.deepEqual(RankingService.cachedKeys(), [])
   })
 
   test('modification d’une fiche → invalidé ; sans changement → conservé', async ({ assert }) => {

@@ -6,6 +6,7 @@ import ProductionCardTransformer from '#transformers/production_card_transformer
 import PublicBylineService from '#services/public_byline_service'
 import FeaturedService from '#services/featured_service'
 import RankingService, { RANKING_SIZE } from '#services/ranking_service'
+import PublicAuthorService from '#services/public_author_service'
 
 /** Base query : productions publiées + agrégats de vues/téléchargements (alias explicites). */
 function publishedWithCounts() {
@@ -39,6 +40,9 @@ export default class HomeController {
     // Classements 365 j : identifiants ordonnés en cache (TTL 10 min, Story 12.2, P2-06).
     const mostViewedRows = await rankedRows(await RankingService.mostViewedIds())
     const mostDownloadedRows = await rankedRows(await RankingService.mostDownloadedIds())
+    // Story 12.3: cached ids, cards rebuilt on every render with the totals of `/authors` and
+    // re-filtered on `Author.visibleOnSite` (D-12.3-4).
+    const topAuthors = await PublicAuthorService.cardsByIds(await RankingService.topAuthorIds())
 
     // Featured banner (Story 11.6): read on every request, never cached (P2.3, journey 5).
     const featuredRows = await FeaturedService.bannerRows()
@@ -57,6 +61,7 @@ export default class HomeController {
       recent: ProductionCardTransformer.transform(recentRows),
       mostViewed: ProductionCardTransformer.transform(mostViewedRows),
       mostDownloaded: ProductionCardTransformer.transform(mostDownloadedRows),
+      topAuthors,
       meta: SeoService.site(locale),
     })
   }

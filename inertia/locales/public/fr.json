@@ -45,7 +45,8 @@
       "most_downloaded": "Les plus téléchargées",
       "window": "sur les 12 derniers mois",
       "see_more": "Voir plus",
-      "see_more_named": "Voir plus : {{title}}"
+      "see_more_named": "Voir plus : {{title}}",
+      "authors": "Auteurs les plus consultés"
     }
   },
   "featured": {

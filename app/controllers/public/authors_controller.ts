@@ -39,10 +39,7 @@ export default class AuthorsController {
       pagination.total > 0 || (filtered && (await PublicAuthorService.hasVisibleAuthors()))
 
     return inertia.render('authors', {
-      authors: paginator.all().map((author) => ({
-        ...PublicAuthorService.listCard(author),
-        photoBase: MediaService.authorPhotoUrl(author),
-      })),
+      authors: paginator.all().map((author) => PublicAuthorService.listCard(author)),
       pagination: {
         currentPage: pagination.currentPage,
         lastPage: pagination.lastPage,

@@ -3,6 +3,7 @@ import Author from '#models/author'
 import Production from '#models/production'
 import ProductionStatus from '#enums/production_status'
 import AuthorService from '#services/author_service'
+import MediaService from '#services/media_service'
 import { normalizeKey } from '#helpers/normalize'
 import { formatAuthorName } from '#helpers/author_name'
 
@@ -185,15 +186,14 @@ export default class PublicAuthorService {
   }
 
   /**
-   * One page of the visible authors (Story 10.5, FR57), aggregates computed in the same query
-   * (no N+1): published productions, primary institution (affiliation position 1), and one
-   * LATERAL pass over the views of the published productions giving the total (D3) and the
-   * 365-day window (default sort, P2.3 without `HAVING`: 0-view authors come last). Search and
-   * institution reuse the admin filters (normalized `search_name`, any affiliation's key).
+   * Visible authors (`Author.visibleOnSite`, single visibility rule) with one LATERAL pass over
+   * the views of their **published** productions: `total_views` (card total, D3) and
+   * `window_views` (rolling 365 days, P2.3). The pivot key `(production_id, author_id)` keeps one
+   * row per production and author: a view counts once per author (D-12.3-2). Shared by the
+   * `/authors` list and the home ranking, so both show the same totals.
    */
-  static list(filters: AuthorsListFilters, sort: AuthorsListSort, page: number) {
-    const published = ProductionStatus.PUBLISHED
-    const query = Author.query()
+  private static visibleWithViews() {
+    return Author.query()
       .withScopes((scopes) => scopes.visibleOnSite())
       .joinRaw(
         `LEFT JOIN LATERAL (
@@ -203,8 +203,14 @@ export default class PublicAuthorService {
              JOIN production_authors pa ON pa.production_id = v.production_id
              JOIN productions p ON p.id = pa.production_id AND p.status = ?
             WHERE pa.author_id = authors.id) AS sv ON true`,
-        [published]
+        [ProductionStatus.PUBLISHED]
       )
+  }
+
+  /** `visibleWithViews()` + the columns of an `AuthorCard` (read back by `listCard`). */
+  private static cardQuery() {
+    const published = ProductionStatus.PUBLISHED
+    return this.visibleWithViews()
       .select('authors.id', 'authors.slug', 'authors.first_names', 'authors.last_names')
       .select('authors.photo_key', 'authors.consent_confirmed_at')
       .select('sv.total_views', 'sv.window_views')
@@ -220,6 +226,17 @@ export default class PublicAuthorService {
              WHERE aa.author_id = authors.id ORDER BY aa.position ASC LIMIT 1) AS primary_institution`
         )
       )
+  }
+
+  /**
+   * One page of the visible authors (Story 10.5, FR57), aggregates computed in the same query
+   * (no N+1): published productions, primary institution (affiliation position 1), total views
+   * (D3) and the 365-day window (default sort, P2.3 without `HAVING`: 0-view authors come last).
+   * Search and institution reuse the admin filters (normalized `search_name`, any affiliation's key).
+   */
+  static list(filters: AuthorsListFilters, sort: AuthorsListSort, page: number) {
+    const published = ProductionStatus.PUBLISHED
+    const query = this.cardQuery()
 
     AuthorService.applyListFilters(query, {
       q: filters.q,
@@ -250,7 +267,48 @@ export default class PublicAuthorService {
     return query.paginate(page, AUTHORS_LIST_PER_PAGE)
   }
 
-  /** Card of the list from a `list()` row (aggregates read from `$extras`). */
+  /**
+   * Home ranking « Auteurs les plus consultés » (Story 12.3, P2.3, D5, D36): visible authors
+   * whose published productions have views in the last 365 days (> 0), ordered by those views,
+   * then the date of their latest published production on Anta (all of them, viewed or not),
+   * then last names, first names, id. Ids only: cached by `RankingService.topAuthorIds()`.
+   */
+  static async topViewedAuthorIds(limit: number): Promise<string[]> {
+    const rows = await this.visibleWithViews()
+      .select('authors.id')
+      .select(
+        db.raw(
+          `(SELECT max(p.anta_published_at) FROM production_authors pa
+              JOIN productions p ON p.id = pa.production_id AND p.status = ?
+             WHERE pa.author_id = authors.id) AS last_published_at`,
+          [ProductionStatus.PUBLISHED]
+        )
+      )
+      .where('sv.window_views', '>', 0)
+      .orderBy('sv.window_views', 'desc')
+      .orderByRaw('last_published_at DESC NULLS LAST')
+      .orderBy('authors.last_names', 'asc')
+      .orderBy('authors.first_names', 'asc')
+      .orderBy('authors.id', 'asc')
+      .limit(limit)
+    return rows.map((author) => author.id)
+  }
+
+  /**
+   * Cards of the given authors, in the order of `ids`, through the same visibility scope: an id
+   * left in a cache by another process never shows a non-public profile (D-12.3-4, FR53).
+   */
+  static async cardsByIds(ids: string[]) {
+    if (ids.length === 0) return []
+    const rows = await this.cardQuery().whereIn('authors.id', ids)
+    const byId = new Map(rows.map((row) => [row.id, row]))
+    return ids.flatMap((id) => {
+      const author = byId.get(id)
+      return author ? [this.listCard(author)] : []
+    })
+  }
+
+  /** `AuthorCard` data from a `cardQuery()` row (aggregates read from `$extras`). */
   static listCard(author: Author) {
     return {
       slug: author.slug,
@@ -259,6 +317,7 @@ export default class PublicAuthorService {
       primaryInstitution: (author.$extras.primary_institution as string | null) ?? null,
       productionsCount: Number(author.$extras.published_count ?? 0),
       viewsCount: Number(author.$extras.total_views ?? 0),
+      photoBase: MediaService.authorPhotoUrl(author),
     }
   }
 
