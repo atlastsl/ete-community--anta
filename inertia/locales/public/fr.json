@@ -112,6 +112,12 @@
     "share_copied": "Lien copié dans le presse-papiers.",
     "share_failed": "Impossible de copier le lien. Copiez l'URL depuis la barre d'adresse."
   },
+  "suggestions": {
+    "title": "Productions similaires",
+    "loading": "Chargement des productions similaires…",
+    "announce_one": "{{count}} production similaire",
+    "announce_other": "{{count}} productions similaires"
+  },
   "media": {
     "pdf_viewer_title": "Lecteur PDF : {{name}}",
     "open_document": "Ouvrir le document",

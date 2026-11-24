@@ -7,6 +7,7 @@ import ViewTracker from '~/components/public/ViewTracker'
 import MediaViewer from '~/components/public/MediaViewer'
 import ShareButton from '~/components/public/ShareButton'
 import AuthorByline from '~/components/public/AuthorByline'
+import SuggestionsGrid from '~/components/public/SuggestionsGrid'
 import type { AuthorCredit } from '~/components/public/ProductionCard'
 import { languageLabel } from '~/lib/languages'
 import { taxonomyLabel } from '~/lib/taxonomy'
@@ -280,6 +281,9 @@ export default function ProductionShow({ production }: Props) {
           </div>
         </aside>
       </div>
+
+      {/* Productions similaires (Story 12.4) : pleine largeur, chargées après la page (NFR18) */}
+      <SuggestionsGrid key={production.slug} slug={production.slug} />
 
       {/* Enregistrement de vue après 10s (FR25) — incrément optimiste du compteur */}
       <ViewTracker productionId={production.id} onRecorded={() => setViewsCount((n) => n + 1)} />

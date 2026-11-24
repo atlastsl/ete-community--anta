@@ -112,6 +112,12 @@
     "share_copied": "Link copied to clipboard.",
     "share_failed": "Could not copy the link. Copy the URL from the address bar."
   },
+  "suggestions": {
+    "title": "Similar productions",
+    "loading": "Loading similar productions…",
+    "announce_one": "{{count}} similar production",
+    "announce_other": "{{count}} similar productions"
+  },
   "media": {
     "pdf_viewer_title": "PDF viewer: {{name}}",
     "open_document": "Open document",

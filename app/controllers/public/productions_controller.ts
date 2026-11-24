@@ -16,6 +16,7 @@ import env from '#start/env'
 import ProductionCardTransformer from '#transformers/production_card_transformer'
 import PublicBylineService from '#services/public_byline_service'
 import PublicAuthorService from '#services/public_author_service'
+import SuggestionService from '#services/suggestion_service'
 
 /** Sérialisation complète pour la page détail (toutes métadonnées publiques + fichiers/liens). */
 function serializeDetail(p: Production) {
@@ -205,6 +206,38 @@ export default class ProductionsController {
         env.get('APP_URL')
       ),
     })
+  }
+
+  /**
+   * Suggestions de productions similaires (Story 12.4, FR61, P2.4) : JSON chargé par
+   * `SuggestionsGrid` après le rendu de la page (NFR18). Servi par `SuggestionsMiddleware`
+   * avant le routeur — sans session, shield ni cookie — car la réponse est cachable
+   * publiquement (D-12.4-3) : `X-Content-Type-Options` est donc posé ici. 404 JSON `no-store`
+   * si la production n'est pas publiée (rien n'en est révélé, NFR12 ; D-12.4-4).
+   */
+  async suggestions(ctx: HttpContext, stateless = false) {
+    const { params, response } = ctx
+    response.header('X-Content-Type-Options', 'nosniff')
+
+    const production = await Production.query()
+      .where('slug', params.slug)
+      .where('status', ProductionStatus.PUBLISHED)
+      .select('id')
+      .first()
+
+    if (!production) {
+      response.header('Cache-Control', 'no-store')
+      return response.status(404).json({ error: 'not_found' })
+    }
+
+    const rows = await SuggestionService.forProduction(production.id)
+    await PublicBylineService.attach(rows)
+    // `ctx.serialize` (providers/api_provider.ts) resolves the transformer collection.
+    const results = await ctx.serialize.withoutWrapping(ProductionCardTransformer.transform(rows))
+    // Public cache only when served statelessly by the middleware; through the router the
+    // session / shield cookies are on the response → never cached (defence in depth, review).
+    response.header('Cache-Control', stateless ? 'public, max-age=300' : 'private, no-store')
+    return response.json({ results })
   }
 
   /**

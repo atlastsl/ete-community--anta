@@ -19,6 +19,12 @@ router.get('/productions/:slug', [controllers.public.Productions, 'show']).as('p
 router
   .get('/productions/:slug/files/:fileId/download', [controllers.public.Productions, 'download'])
   .as('production.download')
+// Suggestions JSON (Story 12.4, P2.4) : servies avant le routeur par `SuggestionsMiddleware`
+// (réponse cachable publiquement, sans session ni cookies, D-12.4-3) ; la route reste déclarée
+// pour le nommage, Tuyau et le repli. Trois segments : aucun conflit avec `/productions/:slug`.
+router
+  .get('/productions/:slug/suggestions', [controllers.public.Productions, 'suggestions'])
+  .as('production.suggestions')
 // Liste des auteurs visibles (P2.6, Story 10.5) puis profil public d'un auteur visible (D11) ; 404 sinon.
 router.get('/authors', [controllers.public.Authors, 'index']).as('authors.index')
 router.get('/authors/:slug', [controllers.public.Authors, 'show']).as('authors.show')

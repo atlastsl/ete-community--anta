@@ -32,7 +32,11 @@ export default function ProductionCard({
   currentAuthorSlug,
 }: {
   production: ProductionCardData
-  variant?: 'grid' | 'list'
+  /**
+   * `compact` (suggestions, Story 12.4, D22, D35): grid card without date, tighter padding,
+   * summary hidden < sm then `line-clamp-2`.
+   */
+  variant?: 'grid' | 'list' | 'compact'
   /** `work`: the work date (author profile, sorted by it) instead of the Anta date. */
   dateField?: 'published' | 'work'
   /** Author profile: that author's own name is not linked (Story 10.4). */
@@ -51,8 +55,10 @@ export default function ProductionCard({
     publishedAt,
   } = production
 
+  const compact = variant === 'compact'
   const showWork = dateField === 'work'
-  const dateValue = showWork ? production.workPublishedAt : publishedAt
+  // Suggestion cards show no date (DESIGN.md, SuggestionsGrid).
+  const dateValue = compact ? null : showWork ? production.workPublishedAt : publishedAt
   const dateLabel = dateValue
     ? new Date(dateValue).toLocaleDateString(i18n.language, {
         day: 'numeric',
@@ -84,16 +90,14 @@ export default function ProductionCard({
   const byline = authors.length > 0 && (
     <p className="mt-1 text-sm text-stone-600">
       {t('production_card.by')}{' '}
-      <AuthorByline
-        authors={authors}
-        max={CARD_MAX_AUTHORS}
-        currentSlug={currentAuthorSlug}
-      />
+      <AuthorByline authors={authors} max={CARD_MAX_AUTHORS} currentSlug={currentAuthorSlug} />
     </p>
   )
 
   const counters = (
-    <div className="mt-4 flex items-center gap-4 text-sm text-stone-500">
+    <div
+      className={`mt-4 flex items-center text-sm text-stone-500 ${compact ? 'flex-wrap gap-x-4 gap-y-1' : 'gap-4'}`}
+    >
       <span
         className="flex items-center gap-1"
         aria-label={t('production_card.views', { count: viewsCount })}
@@ -124,6 +128,22 @@ export default function ProductionCard({
       )}
     </div>
   )
+
+  if (variant === 'compact') {
+    return (
+      <article className="flex flex-col rounded-lg border border-stone-200 bg-white p-4 transition-colors hover:border-green-700 sm:p-5">
+        <h3 className="font-display text-base leading-snug text-stone-900 sm:text-lg">
+          {titleLink}
+        </h3>
+        {byline}
+        {meta}
+        {summary && (
+          <p className="mt-3 line-clamp-2 max-sm:hidden text-sm text-stone-700">{summary}</p>
+        )}
+        <div className="mt-auto">{counters}</div>
+      </article>
+    )
+  }
 
   if (variant === 'list') {
     return (
