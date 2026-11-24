@@ -7,7 +7,6 @@ import StatsDownload from '#models/stats_download'
 import ProductionFile from '#models/production_file'
 import AdminUser from '#models/admin_user'
 import Author from '#models/author'
-import { PRODUCTION_CATEGORIES } from '#constants/production_taxonomy'
 
 type ProductionFixture = {
   title?: string
@@ -52,7 +51,7 @@ test.group('Public home | accès', (group) => {
     return () => db.rollbackGlobalTransaction()
   })
 
-  test('GET / → 200 même base vide (sections vides, catégories fixes)', async ({
+  test('GET / → 200 même base vide (sections vides, sans catégories)', async ({
     client,
     assert,
   }) => {
@@ -62,7 +61,7 @@ test.group('Public home | accès', (group) => {
     assert.isNotNull(props)
     assert.lengthOf(props.mostViewed, 0)
     assert.lengthOf(props.recent, 0)
-    assert.deepEqual(props.categories, [...PRODUCTION_CATEGORIES])
+    assert.notProperty(props, 'categories')
   })
 })
 
@@ -127,14 +126,14 @@ test.group('Public home | sections', (group) => {
     assert.lengthOf(props.recent, 6)
   })
 
-  // Taxonomie unifiée (0a1541f) : liste fixe, indépendante des productions publiées.
-  test('categories : liste fixe de la taxonomie', async ({ client, assert }) => {
+  // Story 12.1 (D8, P2.6) : puces de catégories du hero supprimées, prop retirée.
+  test('categories : prop absente (D8)', async ({ client, assert }) => {
     await createProduction({ status: 'published', category: 'book' })
-    await createProduction({ status: 'draft', category: 'thesis' })
 
     const response = await client.get('/')
     const props = extractProps(response.text())
-    assert.deepEqual(props.categories, [...PRODUCTION_CATEGORIES])
+    assert.notProperty(props, 'categories')
+    assert.properties(props, ['featured', 'mostViewed', 'recent', 'meta'])
   })
 })
 
@@ -377,7 +376,7 @@ test.group('Public home | bannière à la une (11.6)', (group) => {
     assert.lengthOf(props.featured, 1)
     assert.equal(props.recent[0].title, 'À la une et récente')
     assert.equal(props.mostViewed[0].title, 'À la une et récente')
-    assert.deepEqual(props.categories, [...PRODUCTION_CATEGORIES])
+    assert.notProperty(props, 'categories')
     assert.notProperty(props.recent[0], 'imageUrl')
   })
 })

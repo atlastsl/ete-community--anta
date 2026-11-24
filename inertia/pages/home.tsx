@@ -1,9 +1,11 @@
 import { router } from '@inertiajs/react'
+import { Link } from '@adonisjs/inertia/react'
 import { useTranslation } from 'react-i18next'
+import { SlidersHorizontal } from 'lucide-react'
 import SearchBar from '~/components/public/SearchBar'
-import FilterBar from '~/components/public/FilterBar'
 import ProductionCard, { ProductionCardData } from '~/components/public/ProductionCard'
 import FeaturedBanner, { type FeaturedBannerItem } from '~/components/public/FeaturedBanner'
+import { homeSearchHref } from '~/lib/search_query'
 import type { SeoMeta } from '~/lib/seo'
 
 type HomeProps = {
@@ -11,13 +13,12 @@ type HomeProps = {
   featured: FeaturedBannerItem[]
   mostViewed: ProductionCardData[]
   recent: ProductionCardData[]
-  categories: string[]
   meta?: SeoMeta
 }
 
+/** Soumission → `/productions?q=…` ; barre vide → `/productions` (12.1, D8). */
 function handleSearch(query: string) {
-  if (!query) return
-  router.visit(`/productions?q=${encodeURIComponent(query)}`)
+  router.visit(homeSearchHref(query))
 }
 
 function Section({ title, productions }: { title: string; productions: ProductionCardData[] }) {
@@ -39,7 +40,7 @@ function Section({ title, productions }: { title: string; productions: Productio
   )
 }
 
-export default function Home({ featured, mostViewed, recent, categories }: HomeProps) {
+export default function Home({ featured, mostViewed, recent }: HomeProps) {
   const { t } = useTranslation()
 
   return (
@@ -52,11 +53,20 @@ export default function Home({ featured, mostViewed, recent, categories }: HomeP
           {t('home.tagline')}
         </h1>
         <p className="mx-auto mt-3 max-w-xl text-stone-600">{t('home.hero_subtitle')}</p>
-        <div className="mx-auto mt-8 max-w-2xl">
-          <SearchBar onSubmit={handleSearch} />
-        </div>
-        <div className="mt-5 flex justify-center">
-          <FilterBar categories={categories} />
+        {/* SearchBar + « Recherche avancée » (12.1, D8, maquette home.html) : lien accolé à
+            droite à partir de sm, sous la barre en pleine largeur en dessous ; même destination
+            que le lien du pied de page. Puces de catégories supprimées. */}
+        <div className="mx-auto mt-8 flex max-w-3xl flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="min-w-0 flex-1">
+            <SearchBar onSubmit={handleSearch} />
+          </div>
+          <Link
+            href="/productions"
+            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full border border-stone-300 bg-white px-5 text-sm font-medium text-stone-800 shadow-sm hover:border-green-700 hover:text-green-700 sm:w-auto"
+          >
+            <SlidersHorizontal className="size-4" aria-hidden />
+            {t('home.hero.advanced_search')}
+          </Link>
         </div>
       </section>
 

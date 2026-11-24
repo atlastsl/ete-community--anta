@@ -40,6 +40,9 @@
     "sections": {
       "most_viewed": "Most viewed",
       "recent": "Recently added"
+    },
+    "hero": {
+      "advanced_search": "Advanced search"
     }
   },
   "featured": {
@@ -54,7 +57,6 @@
     "clear": "Clear search"
   },
   "filters": {
-    "label": "Search filters",
     "title": "Filters",
     "author_search": "Search an author...",
     "author_limit": "{{count}} authors at most: remove one to choose another.",
@@ -126,16 +128,18 @@
     "download_unavailable": "This file is temporarily unavailable."
   },
   "sort": {
-    "label": "Sort by",
-    "relevance": "Relevance",
-    "date": "Date",
-    "views": "Views",
-    "downloads": "Downloads"
+    "label": "Sort by"
   },
   "listing": {
     "view_label": "Display",
     "view_list": "List view",
-    "view_grid": "Grid view"
+    "view_grid": "Grid view",
+    "sort": {
+      "relevance": "Relevance",
+      "date": "Recently published",
+      "views": "Most viewed",
+      "downloads": "Most downloaded"
+    }
   },
   "privacy": {
     "title": "Privacy Policy",

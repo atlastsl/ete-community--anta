@@ -24,7 +24,7 @@ test.group('Accueil | bannière à la une (11.6)', () => {
     const sections = home.indexOf("<Section title={t('home.sections.most_viewed')}")
     assert.isTrue(hero < banner && banner < sections, 'hero → bannière → sections')
     assert.include(home, "t('home.sections.recent')")
-    assert.include(home, '<FilterBar')
+    assert.notInclude(home, '<FilterBar') // puces supprimées (12.1, D8)
   })
 
   test('point d’entrée public : rendu partagé, aria-label, AuthorByline, srcset, lien détail', ({

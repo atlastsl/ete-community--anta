@@ -129,7 +129,7 @@
 
 ## Deferred from: code review of 10-3-page-de-profil-d-un-auteur (2026-11-19)
 
-- **Tri « Titre (A → Z) » sensible aux accents** : `lower(title)` suit la collation de la base (un titre en « É » peut se ranger après « Z »). L'extension `unaccent` n'est pas installée (aucune migration) et n'est pas ajoutée (base partagée, P2.1 « normalisation applicative ») : à traiter avec le tri par titre de la liste (12.1), par une clé normalisée (`normalizeKey`) ou une collation ICU.
+- **Tri « Titre (A → Z) » sensible aux accents** : `lower(title)` suit la collation de la base (un titre en « É » peut se ranger après « Z »). L'extension `unaccent` n'est pas installée (aucune migration) et n'est pas ajoutée (base partagée, P2.1 « normalisation applicative ») : à traiter par une clé normalisée (`normalizeKey`) ou une collation ICU. Le listing n'a pas de tri par titre (D34 : quatre tris, D-12.1-8) : le report reste ouvert pour le profil d'auteur seul.
 - ~~**Titre d'onglet non rafraîchi en navigation interne**~~ — traité en 10.4 (le titre devenait même « Anta » après hydratation sur toutes les pages publiques). Ancien texte (rappel du report Epic 5) : pas de `<Head>` public, le titre du profil n'est juste qu'au premier chargement ; une navigation Inertia vers ou depuis un profil garde l'ancien titre. À traiter avec 10.4 (liens d'auteurs) / 10.7 (SEO).
 - **Slug en majuscules → 404** : `/authors/Jeanne-Exemple` ne retrouve pas `jeanne-exemple` (comparaison exacte), comme `/productions/:slug`. Accepté (slugs générés en minuscules) ; une redirection 301 vers le slug canonique reste possible.
 
@@ -167,3 +167,8 @@
 ## Deferred from: code review of 11-5-retrait-automatique-d-une-production-a-la-une (2026-11-21)
 
 - **Seeder de démo et productions à la une** : `production_demo_seeder.ts` supprime directement les productions `SEED_DEMO` (`Production.query().delete()`) ; le `CASCADE` retire leurs emplacements sans recompactage (trous de positions) ni journal `featured_auto_remove`. Développement seulement (jamais lancé sur la base partagée) ; `removeProduction` tolère les trous (les suivantes remontent depuis la position retirée). Corriger en passant par `FeaturedService.removeProduction` ou en vidant la une avant la purge si le seeder sert encore.
+
+## Deferred from: code review of 12-1-recherche-avancee-depuis-l-accueil-et-tris-du-listing (2026-11-24)
+
+- **Pas de sélecteur de tri dans la branche « résultats approchants »** (`inertia/pages/productions.tsx`, préexistant) : quand la recherche exacte est vide, les résultats approchants (OR / `pg_trgm`, 24 max) s'affichent sans `SortSelect` ni pagination ; leur ordre est celui de la proximité. À trancher : tri applicable aux approchants ou mention explicite de l'ordre.
+- **`FilterChip` sans appelant** depuis la suppression de `FilterBar` (12.1) : le composant, sa clé `filters.filter_by` et `filter_chip.spec.ts` restent ; à supprimer ou à réutiliser (puces de filtres actifs ?).

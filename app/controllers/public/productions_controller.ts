@@ -79,13 +79,16 @@ export default class ProductionsController {
     const qRaw = request.input('q')
     const q = typeof qRaw === 'string' && qRaw.trim() !== '' ? qRaw.trim() : null
 
-    // Tri validé contre la whitelist ; défaut = pertinence si recherche, sinon date
+    // Tri validé contre la whitelist ; défaut = pertinence si recherche, sinon date.
+    // Tri effectif renvoyé (12.1, D-12.1-3) : `relevance` sans terme trie par date, la prop
+    // `sort` vaut alors `date` (miroir : `effectiveListingSort`, inertia/lib/search_query.ts).
     const sortInput = request.input('sort')
-    const sort: SortOption = SORT_VALUES.includes(sortInput)
+    const requested: SortOption = SORT_VALUES.includes(sortInput)
       ? (sortInput as SortOption)
       : q
         ? 'relevance'
         : 'date'
+    const sort: SortOption = requested === 'relevance' && !q ? 'date' : requested
 
     const filters: ProductionFilters = {
       category: asArray(request.input('category')),

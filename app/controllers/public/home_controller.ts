@@ -2,7 +2,6 @@ import type { HttpContext } from '@adonisjs/core/http'
 import Production from '#models/production'
 import ProductionStatus from '#enums/production_status'
 import SeoService from '#services/seo_service'
-import { PRODUCTION_CATEGORIES } from '#constants/production_taxonomy'
 import ProductionCardTransformer from '#transformers/production_card_transformer'
 import PublicBylineService from '#services/public_byline_service'
 import FeaturedService from '#services/featured_service'
@@ -46,7 +45,6 @@ export default class HomeController {
       featured,
       mostViewed: ProductionCardTransformer.transform(mostViewedRows),
       recent: ProductionCardTransformer.transform(recentRows),
-      categories: [...PRODUCTION_CATEGORIES],
       meta: SeoService.site(locale),
     })
   }
