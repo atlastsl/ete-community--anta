@@ -36,13 +36,16 @@
     "hero_eyebrow": "Bibliothèque numérique",
     "hero_subtitle": "Découvrez, recherchez et consultez les productions de la communauté.",
     "search_placeholder": "Rechercher une production...",
-    "empty": "Aucune production publiée pour le moment.",
-    "sections": {
-      "most_viewed": "Les plus consultées",
-      "recent": "Récemment ajoutées"
-    },
     "hero": {
       "advanced_search": "Recherche avancée"
+    },
+    "blocks": {
+      "recent": "Récemment publiées",
+      "most_viewed": "Les plus consultées",
+      "most_downloaded": "Les plus téléchargées",
+      "window": "sur les 12 derniers mois",
+      "see_more": "Voir plus",
+      "see_more_named": "Voir plus : {{title}}"
     }
   },
   "featured": {

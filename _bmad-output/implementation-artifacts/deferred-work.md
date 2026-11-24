@@ -172,3 +172,8 @@
 
 - **Pas de sélecteur de tri dans la branche « résultats approchants »** (`inertia/pages/productions.tsx`, préexistant) : quand la recherche exacte est vide, les résultats approchants (OR / `pg_trgm`, 24 max) s'affichent sans `SortSelect` ni pagination ; leur ordre est celui de la proximité. À trancher : tri applicable aux approchants ou mention explicite de l'ordre.
 - **`FilterChip` sans appelant** depuis la suppression de `FilterBar` (12.1) : le composant, sa clé `filters.filter_by` et `filter_chip.spec.ts` restent ; à supprimer ou à réutiliser (puces de filtres actifs ?).
+
+## Deferred from: code review of 12-2-blocs-recemment-publiees-les-plus-consultees-et-les-plus-telechargees (2026-11-24)
+
+- **Cache des classements et commandes Ace** : `authors:apply` (et le seeder) tournent dans un autre processus que le serveur web ; leur `RankingService.invalidate()` ne vide pas le cache du serveur. Après la conversion, `topAuthors` (12.3) et les blocs peuvent rester périmés jusqu'à 10 min (TTL). Accepté (P2.3, D-12.2-4) ; à confirmer par le PO (redémarrer l'application après `authors:apply` si l'accueil doit être juste tout de suite).
+- **Savepoints et `after('commit')`** : Lucid exécute le hook d'une transaction imbriquée à la libération du savepoint. `invalidateAfterCommit` invalide aussi à la fin de la transaction la plus externe via les champs knex `parentTransaction` (non documenté) et `executionPromise` ; si une mise à jour de knex les retire, seul le hook du savepoint reste (test `ranking_service.spec.ts` « savepoint relâché puis COMMIT externe » pour le détecter).

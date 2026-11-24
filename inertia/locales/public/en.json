@@ -36,13 +36,16 @@
     "hero_eyebrow": "Digital library",
     "hero_subtitle": "Discover, search and read the community's productions.",
     "search_placeholder": "Search for a production...",
-    "empty": "No production published yet.",
-    "sections": {
-      "most_viewed": "Most viewed",
-      "recent": "Recently added"
-    },
     "hero": {
       "advanced_search": "Advanced search"
+    },
+    "blocks": {
+      "recent": "Recently published",
+      "most_viewed": "Most viewed",
+      "most_downloaded": "Most downloaded",
+      "window": "over the last 12 months",
+      "see_more": "See more",
+      "see_more_named": "See more: {{title}}"
     }
   },
   "featured": {

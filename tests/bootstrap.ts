@@ -51,6 +51,14 @@ export const runnerHooks: Required<Pick<Config, 'setup' | 'teardown'>> = {
  */
 export const configureSuite: Config['configureSuite'] = (suite) => {
   if (['browser', 'functional', 'e2e'].includes(suite.name)) {
+    // Story 12.2 (D-12.2-8): the home rankings live in a process-wide cache; every test starts
+    // with an empty one, or ids of a rolled back test would leak into the next one.
+    const resetRankings = async () => {
+      const { default: RankingService } = await import('#services/ranking_service')
+      RankingService.invalidate()
+    }
+    suite.onGroup((group) => group.each.setup(resetRankings))
+    suite.onTest((test) => test.setup(resetRankings))
     return suite.setup(() => testUtils.httpServer().start())
   }
 }

@@ -153,6 +153,7 @@ test.group('A11y | un seul <h1> sur l’arbre de l’accueil et de « À la une 
         'inertia/components/shared/FeaturedBanner.tsx',
         'inertia/components/public/AuthorByline.tsx',
         'inertia/components/public/ProductionCard.tsx',
+        'inertia/components/public/HomeBlock.tsx',
       ],
     },
     'inertia/pages/admin/Featured/Index.tsx': {

@@ -13,17 +13,14 @@ const fr = JSON.parse(read('inertia/locales/public/fr.json'))
 const en = JSON.parse(read('inertia/locales/public/en.json'))
 
 test.group('Accueil | bannière à la une (11.6)', () => {
-  test('home : prop featured, bannière sous le hero, sections existantes conservées', ({
-    assert,
-  }) => {
+  test('home : prop featured, bannière sous le hero, puis les blocs (12.2)', ({ assert }) => {
     assert.include(home, "from '~/components/public/FeaturedBanner'")
     assert.include(home, 'featured: FeaturedBannerItem[]')
     assert.include(home, '<FeaturedBanner items={featured} />')
     const hero = home.indexOf('<SearchBar')
     const banner = home.indexOf('<FeaturedBanner')
-    const sections = home.indexOf("<Section title={t('home.sections.most_viewed')}")
-    assert.isTrue(hero < banner && banner < sections, 'hero → bannière → sections')
-    assert.include(home, "t('home.sections.recent')")
+    const blocks = home.indexOf('<HomeBlock')
+    assert.isTrue(hero < banner && banner < blocks, 'hero → bannière → blocs')
     assert.notInclude(home, '<FilterBar') // puces supprimées (12.1, D8)
   })
 

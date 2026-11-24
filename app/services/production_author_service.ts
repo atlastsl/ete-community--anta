@@ -2,6 +2,7 @@ import db from '@adonisjs/lucid/services/db'
 import { errors as vineErrors } from '@vinejs/vine'
 import type { QueryClientContract, TransactionClientContract } from '@adonisjs/lucid/types/database'
 import AuthorConversionService from '#services/author_conversion_service'
+import RankingService from '#services/ranking_service'
 
 /** Attachment state of one production (rule of `AuthorConversionService.matchKey`). */
 export type AttachmentState = {
@@ -227,6 +228,8 @@ export default class ProductionAuthorService {
       }
     }
     await this.refreshDenormalizedNames([productionId], trx)
+    // Home rankings (Story 12.2, D-12.2-6): only when the pivot changed, after the commit.
+    if (changed) RankingService.invalidateAfterCommit(trx)
     return { protected: false, changed }
   }
 

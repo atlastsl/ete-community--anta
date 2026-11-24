@@ -5,8 +5,10 @@ import Production from '#models/production'
 import StatsView from '#models/stats_view'
 import StatsDownload from '#models/stats_download'
 import ProductionFile from '#models/production_file'
+import ProductionLink from '#models/production_link'
 import AdminUser from '#models/admin_user'
 import Author from '#models/author'
+import RankingService from '#services/ranking_service'
 
 type ProductionFixture = {
   title?: string
@@ -15,9 +17,11 @@ type ProductionFixture = {
   antaPublishedAt?: DateTime | null
 }
 
+let fixtureCounter = 0
+
 async function createProduction(opts: ProductionFixture = {}): Promise<Production> {
   return Production.create({
-    title: opts.title ?? `Production ${Math.floor(Math.random() * 1_000_000)}`,
+    title: opts.title ?? `Production ${fixtureCounter++}`,
     status: opts.status ?? 'draft',
     authorNames: [],
     tags: [],
@@ -28,13 +32,32 @@ async function createProduction(opts: ProductionFixture = {}): Promise<Productio
   })
 }
 
-async function addViews(production: Production, count: number) {
+/** Published production, published on Anta `daysAgo` days ago (distinct dates by default). */
+async function published(title: string, daysAgo = fixtureCounter++): Promise<Production> {
+  return createProduction({
+    title,
+    status: 'published',
+    antaPublishedAt: DateTime.now().minus({ days: daysAgo }),
+  })
+}
+
+async function addViews(production: Production, count: number, daysAgo = 0) {
   for (let i = 0; i < count; i++) {
     await StatsView.create({
       productionId: production.id,
-      recordedAt: DateTime.now(),
+      recordedAt: DateTime.now().minus({ days: daysAgo }),
       ipHash: `hash-${i}`,
       sessionId: null,
+    })
+  }
+}
+
+async function addDownloads(production: Production, count: number, daysAgo = 0) {
+  for (let i = 0; i < count; i++) {
+    await StatsDownload.create({
+      productionId: production.id,
+      downloadedAt: DateTime.now().minus({ days: daysAgo }),
+      ipHash: `hash-${i}`,
     })
   }
 }
@@ -45,13 +68,56 @@ function extractProps(body: string) {
   return JSON.parse(match[1].replace(/&quot;/g, '"')).props
 }
 
+const titles = (cards: { title: string }[]) => cards.map((card) => card.title)
+
+async function createAdmin(): Promise<AdminUser> {
+  return AdminUser.create({
+    email: `home-${fixtureCounter++}@anta.test`,
+    passwordHash: 'plain-password-hashed-by-mixin',
+    role: 'admin',
+    passwordChanged: true,
+    isActive: true,
+    createdById: null,
+  })
+}
+
+/** Draft that `POST /admin/productions/:id/publish` accepts (FR21: pivot author + link). */
+async function createPublishableDraft(title: string): Promise<Production> {
+  const production = await Production.create({
+    title,
+    summary: 'Résumé complet.',
+    authorNames: ['Awa Fictive'],
+    tags: ['maths'],
+    category: 'article',
+    domain: 'mathematics',
+    subdomain: ['topology'],
+    language: 'fr',
+    publicationCountry: 'Sénégal',
+    licenseStatus: 'member',
+    status: 'draft',
+    workPublishedAt: DateTime.fromISO('2024-03-15'),
+    createdById: null,
+  })
+  const author = await Author.create({ firstNames: 'Awa', lastNames: 'Fictive' })
+  await db
+    .table('production_authors')
+    .insert({ production_id: production.id, author_id: author.id, position: 1 })
+  await ProductionLink.create({
+    productionId: production.id,
+    url: 'https://example.com',
+    linkType: 'simple',
+    label: null,
+  })
+  return production
+}
+
 test.group('Public home | accès', (group) => {
   group.each.setup(async () => {
     await db.beginGlobalTransaction()
     return () => db.rollbackGlobalTransaction()
   })
 
-  test('GET / → 200 même base vide (sections vides, sans catégories)', async ({
+  test('GET / → 200 même base vide : trois blocs vides, sans catégories', async ({
     client,
     assert,
   }) => {
@@ -59,81 +125,324 @@ test.group('Public home | accès', (group) => {
     response.assertStatus(200)
     const props = extractProps(response.text())
     assert.isNotNull(props)
-    assert.lengthOf(props.mostViewed, 0)
     assert.lengthOf(props.recent, 0)
+    assert.lengthOf(props.mostViewed, 0)
+    assert.lengthOf(props.mostDownloaded, 0)
     assert.notProperty(props, 'categories')
   })
 })
 
-test.group('Public home | sections', (group) => {
+// Story 12.2 — blocs de l'accueil (FR9, FR45, FR46, D4, D5, D6, P2.3). Données fictives.
+test.group('Public home | blocs (12.2)', (group) => {
   group.each.setup(async () => {
     await db.beginGlobalTransaction()
     return () => db.rollbackGlobalTransaction()
   })
 
-  test('mostViewed : publiées uniquement, triées par vues décroissantes, max 6', async ({
+  test('props : featured, recent, mostViewed, mostDownloaded, meta ; pas de categories', async ({
     client,
     assert,
   }) => {
-    const low = await createProduction({ title: 'Peu vue', status: 'published' })
-    const high = await createProduction({ title: 'Très vue', status: 'published' })
-    await createProduction({ title: 'Brouillon', status: 'draft' })
-    await addViews(low, 2)
-    await addViews(high, 10)
-
-    const response = await client.get('/')
-    response.assertStatus(200)
-    const props = extractProps(response.text())
-
-    assert.lengthOf(props.mostViewed, 2)
-    assert.equal(props.mostViewed[0].title, 'Très vue')
-    assert.equal(props.mostViewed[0].viewsCount, 10)
-    assert.equal(props.mostViewed[1].title, 'Peu vue')
-    assert.isFalse(props.mostViewed.some((p: { title: string }) => p.title === 'Brouillon'))
-  })
-
-  test('recent : triées par antaPublishedAt décroissant, max 6', async ({ client, assert }) => {
-    await createProduction({
-      title: 'Ancienne',
-      status: 'published',
-      antaPublishedAt: DateTime.fromISO('2026-01-01'),
-    })
-    await createProduction({
-      title: 'Nouvelle',
-      status: 'published',
-      antaPublishedAt: DateTime.fromISO('2026-05-01'),
-    })
-
-    const response = await client.get('/')
-    const props = extractProps(response.text())
-
-    assert.equal(props.recent[0].title, 'Nouvelle')
-    assert.equal(props.recent[1].title, 'Ancienne')
-  })
-
-  test('limite à 6 items par section', async ({ client, assert }) => {
-    for (let i = 0; i < 8; i++) {
-      await createProduction({
-        title: `Prod ${i}`,
-        status: 'published',
-        antaPublishedAt: DateTime.now().minus({ days: i }),
-      })
-    }
-
-    const response = await client.get('/')
-    const props = extractProps(response.text())
-    assert.lengthOf(props.mostViewed, 6)
-    assert.lengthOf(props.recent, 6)
-  })
-
-  // Story 12.1 (D8, P2.6) : puces de catégories du hero supprimées, prop retirée.
-  test('categories : prop absente (D8)', async ({ client, assert }) => {
     await createProduction({ status: 'published', category: 'book' })
 
     const response = await client.get('/')
     const props = extractProps(response.text())
     assert.notProperty(props, 'categories')
-    assert.properties(props, ['featured', 'mostViewed', 'recent', 'meta'])
+    assert.properties(props, ['featured', 'recent', 'mostViewed', 'mostDownloaded', 'meta'])
+  })
+
+  test('recent : 3 publiées les plus récentes sur Anta, brouillon exclu', async ({
+    client,
+    assert,
+  }) => {
+    await published('Il y a 4 j', 4)
+    await published('Il y a 1 j', 1)
+    await published('Il y a 3 j', 3)
+    await published('Il y a 2 j', 2)
+    await createProduction({ title: 'Brouillon récent', antaPublishedAt: DateTime.now() })
+
+    const props = await homeProps(client)
+    assert.deepEqual(titles(props.recent), ['Il y a 1 j', 'Il y a 2 j', 'Il y a 3 j'])
+  })
+
+  test('recent : même anta_published_at → id ↑', async ({ client, assert }) => {
+    const date = DateTime.now().minus({ days: 1 })
+    const created = []
+    for (const title of ['R1', 'R2', 'R3', 'R4']) {
+      created.push(await createProduction({ title, status: 'published', antaPublishedAt: date }))
+    }
+    const expected = created
+      .sort((p, q) => (p.id < q.id ? -1 : 1))
+      .slice(0, 3)
+      .map((p) => p.title)
+
+    const props = await homeProps(client)
+    assert.deepEqual(titles(props.recent), expected)
+  })
+
+  test('mostViewed : vues des 365 derniers jours ↓, 3 éléments, totaux affichés', async ({
+    client,
+    assert,
+  }) => {
+    const a = await published('A')
+    const b = await published('B')
+    const c = await published('C')
+    const d = await published('D')
+    await addViews(a, 4)
+    await addViews(b, 3)
+    await addViews(c, 2, 364) // still inside the window
+    await addViews(d, 1)
+    // Old views: they count in the totals, never in the window (366 days ago).
+    await addViews(d, 10, 366)
+
+    const props = await homeProps(client)
+    assert.deepEqual(titles(props.mostViewed), ['A', 'B', 'C'])
+    assert.equal(props.mostViewed[0].viewsCount, 4)
+
+    // D: 1 view in the window, 11 in total: ranked on the window, shown with the total.
+    RankingService.invalidate()
+    await db.from('stats_views').where('production_id', a.id).delete()
+    await db.from('stats_views').where('production_id', b.id).delete()
+    const after = await homeProps(client)
+    assert.deepEqual(titles(after.mostViewed), ['C', 'D'])
+    assert.equal(after.mostViewed[1].viewsCount, 11)
+  })
+
+  test('mostViewed : stats de 366 j ignorées → production à 0 exclue (D5)', async ({
+    client,
+    assert,
+  }) => {
+    const old = await published('Vue il y a longtemps')
+    const never = await published('Jamais vue')
+    const recent = await published('Vue récemment')
+    await addViews(old, 50, 366)
+    await addViews(recent, 1)
+
+    const props = await homeProps(client)
+    assert.deepEqual(titles(props.mostViewed), ['Vue récemment'])
+    assert.notInclude(titles(props.mostViewed), never.title)
+  })
+
+  test('mostViewed : ex æquo départagés par anta_published_at ↓', async ({ client, assert }) => {
+    const older = await published('Plus ancienne', 10)
+    const newer = await published('Plus récente', 2)
+    await addViews(older, 2)
+    await addViews(newer, 2)
+
+    const props = await homeProps(client)
+    assert.deepEqual(titles(props.mostViewed), ['Plus récente', 'Plus ancienne'])
+  })
+
+  test('mostViewed : même compte et même date → id ↑', async ({ client, assert }) => {
+    const date = DateTime.now().minus({ days: 5 })
+    const one = await createProduction({ title: 'X', status: 'published', antaPublishedAt: date })
+    const two = await createProduction({ title: 'Y', status: 'published', antaPublishedAt: date })
+    await addViews(one, 1)
+    await addViews(two, 1)
+    const expected = [one, two].sort((p, q) => (p.id < q.id ? -1 : 1)).map((p) => p.title)
+
+    const props = await homeProps(client)
+    assert.deepEqual(titles(props.mostViewed), expected)
+  })
+
+  test('mostViewed : brouillon et dépubliée exclus même très vus', async ({ client, assert }) => {
+    const draft = await createProduction({ title: 'Brouillon', status: 'draft' })
+    const unpub = await createProduction({
+      title: 'Dépubliée',
+      status: 'unpublished',
+      antaPublishedAt: DateTime.now().minus({ days: 3 }),
+    })
+    const pub = await published('Publiée')
+    await addViews(draft, 9)
+    await addViews(unpub, 9)
+    await addViews(pub, 1)
+
+    const props = await homeProps(client)
+    assert.deepEqual(titles(props.mostViewed), ['Publiée'])
+  })
+
+  test('mostDownloaded : téléchargements 365 j ↓, 0 exclu, totaux affichés', async ({
+    client,
+    assert,
+  }) => {
+    const a = await published('Téléchargée récemment')
+    const b = await published('Téléchargée autrefois')
+    const c = await published('Peu téléchargée')
+    await addDownloads(a, 3)
+    await addDownloads(a, 5, 400)
+    await addDownloads(b, 7, 366)
+    await addDownloads(c, 1)
+    await addViews(c, 4)
+
+    const props = await homeProps(client)
+    assert.deepEqual(titles(props.mostDownloaded), ['Téléchargée récemment', 'Peu téléchargée'])
+    assert.equal(props.mostDownloaded[0].downloadsCount, 8) // total ≠ 3 in the window
+    assert.equal(props.mostDownloaded[1].viewsCount, 4)
+    assert.notInclude(titles(props.mostDownloaded), b.title)
+  })
+
+  test('blocs : 3 éléments au plus ; un classement sans stats sur 365 j est vide', async ({
+    client,
+    assert,
+  }) => {
+    for (let i = 0; i < 5; i++) {
+      const production = await published(`P${i}`, i + 1)
+      await addViews(production, 5 - i)
+    }
+
+    const props = await homeProps(client)
+    assert.lengthOf(props.recent, 3)
+    assert.deepEqual(titles(props.mostViewed), ['P0', 'P1', 'P2'])
+    assert.lengthOf(props.mostDownloaded, 0) // bloc absent côté client
+  })
+
+  test('cartes : forme du transformer, sans image (D37)', async ({ client, assert }) => {
+    const production = await published('Carte')
+    await addViews(production, 1)
+    await addDownloads(production, 2)
+
+    const props = await homeProps(client)
+    for (const card of [props.recent[0], props.mostViewed[0], props.mostDownloaded[0]]) {
+      assert.containsSubset(card, { slug: production.slug, viewsCount: 1, downloadsCount: 2 })
+      assert.notProperty(card, 'imageUrl')
+      assert.notProperty(card, 'thumbnailKey')
+    }
+  })
+})
+
+// Story 12.2 — cache des classements (P2-06) et invalidation après commit.
+test.group('Public home | cache des classements (12.2)', (group) => {
+  group.each.setup(async () => {
+    await db.beginGlobalTransaction()
+    return () => db.rollbackGlobalTransaction()
+  })
+
+  test('les classements sont servis depuis le cache ; « Récemment publiées » ne l’est pas', async ({
+    client,
+    assert,
+  }) => {
+    const a = await published('A', 5)
+    await addViews(a, 2)
+    await client.get('/')
+    assert.sameMembers(RankingService.cachedKeys(), ['mostViewed', 'mostDownloaded'])
+
+    // New stats and a new publication written behind the service's back (no invalidation).
+    const b = await published('B', 1)
+    await addViews(b, 9)
+
+    const props = await homeProps(client)
+    assert.deepEqual(titles(props.mostViewed), ['A']) // cached ids
+    assert.equal(props.recent[0].title, 'B') // not cached
+  })
+
+  test('dépublication → cache invalidé (le 4e entre dans le bloc)', async ({ client, assert }) => {
+    const admin = await createAdmin()
+    const productions = []
+    for (const [index, title] of ['A', 'B', 'C', 'D'].entries()) {
+      const production = await published(title, index + 1)
+      await addViews(production, 4 - index)
+      productions.push(production)
+    }
+    let props = await homeProps(client)
+    assert.deepEqual(titles(props.mostViewed), ['A', 'B', 'C'])
+
+    const response = await client
+      .post(`/admin/productions/${productions[0].id}/unpublish`)
+      .loginAs(admin)
+      .withCsrfToken()
+      .redirects(0)
+    response.assertStatus(302)
+
+    props = await homeProps(client)
+    assert.deepEqual(titles(props.mostViewed), ['B', 'C', 'D'])
+  })
+
+  test('publication → cache invalidé', async ({ client, assert }) => {
+    const admin = await createAdmin()
+    const a = await published('A')
+    await addViews(a, 1)
+    const draft = await createPublishableDraft('Brouillon très vu')
+    await addViews(draft, 5)
+    let props = await homeProps(client)
+    assert.deepEqual(titles(props.mostViewed), ['A'])
+
+    const response = await client
+      .post(`/admin/productions/${draft.id}/publish`)
+      .loginAs(admin)
+      .withCsrfToken()
+      .redirects(0)
+    response.assertStatus(302)
+
+    props = await homeProps(client)
+    assert.deepEqual(titles(props.mostViewed), ['Brouillon très vu', 'A'])
+  })
+
+  test('suppression → cache invalidé', async ({ client, assert }) => {
+    const admin = await createAdmin()
+    const productions = []
+    for (const [index, title] of ['A', 'B', 'C', 'D'].entries()) {
+      const production = await published(title, index + 1)
+      await addDownloads(production, 4 - index)
+      productions.push(production)
+    }
+    let props = await homeProps(client)
+    assert.deepEqual(titles(props.mostDownloaded), ['A', 'B', 'C'])
+
+    const response = await client
+      .delete(`/admin/productions/${productions[1].id}`)
+      .loginAs(admin)
+      .withCsrfToken()
+      .redirects(0)
+    response.assertStatus(302)
+
+    props = await homeProps(client)
+    assert.deepEqual(titles(props.mostDownloaded), ['A', 'C', 'D'])
+  })
+
+  test('édition rendant la production incomplète → dépubliée et cache invalidé', async ({
+    client,
+    assert,
+  }) => {
+    const admin = await createAdmin()
+    const productions = []
+    for (const [index, title] of ['A', 'B', 'C', 'D'].entries()) {
+      const production = await createPublishableDraft(title)
+      production.status = 'published'
+      production.antaPublishedAt = DateTime.now().minus({ days: index + 1 })
+      await production.save()
+      await addViews(production, 4 - index)
+      productions.push(production)
+    }
+    let props = await homeProps(client)
+    assert.deepEqual(titles(props.mostViewed), ['A', 'B', 'C'])
+
+    // Summary emptied: the edit auto-unpublishes A (FR21), authors untouched (no `authorIds`).
+    const response = await client
+      .put(`/admin/productions/${productions[0].id}`)
+      .loginAs(admin)
+      .withCsrfToken()
+      .redirects(0)
+      .json({ title: 'A' })
+    response.assertStatus(302)
+    await productions[0].refresh()
+    assert.equal(productions[0].status, 'draft')
+
+    props = await homeProps(client)
+    assert.deepEqual(titles(props.mostViewed), ['B', 'C', 'D'])
+  })
+})
+
+// Story 12.1 (D8, P2.6) — prop `categories` toujours absente.
+test.group('Public home | categories (12.1)', (group) => {
+  group.each.setup(async () => {
+    await db.beginGlobalTransaction()
+    return () => db.rollbackGlobalTransaction()
+  })
+
+  test('categories : prop absente (D8)', async ({ client, assert }) => {
+    await createProduction({ status: 'published', category: 'book' })
+    const props = await homeProps(client)
+    assert.notProperty(props, 'categories')
   })
 })
 
@@ -369,8 +678,9 @@ test.group('Public home | bannière à la une (11.6)', (group) => {
     assert.notInclude(head, production.thumbnailKey!)
   })
 
-  test('sections existantes intactes avec une bannière', async ({ client, assert }) => {
+  test('blocs avec une bannière : aucun dédoublonnage (D6)', async ({ client, assert }) => {
     const production = await createFeaturable({ title: 'À la une et récente' })
+    await addViews(production, 1)
     await feature(production)
     const props = await homeProps(client)
     assert.lengthOf(props.featured, 1)

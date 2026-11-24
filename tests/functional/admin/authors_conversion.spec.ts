@@ -12,6 +12,7 @@ import AuthorsValidate from '../../../commands/authors_validate.js'
 import AuthorsApply from '../../../commands/authors_apply.js'
 import AuthorsVerify from '../../../commands/authors_verify.js'
 import AuthorConversionService, { CSV_COLUMNS } from '#services/author_conversion_service'
+import RankingService from '#services/ranking_service'
 
 // Fictitious names only (public repository). Les CSV vont dans un sous-dossier
 // unique de tmp/ (ignoré par git), supprimé à la fin de chaque test.
@@ -345,6 +346,26 @@ test.group('authors:apply / authors:verify (Story 9.6)', (group) => {
     assert.include(report, 'SIMULATION')
     assert.include(report, 'Fiches créées : 2')
     assert.include(report, 'Liens créés : 2')
+  })
+
+  // Story 12.2 (P2.3): the pivot is written outside `sync` → home rankings invalidated after
+  // the commit (this process only, D-12.2-4); a dry run rolls back and keeps them.
+  test('apply invalidates the home rankings; --dry-run keeps them (Story 12.2)', async ({
+    assert,
+  }) => {
+    await createProduction(['FICTIVA Aminata'])
+    const file = await writeCsv('ok.csv', [
+      row('FICTIVA Aminata', 'fictiva-aminata', 'Aminata', 'FICTIVA'),
+    ])
+    await RankingService.mostViewedIds()
+
+    const dry = await apply(file, '--dry-run', '--report', `${dir}/ranking-dry.txt`)
+    dry.assertSucceeded()
+    assert.include(RankingService.cachedKeys(), 'mostViewed')
+
+    const command = await apply(file, '--report', `${dir}/ranking.txt`)
+    command.assertSucceeded()
+    assert.deepEqual(RankingService.cachedKeys(), [])
   })
 
   test('apply twice = same state; completed CSV → only the new names attached', async ({

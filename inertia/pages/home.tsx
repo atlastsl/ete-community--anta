@@ -3,44 +3,34 @@ import { Link } from '@adonisjs/inertia/react'
 import { useTranslation } from 'react-i18next'
 import { SlidersHorizontal } from 'lucide-react'
 import SearchBar from '~/components/public/SearchBar'
-import ProductionCard, { ProductionCardData } from '~/components/public/ProductionCard'
+import ProductionCard, { type ProductionCardData } from '~/components/public/ProductionCard'
 import FeaturedBanner, { type FeaturedBannerItem } from '~/components/public/FeaturedBanner'
+import HomeBlock from '~/components/public/HomeBlock'
 import { homeSearchHref } from '~/lib/search_query'
 import type { SeoMeta } from '~/lib/seo'
 
 type HomeProps = {
   /** Featured banner (Story 11.6): published featured productions, in order; `[]` → no banner. */
   featured: FeaturedBannerItem[]
-  mostViewed: ProductionCardData[]
+  /** Blocks (Story 12.2): 3 cards at most each, totals shown; `[]` → block absent (FR46). */
   recent: ProductionCardData[]
+  /** Ranked on the views / downloads of the last 365 days (D4, D5). */
+  mostViewed: ProductionCardData[]
+  mostDownloaded: ProductionCardData[]
   meta?: SeoMeta
 }
+
+const productionKey = (production: ProductionCardData) => production.id
+const productionCard = (production: ProductionCardData) => (
+  <ProductionCard production={production} />
+)
 
 /** Soumission → `/productions?q=…` ; barre vide → `/productions` (12.1, D8). */
 function handleSearch(query: string) {
   router.visit(homeSearchHref(query))
 }
 
-function Section({ title, productions }: { title: string; productions: ProductionCardData[] }) {
-  const { t } = useTranslation()
-
-  return (
-    <section className="mt-12">
-      <h2 className="text-2xl text-stone-900">{title}</h2>
-      {productions.length === 0 ? (
-        <p className="mt-4 text-sm text-stone-500">{t('home.empty')}</p>
-      ) : (
-        <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {productions.map((production) => (
-            <ProductionCard key={production.id} production={production} />
-          ))}
-        </div>
-      )}
-    </section>
-  )
-}
-
-export default function Home({ featured, mostViewed, recent }: HomeProps) {
+export default function Home({ featured, recent, mostViewed, mostDownloaded }: HomeProps) {
   const { t } = useTranslation()
 
   return (
@@ -72,8 +62,31 @@ export default function Home({ featured, mostViewed, recent }: HomeProps) {
 
       <FeaturedBanner items={featured} />
 
-      <Section title={t('home.sections.most_viewed')} productions={mostViewed} />
-      <Section title={t('home.sections.recent')} productions={recent} />
+      {/* Ordre FR9 sous la bannière (12.2) ; aucun dédoublonnage avec la une (D6). « Voir
+          plus » → tris du listing (D28). */}
+      <HomeBlock
+        title={t('home.blocks.recent')}
+        seeMoreHref="/productions?sort=date"
+        items={recent}
+        itemKey={productionKey}
+        renderItem={productionCard}
+      />
+      <HomeBlock
+        title={t('home.blocks.most_viewed')}
+        windowed
+        seeMoreHref="/productions?sort=views"
+        items={mostViewed}
+        itemKey={productionKey}
+        renderItem={productionCard}
+      />
+      <HomeBlock
+        title={t('home.blocks.most_downloaded')}
+        windowed
+        seeMoreHref="/productions?sort=downloads"
+        items={mostDownloaded}
+        itemKey={productionKey}
+        renderItem={productionCard}
+      />
     </div>
   )
 }

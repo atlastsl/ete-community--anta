@@ -12,6 +12,7 @@ import db from '@adonisjs/lucid/services/db'
 import AuthorService from '#services/author_service'
 import AuthorConversionService from '#services/author_conversion_service'
 import ProductionAuthorService from '#services/production_author_service'
+import RankingService from '#services/ranking_service'
 import ProductionService from '#services/production_service'
 import FeaturedService from '#services/featured_service'
 import StatsService from '#services/stats_service'
@@ -271,6 +272,9 @@ export default class ProductionsController {
       await locked.save()
       return { production: locked, autoUnpublished: unpublished, unfeatured: removedFromFeatured }
     })
+    // Dépublication automatique écrite ici (pas par ProductionService) : classements de
+    // l'accueil invalidés après le commit (Story 12.2, D-12.2-3).
+    if (autoUnpublished) RankingService.invalidate()
 
     await ActivityLogService.log({
       adminUserId: auth.user!.id,

@@ -4,6 +4,7 @@ import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 import { normalizeKey } from '#helpers/normalize'
 import Author from '#models/author'
 import ProductionAuthorService from '#services/production_author_service'
+import RankingService from '#services/ranking_service'
 import { AUTHOR_NAME_MAX } from '#validators/admin/author_validator'
 
 /**
@@ -1039,6 +1040,9 @@ export default class AuthorConversionService {
       } else {
         try {
           await trx.commit()
+          // Pivot written outside `sync`: home rankings invalidated (Story 12.2). Only this
+          // process's cache: the web server's one expires within its TTL (D-12.2-4).
+          RankingService.invalidate()
         } catch (error) {
           return {
             errors: [
