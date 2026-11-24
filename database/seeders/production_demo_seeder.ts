@@ -23,11 +23,55 @@ import ProductionService from '#services/production_service'
  * 1 ou 2 affiliations, un tiers à consentement confirmé ; chaque production est rattachée par
  * `ProductionAuthorService.sync` (pivot et colonne dénormalisée `productions.authors` cohérents).
  * Purge : productions de démo d'abord, puis fiches `seed-demo:` (celles qu'un admin aurait liées
- * à une vraie production sont conservées). Base LOCALE uniquement, jamais la base partagée.
+ * à une vraie production sont conservées).
+ *
+ * Statistiques datées (Story 12.5) : `recorded_at` / `downloaded_at` tirés au hasard sur les
+ * 540 derniers jours, jamais avant la publication sur Anta de la production → la fenêtre de 365 j
+ * des classements de l'accueil est réellement exercée (une partie des stats tombe hors fenêtre).
+ *
+ * Base LOCALE uniquement, jamais la base partagée : `environment = ['development']` ne suffit
+ * pas (l'environnement de dev peut pointer vers la base partagée) → `run()` refuse tout hôte de
+ * base qui n'est pas la boucle locale (`assertLocalDatabase`). Volontairement strict : un nom de
+ * service Docker (`postgres`, `db`) ou un socket Unix est refusé aussi (publier le port du
+ * conteneur sur 127.0.0.1). Limite connue : un tunnel `localhost` vers une base distante n'est
+ * pas détecté.
  *
  * Lancer : node ace db:seed --files=./database/seeders/production_demo_seeder.ts
  */
 const MARKER = 'SEED_DEMO'
+
+/** Période sur laquelle les vues / téléchargements de démo sont datés (Story 12.5). */
+export const STATS_SPREAD_DAYS = 540
+
+/** Hôtes de base acceptés par le seeder : la boucle locale seulement (conteneur Docker local, CI). */
+export const LOCAL_DB_HOSTS = ['localhost', '127.0.0.1', '::1'] as const
+
+/**
+ * Refuse toute base qui n'est pas locale (Story 12.5) : le seeder purge et écrit des données
+ * factices, il ne doit jamais toucher une base partagée.
+ */
+export function assertLocalDatabase(host: string | undefined | null): void {
+  if (!host || !(LOCAL_DB_HOSTS as readonly string[]).includes(host)) {
+    throw new Error(
+      `Seeder de démo refusé : base non locale (hôte « ${host ?? '?'} »). ` +
+        `Hôtes acceptés : ${LOCAL_DB_HOSTS.join(', ')}.`
+    )
+  }
+}
+
+/**
+ * Date aléatoire uniforme entre `max(now - STATS_SPREAD_DAYS, publishedAt)` et `now` (Story 12.5) :
+ * jamais avant la publication sur Anta, jamais dans le futur.
+ */
+export function randomStatDate(
+  publishedAt: DateTime | null,
+  now: DateTime = DateTime.now()
+): DateTime {
+  const floor = now.minus({ days: STATS_SPREAD_DAYS })
+  const from = publishedAt && publishedAt > floor ? publishedAt : floor
+  const start = Math.min(from.toMillis(), now.toMillis()) // a future date is clamped to now
+  return DateTime.fromMillis(start + Math.floor(Math.random() * (now.toMillis() - start)))
+}
 
 const CATEGORIES = [
   'book',
@@ -135,7 +179,8 @@ function buildRow(i: number, status: Row['status']): Record<string, unknown> {
     work_published_at: DateTime.now()
       .minus({ days: randInt(30, 11000) })
       .toFormat('yyyy-MM-dd'),
-    anta_published_at: antaPublishedAt ? antaPublishedAt.toSQL({ includeOffset: false }) : null,
+    // timestamptz : ISO avec décalage, juste quel que soit le fuseau de Node.
+    anta_published_at: antaPublishedAt ? antaPublishedAt.toISO() : null,
     created_by_id: null,
     created_at: DateTime.now().toSQL({ includeOffset: false }),
     updated_at: DateTime.now().toSQL({ includeOffset: false }),
@@ -157,6 +202,13 @@ export default class extends BaseSeeder {
   static environment = ['development']
 
   async run() {
+    // 0. Base locale uniquement (Story 12.5).
+    const connection = db.getRawConnection(this.client.connectionName)?.config.connection as
+      | { host?: string }
+      | string
+      | undefined
+    assertLocalDatabase(typeof connection === 'object' ? connection?.host : undefined)
+
     // 1. Purge des données de démo précédentes : productions (CASCADE → stats, pivot), puis
     //    fiches `seed-demo:` qui ne sont plus liées à aucune production (FK RESTRICT).
     const deleted = await Production.query({ client: this.client })
@@ -183,7 +235,7 @@ export default class extends BaseSeeder {
 
     // 4. Insertion en lot (multiInsert = un INSERT multi-lignes ; le trigger peuple search_vector).
     //    `?::jsonb` pour authors/tags (colonnes jsonb).
-    const inserted: { id: string; status: string }[] = []
+    const inserted: { id: string; status: string; anta_published_at: Date | null }[] = []
     const CHUNK = 50
     for (let c = 0; c < rows.length; c += CHUNK) {
       const chunk = rows.slice(c, c + CHUNK).map((r) => ({
@@ -195,8 +247,8 @@ export default class extends BaseSeeder {
       const res = await this.client
         .table('productions')
         .multiInsert(chunk)
-        .returning(['id', 'status'])
-      inserted.push(...(res as { id: string; status: string }[]))
+        .returning(['id', 'status', 'anta_published_at'])
+      inserted.push(...(res as typeof inserted))
     }
     console.log(`✔ ${inserted.length} productions créées`)
 
@@ -208,17 +260,29 @@ export default class extends BaseSeeder {
     })
     console.log('✔ auteurs rattachés (pivot + productions.authors)')
 
-    // 6. Compteurs vues / téléchargements pour les publiées (sections + tri)
-    const publishedIds = inserted.filter((r) => r.status === 'published').map((r) => r.id)
-    const viewRows: { production_id: string; ip_hash: string }[] = []
-    const downloadRows: { production_id: string; ip_hash: string }[] = []
-    for (const id of publishedIds) {
+    // 6. Vues / téléchargements des publiées, datés sur 540 j (Story 12.5 : fenêtre de 365 j).
+    const now = DateTime.now()
+    const stamp = (publishedAt: DateTime | null) => randomStatDate(publishedAt, now).toISO() // with offset: right whatever the Node timezone
+    const published = inserted.filter((r) => r.status === 'published')
+    const viewRows: { production_id: string; ip_hash: string; recorded_at: string | null }[] = []
+    const downloadRows: { production_id: string; ip_hash: string; downloaded_at: string | null }[] =
+      []
+    for (const { id, anta_published_at: date } of published) {
+      const publishedAt = date ? DateTime.fromJSDate(date) : null
       const views = randInt(0, 80)
       const downloads = randInt(0, 30)
       for (let v = 0; v < views; v++)
-        viewRows.push({ production_id: id, ip_hash: `seed-v-${id}-${v}` })
+        viewRows.push({
+          production_id: id,
+          ip_hash: `seed-v-${id}-${v}`,
+          recorded_at: stamp(publishedAt),
+        })
       for (let d = 0; d < downloads; d++)
-        downloadRows.push({ production_id: id, ip_hash: `seed-d-${id}-${d}` })
+        downloadRows.push({
+          production_id: id,
+          ip_hash: `seed-d-${id}-${d}`,
+          downloaded_at: stamp(publishedAt),
+        })
     }
     const SCHUNK = 2000
     for (let c = 0; c < viewRows.length; c += SCHUNK) {

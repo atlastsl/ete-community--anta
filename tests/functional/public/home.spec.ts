@@ -8,6 +8,7 @@ import ProductionFile from '#models/production_file'
 import ProductionLink from '#models/production_link'
 import AdminUser from '#models/admin_user'
 import Author from '#models/author'
+import AuthorAffiliation from '#models/author_affiliation'
 import RankingService from '#services/ranking_service'
 
 type ProductionFixture = {
@@ -993,5 +994,282 @@ test.group('Public home | auteurs les plus consultés (12.3)', (group) => {
     RankingService.invalidate()
     props = await homeProps(client)
     assert.deepEqual(authorNames(props.topAuthors), ['SECOND', 'PREMIER'])
+  })
+})
+
+// Story 12.5 — ordre des props (FR9) et invalidation du cache par chaque route admin restée
+// couverte par les seuls tests unitaires des services (sync, consentement, fiche auteur).
+// Preuve par recalcul observable (un auteur entre dans le bloc, ce que le re-filtrage
+// `visibleOnSite` seul ne produit pas, D-12.3-4) ou, si le classement ne change pas, par
+// `RankingService.cachedKeys()`. Noms fictifs (dépôt public).
+const ALL_KEYS = ['mostViewed', 'mostDownloaded', 'topAuthors']
+
+async function addAffiliation(author: Author) {
+  await AuthorAffiliation.create({
+    authorId: author.id,
+    position: 1,
+    institution: 'Université Fictive',
+    department: null,
+  })
+}
+
+/** Published, complete production (pivot + link) linked to `authors`, with `views` views. */
+async function publishedComplete(title: string, views: number, ...authors: Author[]) {
+  const production = await createPublishableDraft(title)
+  await db.from('production_authors').where('production_id', production.id).delete()
+  production.status = 'published'
+  production.antaPublishedAt = DateTime.now().minus({ days: 5 })
+  await production.save()
+  await link(production, ...authors)
+  await addViews(production, views)
+  return production
+}
+
+/** Full edit form of `publishedComplete` productions (nothing incomplete: no auto-unpublish). */
+function productionForm(title: string, authorIds: string[]) {
+  return {
+    title,
+    summary: 'Résumé complet.',
+    tags: ['maths'],
+    category: 'article',
+    domain: 'mathematics',
+    subdomain: ['topology'],
+    language: 'fr',
+    publicationCountry: 'Sénégal',
+    licenseStatus: 'member',
+    workPublishedAt: '2024-03-15',
+    authorIds,
+  }
+}
+
+test.group('Public home | ordre des props (12.5)', (group) => {
+  group.each.setup(async () => {
+    await db.beginGlobalTransaction()
+    return () => db.rollbackGlobalTransaction()
+  })
+
+  // L'ordre des clés JSON n'est pas un contrat (Inertia résout les props transformées après les
+  // autres) : l'ordre FR9 est celui du rendu, vérifié par lecture de source (`home_blocks.spec.ts`,
+  // D-12.5-2). Ici : l'ensemble exact des props de la page, sans `categories`.
+  test('props de la page : exactement featured, recent, mostViewed, mostDownloaded, topAuthors, meta', async ({
+    client,
+    assert,
+  }) => {
+    await published('A')
+    const response = await client.get('/')
+    const page = JSON.parse(
+      response
+        .text()
+        .match(/data-page="([^"]*)"/)![1]
+        .replace(/&quot;/g, '"')
+    )
+    const shared = new Set(Object.keys(page.props))
+    const own = ['featured', 'recent', 'mostViewed', 'mostDownloaded', 'topAuthors', 'meta']
+    for (const key of own) assert.isTrue(shared.has(key), key)
+    assert.notProperty(page.props, 'categories')
+    // Every other prop is shared by every public page (same set as `/productions`).
+    const listing = await client.get('/productions')
+    const listingKeys = new Set(Object.keys(extractProps(listing.text())))
+    const extra = [...shared].filter((key) => !own.includes(key) && !listingKeys.has(key))
+    assert.deepEqual(extra, [])
+  })
+})
+
+test.group('Public home | cache invalidé par les routes admin (12.5)', (group) => {
+  group.each.setup(async () => {
+    await db.beginGlobalTransaction()
+    return () => db.rollbackGlobalTransaction()
+  })
+
+  test('PUT /admin/productions/:id avec authorIds modifiés (sync) → topAuthors recalculé', async ({
+    client,
+    assert,
+  }) => {
+    const admin = await createAdmin()
+    const first = await createAuthor('PREMIER')
+    const added = await createAuthor('AJOUTE') // public, but linked to nothing yet: not visible
+    await addAffiliation(added)
+    const production = await publishedComplete('Production éditée', 5, first)
+
+    let props = await homeProps(client)
+    assert.deepEqual(authorNames(props.topAuthors), ['PREMIER'])
+    assert.sameMembers(RankingService.cachedKeys(), ALL_KEYS)
+
+    const response = await client
+      .put(`/admin/productions/${production.id}`)
+      .json(productionForm('Production éditée', [first.id, added.id]))
+      .loginAs(admin)
+      .withCsrfToken()
+      .redirects(0)
+    response.assertStatus(302)
+    await production.refresh()
+    assert.equal(production.status, 'published')
+    assert.deepEqual(RankingService.cachedKeys(), [])
+
+    props = await homeProps(client)
+    assert.deepEqual(authorNames(props.topAuthors), ['AJOUTE', 'PREMIER'])
+  })
+
+  test('PUT /admin/productions/:id sans changement d’auteurs → cache conservé (D-12.2-6)', async ({
+    client,
+    assert,
+  }) => {
+    const admin = await createAdmin()
+    const author = await createAuthor('STABLE')
+    const production = await publishedComplete('Avant', 3, author)
+    await homeProps(client)
+
+    const response = await client
+      .put(`/admin/productions/${production.id}`)
+      .json(productionForm('Après', [author.id]))
+      .loginAs(admin)
+      .withCsrfToken()
+      .redirects(0)
+    response.assertStatus(302)
+    await production.refresh()
+    assert.equal(production.title, 'Après')
+    assert.equal(production.status, 'published')
+    assert.sameMembers(RankingService.cachedKeys(), ALL_KEYS)
+    // Cards are hydrated on every render: the new title shows anyway (D-12.2-1).
+    const props = await homeProps(client)
+    assert.deepEqual(titles(props.mostViewed), ['Après'])
+  })
+
+  test('POST /admin/authors/:id/confirm-consent → l’auteur entre dans le bloc', async ({
+    client,
+    assert,
+  }) => {
+    const admin = await createAdmin()
+    const pending = await createAuthor('ENATTENTE', { consent: false })
+    await addAffiliation(pending)
+    const p = await published('Très vue')
+    await link(p, pending)
+    await addViews(p, 9)
+    const other = await createAuthor('AUTRE')
+    const q = await published('Peu vue')
+    await link(q, other)
+    await addViews(q, 1)
+
+    let props = await homeProps(client)
+    assert.deepEqual(authorNames(props.topAuthors), ['AUTRE'])
+
+    const response = await client
+      .post(`/admin/authors/${pending.id}/confirm-consent`)
+      .withCsrfToken()
+      .loginAs(admin)
+      .redirects(0)
+    response.assertStatus(302)
+    assert.notInclude(RankingService.cachedKeys(), 'topAuthors')
+
+    props = await homeProps(client)
+    assert.deepEqual(authorNames(props.topAuthors), ['ENATTENTE', 'AUTRE'])
+  })
+
+  test('PUT /admin/authors/:id case « consentement » cochée → l’auteur entre dans le bloc', async ({
+    client,
+    assert,
+  }) => {
+    const admin = await createAdmin()
+    const pending = await createAuthor('COCHE', { consent: false })
+    const p = await published('Très vue')
+    await link(p, pending)
+    await addViews(p, 9)
+    const other = await createAuthor('AUTRE')
+    const q = await published('Peu vue')
+    await link(q, other)
+    await addViews(q, 1)
+
+    let props = await homeProps(client)
+    assert.deepEqual(authorNames(props.topAuthors), ['AUTRE'])
+
+    const response = await client
+      .put(`/admin/authors/${pending.id}`)
+      .json({
+        lastNames: 'COCHE',
+        firstNames: 'Awa',
+        affiliations: [{ institution: 'Université Fictive' }],
+        consent: true,
+      })
+      .loginAs(admin)
+      .withCsrfToken()
+      .redirects(0)
+    response.assertStatus(302)
+    await pending.refresh()
+    assert.isNotNull(pending.consentConfirmedAt)
+    assert.notInclude(RankingService.cachedKeys(), 'topAuthors')
+
+    props = await homeProps(client)
+    assert.deepEqual(authorNames(props.topAuthors), ['COCHE', 'AUTRE'])
+  })
+
+  // Le renommage change le départage D36 (nom de famille) : seul un recalcul fait passer
+  // l'auteur renommé devant ; les cartes réhydratées garderaient l'ordre en cache.
+  test('PUT /admin/authors/:id renommage → classement recalculé (départage par nom)', async ({
+    client,
+    assert,
+  }) => {
+    const admin = await createAdmin()
+    const renamed = await createAuthor('ZED')
+    await addAffiliation(renamed)
+    const other = await createAuthor('MILIEU')
+    // Co-signed: same views, same last publication → ordered by last name (D36).
+    const p = await published('Co-signée')
+    await link(p, renamed, other)
+    await addViews(p, 2)
+    let props = await homeProps(client)
+    assert.deepEqual(authorNames(props.topAuthors), ['MILIEU', 'ZED'])
+    assert.sameMembers(RankingService.cachedKeys(), ALL_KEYS)
+
+    const response = await client
+      .put(`/admin/authors/${renamed.id}`)
+      .json({
+        lastNames: 'ALPHA',
+        firstNames: 'Awa',
+        affiliations: [{ institution: 'Université Fictive' }],
+      })
+      .loginAs(admin)
+      .withCsrfToken()
+      .redirects(0)
+    response.assertStatus(302)
+    assert.deepEqual(RankingService.cachedKeys(), [])
+
+    // Without invalidation: ['MILIEU', 'ALPHA'] (cached order, fresh names).
+    props = await homeProps(client)
+    assert.deepEqual(authorNames(props.topAuthors), ['ALPHA', 'MILIEU'])
+  })
+
+  test('DELETE /admin/authors/:id : fiche non liée supprimée → cache vidé ; fiche liée refusée → conservé', async ({
+    client,
+    assert,
+  }) => {
+    const admin = await createAdmin()
+    const linked = await createAuthor('LIEE')
+    const p = await published('P')
+    await link(p, linked)
+    await addViews(p, 2)
+    const unlinked = await createAuthor('SEULE')
+    await homeProps(client)
+    assert.sameMembers(RankingService.cachedKeys(), ALL_KEYS)
+
+    const refused = await client
+      .delete(`/admin/authors/${linked.id}`)
+      .loginAs(admin)
+      .withCsrfToken()
+      .redirects(0)
+    refused.assertStatus(302)
+    assert.include(JSON.stringify(refused.flashMessages()), 'authors.delete.refused')
+    assert.sameMembers(RankingService.cachedKeys(), ALL_KEYS)
+
+    const deleted = await client
+      .delete(`/admin/authors/${unlinked.id}`)
+      .loginAs(admin)
+      .withCsrfToken()
+      .redirects(0)
+    deleted.assertStatus(302)
+    assert.isNull(await Author.find(unlinked.id))
+    assert.deepEqual(RankingService.cachedKeys(), [])
+
+    const props = await homeProps(client)
+    assert.deepEqual(authorNames(props.topAuthors), ['LIEE'])
   })
 })
