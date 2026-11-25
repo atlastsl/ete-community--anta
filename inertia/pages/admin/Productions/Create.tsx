@@ -15,6 +15,7 @@ import {
   uploadPendingAttachments,
   publishProduction,
   productionIdFromEditPage,
+  toProductionPayload,
 } from '~/lib/production_submit'
 
 export default function AdminProductionsCreate({
@@ -25,6 +26,8 @@ export default function AdminProductionsCreate({
   const { t } = useTranslation()
   const form = useForm<ProductionFormData>({ ...EMPTY_PRODUCTION_FORM })
   const { data, setData, post, processing, errors } = form
+  // Les auteurs sélectionnés partent en `authorIds` ordonnés (Story 9.7).
+  form.transform(toProductionPayload)
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
   const [pendingLinks, setPendingLinks] = useState<PendingProductionLink[]>([])
   const publishAfterSave = useRef(false)

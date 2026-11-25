@@ -1,6 +1,7 @@
 {
   "nav": {
     "productions": "Productions",
+    "authors": "Authors",
     "statistics": "Statistics",
     "users": "Users",
     "logout": "Sign out",
@@ -96,7 +97,9 @@
         "required_to_publish": "Required to publish.",
         "category_invalid": "Invalid category.",
         "domain_invalid": "Invalid domain.",
-        "subdomain_invalid": "Invalid subdomain for this domain."
+        "subdomain_invalid": "Invalid subdomain for this domain.",
+        "author_unknown": "A selected author no longer exists. Remove it and try again.",
+        "authors_invalid": "Invalid author selection."
       },
       "select_placeholder": "Select…",
       "files_placeholder": "Adding files and links will be available after saving the draft.",
@@ -107,7 +110,11 @@
       "country_group_other": "Other countries",
       "save_draft": "Save draft",
       "save": "Save",
-      "publish": "Publish"
+      "publish": "Publish",
+      "completion": {
+        "authors": "At least one author"
+      },
+      "authors_hint": "Select the authors in publication order. At least one author is required to publish."
     },
     "completion": {
       "summary": "{{filled}}/{{total}} fields — {{missing}} required to publish",
@@ -187,6 +194,157 @@
       "edit": "Edit",
       "unpublish": "Unpublish",
       "delete": "Delete"
+    }
+  },
+  "authors": {
+    "heading": "Authors",
+    "create_button": "Create an author",
+    "create_title": "Create an author",
+    "edit_title": "Edit author",
+    "table": {
+      "author": "Author",
+      "primary_affiliation": "Primary affiliation",
+      "updated_at": "Updated",
+      "actions": "Actions",
+      "productions": "Productions",
+      "status": "Status"
+    },
+    "no_affiliation": "No affiliation",
+    "actions": {
+      "edit": "Edit",
+      "delete": "Delete"
+    },
+    "empty_title": "No authors",
+    "empty_description": "Create the first author record to link it to productions.",
+    "form": {
+      "sections": {
+        "identity": "Identity",
+        "photo": "Photo",
+        "affiliations": "Affiliations",
+        "links": "Links",
+        "consent": "Consent"
+      },
+      "photo": {
+        "choose": "Choose a photo",
+        "replace": "Replace photo",
+        "cancel": "Cancel",
+        "remove": "Remove photo",
+        "help": "Optional. JPEG, PNG or WebP · 5 MB max · automatic square cropping",
+        "selected": "Selected file: {{name}}",
+        "uploading": "Uploading photo… {{percent}}%"
+      },
+      "fields": {
+        "last_names": "Last name(s)",
+        "first_names": "First name(s)",
+        "institution": "Institution",
+        "department": "Department",
+        "google_scholar_url": "Google Scholar link"
+      },
+      "affiliation_n": "Affiliation {{n}}",
+      "primary_hint": "The first affiliation is the primary institution.",
+      "no_affiliation_yet": "This record has no affiliation yet.",
+      "add_affiliation": "Add an affiliation",
+      "move_up": "Move affiliation {{n}} up",
+      "move_down": "Move affiliation {{n}} down",
+      "remove": "Remove affiliation {{n}}",
+      "moved": "Affiliation moved to position {{n}}.",
+      "removed": "Affiliation removed.",
+      "submit_create": "Create author",
+      "scholar_placeholder": "https://scholar.google.com/citations?user=…",
+      "errors": {
+        "last_names_required": "Last name is required.",
+        "last_names_too_long": "Last name must not exceed 120 characters.",
+        "first_names_required": "First name is required.",
+        "first_names_too_long": "First name must not exceed 120 characters.",
+        "affiliation_required": "Add at least one affiliation.",
+        "affiliations_too_many": "20 affiliations at most.",
+        "institution_required": "Institution is required.",
+        "institution_too_long": "Institution must not exceed 255 characters.",
+        "department_too_long": "Department must not exceed 255 characters.",
+        "scholar_url_invalid": "Enter a valid web address starting with http:// or https:// (500 characters at most).",
+        "photo_type": "Choose a valid JPEG, PNG or WebP image.",
+        "photo_size": "The photo must not exceed 5 MB.",
+        "photo_dimensions": "The photo is too large (40 megapixels maximum).",
+        "consent_requires_affiliation": "Add an affiliation first."
+      }
+    },
+    "flash": {
+      "created": "Author created.",
+      "saved": "Author saved.",
+      "deleted": "Author deleted."
+    },
+    "list": {
+      "search_label": "Search for an author",
+      "institution_label": "Institution",
+      "institution_all": "All institutions",
+      "quick_filters": "Quick filters",
+      "consent_pending": "Consent pending",
+      "incomplete": "Incomplete",
+      "clear_filters": "Clear filters",
+      "no_results": "No author matches these filters."
+    },
+    "badges": {
+      "public": "Public",
+      "not_public": "Not public",
+      "incomplete": "Incomplete"
+    },
+    "delete": {
+      "title": "Delete this author record?",
+      "description": "The record of {{name}} and its affiliations will be permanently deleted.",
+      "confirm": "Delete",
+      "blocked": "Cannot delete: this record is linked to {{count}} production(s), drafts included.",
+      "refused": "Cannot delete: this record is linked to at least one production, drafts included."
+    },
+    "consent": {
+      "label": "The author has consented to the publication of their profile.",
+      "help": "Optional. Without consent, the record is created but the profile stays private: the name appears on productions, without a link to a profile. You can confirm it later from the author's record.",
+      "unavailable": "Add an affiliation first.",
+      "public_help": "This author's profile is public.",
+      "confirm_action": "Confirm consent",
+      "withdraw_action": "Withdraw consent",
+      "confirm_title": "Confirm consent?",
+      "confirm_description": "{{name}}'s profile will become public.",
+      "confirm_submit": "Confirm",
+      "withdraw_title": "Withdraw consent?",
+      "withdraw_description": "{{name}}'s profile will no longer be public. Their productions stay published; their name will be shown without a link.",
+      "withdraw_submit": "Withdraw consent",
+      "flash": {
+        "confirmed": "Consent confirmed.",
+        "withdrawn": "Consent withdrawn.",
+        "refused": "Cannot confirm: add an affiliation first.",
+        "already_public": "The profile was already public.",
+        "already_private": "The profile was already not public."
+      }
+    },
+    "picker": {
+      "label": "Add an author",
+      "placeholder": "Last or first name…",
+      "loading": "Searching…",
+      "no_results": "No author found.",
+      "error": "Search unavailable, please try again.",
+      "selected_label": "Selected authors",
+      "empty": "No author selected.",
+      "move_up": "Move {{name}} up",
+      "move_down": "Move {{name}} down",
+      "remove": "Remove {{name}}",
+      "moved": "{{name}} moved to position {{n}}.",
+      "removed": "{{name}} removed.",
+      "legacy_title": "Authors to link",
+      "legacy_description": "Names not linked to the referential: {{names}}. They are kept as long as the author selection is not changed; a changed selection replaces them on save.",
+      "results_count_one": "{{count}} author found.",
+      "results_count_other": "{{count}} authors found.",
+      "already_first": "Already in first position.",
+      "already_last": "Already in last position.",
+      "legacy_non_text": "The stored author list contains non-text values; it is kept as long as the author selection is not changed.",
+      "create_option": "Create author “{{query}}”"
+    },
+    "dialog": {
+      "description": "The new author will be added to the production.",
+      "submit": "Create and add",
+      "close": "Close",
+      "added": "{{name}} created and added to the authors.",
+      "error": "The author could not be created. Check your connection and try again.",
+      "session_expired": "Session expired: sign in again in another tab; the production is not saved yet."
     }
   },
   "users": {
@@ -322,7 +480,12 @@
       "publish": "Publish",
       "unpublish": "Unpublish",
       "delete": "Delete",
-      "password_reset": "Password reset"
+      "password_reset": "Password reset",
+      "consent_confirm": "Consent confirmed",
+      "consent_withdraw": "Consent withdrawn"
+    },
+    "resource": {
+      "author": "Author"
     }
   },
   "taxonomy": {

@@ -11,7 +11,10 @@ import {
 export type DraftProductionPayload = {
   title: string
   summary?: string
+  /** Legacy free-text names: still accepted, ignored since Story 9.7 (contract later). */
   authors?: string[]
+  /** Ordered author card ids (Story 9.7); existence checked by `ProductionAuthorService.sync`. */
+  authorIds?: string[]
   tags?: string[]
   category?: string
   domain?: string
@@ -60,6 +63,21 @@ export function assertProductionTaxonomy(data: DraftProductionPayload): void {
   }
 }
 
+/** Doublons d'un tableau de chaînes, sans tenir compte de la casse ni des espaces. */
+const distinctIgnoringCase = vine.createRule((value, _options, field) => {
+  if (!Array.isArray(value)) return
+  const seen = new Set<string>()
+  for (const item of value) {
+    if (typeof item !== 'string') continue
+    const key = item.trim().toLowerCase()
+    if (seen.has(key)) {
+      field.report('productions.form.errors.authors_invalid', 'distinct', field)
+      return
+    }
+    seen.add(key)
+  }
+})
+
 /**
  * Validateur d'enregistrement BROUILLON (Story 4.3).
  *
@@ -71,7 +89,17 @@ export const draftProductionValidator = vine.compile(
   vine.object({
     title: vine.string().trim().minLength(1).maxLength(255),
     summary: vine.string().trim().optional(),
+    // Ancienne saisie libre : acceptée mais ignorée depuis la Story 9.7 (seul
+    // ProductionAuthorService écrit `productions.authors`) ; retrait au « contract ».
     authors: vine.array(vine.string().trim()).optional(),
+    // Auteurs du référentiel, ordonnés (Story 9.7, P2.6) ; existence vérifiée par `sync`.
+    // Uuids normalisés en minuscules ; doublons comparés sans la casse (`distinct` de VineJS
+    // voit les valeurs brutes). 200 au plus (= exclusions acceptées par la recherche).
+    authorIds: vine
+      .array(vine.string().trim().toLowerCase().uuid())
+      .maxLength(200)
+      .use(distinctIgnoringCase())
+      .optional(),
     tags: vine.array(vine.string().trim()).optional(),
     category: vine.enum([...PRODUCTION_CATEGORIES]).optional(),
     domain: vine.enum([...PRODUCTION_DOMAINS]).optional(),
@@ -97,6 +125,11 @@ draftProductionValidator.messagesProvider = new SimpleMessagesProvider({
   'title.required': 'productions.form.errors.title_required',
   'title.minLength': 'productions.form.errors.title_required',
   'title.maxLength': 'productions.form.errors.title_too_long',
+  'authorIds.array': 'productions.form.errors.authors_invalid',
+  'authorIds.distinct': 'productions.form.errors.authors_invalid',
+  'authorIds.array.maxLength': 'productions.form.errors.authors_invalid',
+  'authorIds.*.uuid': 'productions.form.errors.authors_invalid',
+  'authorIds.*.string': 'productions.form.errors.authors_invalid',
 })
 
 /**

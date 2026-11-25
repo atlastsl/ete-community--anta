@@ -1,6 +1,7 @@
 {
   "nav": {
     "productions": "Productions",
+    "authors": "Auteurs",
     "statistics": "Statistiques",
     "users": "Utilisateurs",
     "logout": "Se déconnecter",
@@ -96,7 +97,9 @@
         "required_to_publish": "Requis pour publier.",
         "category_invalid": "Catégorie invalide.",
         "domain_invalid": "Domaine invalide.",
-        "subdomain_invalid": "Sous-domaine invalide pour ce domaine."
+        "subdomain_invalid": "Sous-domaine invalide pour ce domaine.",
+        "author_unknown": "Un auteur sélectionné n'existe plus. Retirez-le puis réessayez.",
+        "authors_invalid": "Sélection d'auteurs invalide."
       },
       "select_placeholder": "Sélectionnez…",
       "files_placeholder": "L'ajout de fichiers et de liens sera disponible après l'enregistrement du brouillon.",
@@ -107,7 +110,11 @@
       "country_group_other": "Autres pays",
       "save_draft": "Enregistrer brouillon",
       "save": "Enregistrer",
-      "publish": "Publier"
+      "publish": "Publier",
+      "completion": {
+        "authors": "Au moins un auteur"
+      },
+      "authors_hint": "Sélectionnez les auteurs dans l'ordre de la publication. Au moins un auteur est requis pour publier."
     },
     "completion": {
       "summary": "{{filled}}/{{total}} champs — {{missing}} requis pour publier",
@@ -187,6 +194,157 @@
       "edit": "Modifier",
       "unpublish": "Dépublier",
       "delete": "Supprimer"
+    }
+  },
+  "authors": {
+    "heading": "Auteurs",
+    "create_button": "Créer un auteur",
+    "create_title": "Créer un auteur",
+    "edit_title": "Modifier l'auteur",
+    "table": {
+      "author": "Auteur",
+      "primary_affiliation": "Affiliation principale",
+      "updated_at": "Mise à jour",
+      "actions": "Actions",
+      "productions": "Productions",
+      "status": "Statut"
+    },
+    "no_affiliation": "Aucune affiliation",
+    "actions": {
+      "edit": "Modifier",
+      "delete": "Supprimer"
+    },
+    "empty_title": "Aucun auteur",
+    "empty_description": "Créez la première fiche auteur pour l'associer à des productions.",
+    "form": {
+      "sections": {
+        "identity": "Identité",
+        "photo": "Photo",
+        "affiliations": "Affiliations",
+        "links": "Liens",
+        "consent": "Consentement"
+      },
+      "photo": {
+        "choose": "Choisir une photo",
+        "replace": "Remplacer la photo",
+        "cancel": "Annuler",
+        "remove": "Retirer la photo",
+        "help": "Facultatif. JPEG, PNG ou WebP · 5 Mo max · recadrage carré automatique",
+        "selected": "Fichier choisi : {{name}}",
+        "uploading": "Envoi de la photo… {{percent}} %"
+      },
+      "fields": {
+        "last_names": "Nom(s)",
+        "first_names": "Prénom(s)",
+        "institution": "Institution",
+        "department": "Département",
+        "google_scholar_url": "Lien Google Scholar"
+      },
+      "affiliation_n": "Affiliation {{n}}",
+      "primary_hint": "La première affiliation est l'institution principale.",
+      "no_affiliation_yet": "Cette fiche n'a pas encore d'affiliation.",
+      "add_affiliation": "Ajouter une affiliation",
+      "move_up": "Monter l'affiliation {{n}}",
+      "move_down": "Descendre l'affiliation {{n}}",
+      "remove": "Retirer l'affiliation {{n}}",
+      "moved": "Affiliation déplacée en position {{n}}.",
+      "removed": "Affiliation retirée.",
+      "submit_create": "Créer l'auteur",
+      "scholar_placeholder": "https://scholar.google.com/citations?user=…",
+      "errors": {
+        "last_names_required": "Le nom est obligatoire.",
+        "last_names_too_long": "Le nom ne doit pas dépasser 120 caractères.",
+        "first_names_required": "Le prénom est obligatoire.",
+        "first_names_too_long": "Le prénom ne doit pas dépasser 120 caractères.",
+        "affiliation_required": "Ajoutez au moins une affiliation.",
+        "affiliations_too_many": "20 affiliations au maximum.",
+        "institution_required": "L'institution est obligatoire.",
+        "institution_too_long": "L'institution ne doit pas dépasser 255 caractères.",
+        "department_too_long": "Le département ne doit pas dépasser 255 caractères.",
+        "scholar_url_invalid": "Saisissez une adresse web valide commençant par http:// ou https:// (500 caractères au maximum).",
+        "photo_type": "Choisissez une image JPEG, PNG ou WebP valide.",
+        "photo_size": "La photo ne doit pas dépasser 5 Mo.",
+        "photo_dimensions": "La photo est trop grande (40 mégapixels au maximum).",
+        "consent_requires_affiliation": "Complétez d'abord une affiliation."
+      }
+    },
+    "flash": {
+      "created": "Auteur créé.",
+      "saved": "Auteur enregistré.",
+      "deleted": "Auteur supprimé."
+    },
+    "list": {
+      "search_label": "Rechercher un auteur",
+      "institution_label": "Institution",
+      "institution_all": "Toutes les institutions",
+      "quick_filters": "Filtres rapides",
+      "consent_pending": "Consentement en attente",
+      "incomplete": "À compléter",
+      "clear_filters": "Effacer les filtres",
+      "no_results": "Aucun auteur ne correspond à ces filtres."
+    },
+    "badges": {
+      "public": "Public",
+      "not_public": "Non public",
+      "incomplete": "À compléter"
+    },
+    "delete": {
+      "title": "Supprimer cette fiche auteur ?",
+      "description": "La fiche de {{name}} et ses affiliations seront définitivement supprimées.",
+      "confirm": "Supprimer",
+      "blocked": "Suppression impossible : fiche liée à {{count}} production(s) (brouillons compris).",
+      "refused": "Suppression impossible : cette fiche est liée à au moins une production (brouillons compris)."
+    },
+    "consent": {
+      "label": "L'auteur a consenti à la publication de son profil.",
+      "help": "Facultatif. Sans ce consentement, la fiche est créée mais le profil reste non public : le nom apparaît sur les productions, sans lien vers un profil. Vous pourrez le confirmer plus tard dans la fiche de l'auteur.",
+      "unavailable": "Complétez d'abord une affiliation.",
+      "public_help": "Le profil de cet auteur est public.",
+      "confirm_action": "Confirmer le consentement",
+      "withdraw_action": "Retirer le consentement",
+      "confirm_title": "Confirmer le consentement ?",
+      "confirm_description": "Le profil de {{name}} deviendra public.",
+      "confirm_submit": "Confirmer",
+      "withdraw_title": "Retirer le consentement ?",
+      "withdraw_description": "Le profil de {{name}} ne sera plus public. Ses productions restent publiées, son nom s'affichera sans lien.",
+      "withdraw_submit": "Retirer le consentement",
+      "flash": {
+        "confirmed": "Consentement confirmé.",
+        "withdrawn": "Consentement retiré.",
+        "refused": "Confirmation impossible : complétez d'abord une affiliation.",
+        "already_public": "Le profil était déjà public.",
+        "already_private": "Le profil n'était déjà plus public."
+      }
+    },
+    "picker": {
+      "label": "Ajouter un auteur",
+      "placeholder": "Nom ou prénom…",
+      "loading": "Recherche…",
+      "no_results": "Aucun auteur trouvé.",
+      "error": "Recherche indisponible, réessayez.",
+      "selected_label": "Auteurs sélectionnés",
+      "empty": "Aucun auteur sélectionné.",
+      "move_up": "Monter {{name}}",
+      "move_down": "Descendre {{name}}",
+      "remove": "Retirer {{name}}",
+      "moved": "{{name}} déplacé en position {{n}}.",
+      "removed": "{{name}} retiré.",
+      "legacy_title": "Auteurs à rattacher",
+      "legacy_description": "Noms non rattachés au référentiel : {{names}}. Ils sont conservés tant que la sélection d'auteurs n'est pas modifiée ; une sélection modifiée les remplace à l'enregistrement.",
+      "results_count_one": "{{count}} auteur trouvé.",
+      "results_count_other": "{{count}} auteurs trouvés.",
+      "already_first": "Déjà en première position.",
+      "already_last": "Déjà en dernière position.",
+      "legacy_non_text": "La liste d'auteurs enregistrée contient des valeurs non textuelles ; elle est conservée tant que la sélection d'auteurs n'est pas modifiée.",
+      "create_option": "Créer un auteur « {{query}} »"
+    },
+    "dialog": {
+      "description": "L'auteur créé sera ajouté à la production.",
+      "submit": "Créer et ajouter",
+      "close": "Fermer",
+      "added": "{{name}} créé et ajouté aux auteurs.",
+      "error": "La création a échoué. Vérifiez votre connexion puis réessayez.",
+      "session_expired": "Session expirée : reconnectez-vous dans un autre onglet ; la production n'est pas encore enregistrée."
     }
   },
   "users": {
@@ -322,7 +480,12 @@
       "publish": "Publication",
       "unpublish": "Dépublication",
       "delete": "Suppression",
-      "password_reset": "Réinit. mot de passe"
+      "password_reset": "Réinit. mot de passe",
+      "consent_confirm": "Consentement confirmé",
+      "consent_withdraw": "Consentement retiré"
+    },
+    "resource": {
+      "author": "Auteur"
     }
   },
   "taxonomy": {

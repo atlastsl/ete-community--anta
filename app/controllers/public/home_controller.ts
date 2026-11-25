@@ -32,7 +32,7 @@ function serialize(p: Production): ProductionCardProps {
     id: p.id,
     slug: p.slug,
     title: p.title,
-    authors: p.authors ?? [],
+    authors: p.authorNames ?? [],
     category: p.category,
     domain: p.domain,
     summary: p.summary,

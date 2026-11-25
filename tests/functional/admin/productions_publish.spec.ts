@@ -6,6 +6,9 @@ import Production from '#models/production'
 import ProductionFile from '#models/production_file'
 import ProductionLink from '#models/production_link'
 import AdminActivityLog from '#models/admin_activity_log'
+import Author from '#models/author'
+
+// Noms fictifs uniquement (dépôt public).
 
 async function createAdminUser(): Promise<AdminUser> {
   return AdminUser.create({
@@ -18,13 +21,14 @@ async function createAdminUser(): Promise<AdminUser> {
   })
 }
 
+/** Production complète, auteur rattaché par le pivot (FR21 compte le pivot depuis la Story 9.7). */
 async function createCompleteProduction(
   license: 'member' | 'free_license' | 'external_link' = 'member'
 ): Promise<Production> {
-  return Production.create({
+  const production = await Production.create({
     title: 'Topologie',
     summary: 'Résumé complet.',
-    authors: ['Kofi A.'],
+    authorNames: ['Kofi A.'],
     tags: ['maths'],
     category: 'article',
     domain: 'mathematics',
@@ -36,6 +40,11 @@ async function createCompleteProduction(
     workPublishedAt: DateTime.fromISO('2024-03-15'),
     createdById: null,
   })
+  const author = await Author.create({ firstNames: 'Kofi', lastNames: 'Fictif' })
+  await db
+    .table('production_authors')
+    .insert({ production_id: production.id, author_id: author.id, position: 1 })
+  return production
 }
 
 async function attachLink(production: Production) {
@@ -129,7 +138,7 @@ test.group('Admin productions publish', (group) => {
     const production = await Production.create({
       title: 'Incomplète',
       status: 'draft',
-      authors: [],
+      authorNames: [],
       tags: [],
       licenseStatus: 'member',
       createdById: null,
@@ -151,6 +160,26 @@ test.group('Admin productions publish', (group) => {
       .where('resourceId', production.id)
       .first()
     assert.isNull(log)
+  })
+
+  test('noms dans la colonne mais pivot vide → publication refusée (Story 9.7, FR21)', async ({
+    client,
+    assert,
+  }) => {
+    const admin = await createAdminUser()
+    const production = await createCompleteProduction()
+    await attachLink(production)
+    await db.from('production_authors').where('production_id', production.id).delete()
+
+    await client
+      .post(`/admin/productions/${production.id}/publish`)
+      .loginAs(admin)
+      .withCsrfToken()
+      .redirects(0)
+
+    await production.refresh()
+    assert.equal(production.status, 'draft')
+    assert.deepEqual(production.authorNames, ['Kofi A.'])
   })
 
   test('external_link + fichier seul → rejet ; + lien → publiée', async ({ client, assert }) => {

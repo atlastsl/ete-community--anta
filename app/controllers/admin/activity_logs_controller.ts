@@ -45,6 +45,8 @@ export default class ActivityLogsController {
         actionType: log.actionType,
         resourceType: log.resourceType,
         resourceId: log.resourceId,
+        // Name stored with Phase 2 events (author cards); null for older entries.
+        resourceName: typeof log.metadata?.name === 'string' ? log.metadata.name : null,
         createdAt: log.createdAt.toISO() ?? null,
       })),
       pagination: {

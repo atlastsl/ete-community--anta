@@ -87,4 +87,19 @@ export default class FileStorageService {
     const disk = drive.use('r2')
     await disk.delete(fileKey)
   }
+
+  /** Writes an in-memory object (author photo variants, Story 9.3). */
+  static async putObject(key: string, body: Buffer, contentType: string): Promise<void> {
+    const disk = drive.use('r2')
+    await disk.put(key, body, { contentType })
+  }
+
+  /** Deletes explicit keys; never throws, returns the keys that could not be deleted. */
+  static async deleteObjects(keys: string[]): Promise<{ key: string; error: unknown }[]> {
+    const disk = drive.use('r2')
+    const results = await Promise.allSettled(keys.map((key) => disk.delete(key)))
+    return results.flatMap((result, index) =>
+      result.status === 'rejected' ? [{ key: keys[index], error: result.reason }] : []
+    )
+  }
 }

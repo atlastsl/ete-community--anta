@@ -213,4 +213,18 @@ test.group('Deployment staging | CI/CD', () => {
     assert.include(dockerfile, 'ANTA_REVISION=$GIT_SHA')
     assert.include(read('start/routes.ts'), "env.get('ANTA_REVISION', 'unknown')")
   })
+
+  test('sharp : dépendance de production et binaires linux-x64 glibc dans le lockfile', ({
+    assert,
+  }) => {
+    const pkg = JSON.parse(read('package.json'))
+    assert.isDefined(pkg.dependencies.sharp)
+    assert.isUndefined(pkg.devDependencies?.sharp)
+    // `npm ci --omit=dev` de l'image (node:24-bookworm-slim, glibc x64) n'installe que le lock.
+    const lock = JSON.parse(read('package-lock.json'))
+    const linux = lock.packages['node_modules/@img/sharp-linux-x64']
+    assert.isDefined(linux)
+    assert.deepEqual(linux.libc, ['glibc'])
+    assert.isDefined(lock.packages['node_modules/@img/sharp-libvips-linux-x64'])
+  })
 })

@@ -103,6 +103,28 @@ router
         router
           .delete('productions/:productionId/links/:linkId', [controllers.admin.Links, 'destroy'])
           .as('admin.productions.links.destroy')
+        router
+          .get('authors/create', [controllers.admin.Authors, 'create'])
+          .as('admin.authors.create')
+        router
+          .get('authors/search', [controllers.admin.Authors, 'search'])
+          .as('admin.authors.search')
+        router
+          .post('authors/quick', [controllers.admin.Authors, 'quickStore'])
+          .as('admin.authors.quick-store')
+        router.get('authors/:id/edit', [controllers.admin.Authors, 'edit']).as('admin.authors.edit')
+        router.get('authors', [controllers.admin.Authors, 'index']).as('admin.authors')
+        router.post('authors', [controllers.admin.Authors, 'store']).as('admin.authors.store')
+        router.put('authors/:id', [controllers.admin.Authors, 'update']).as('admin.authors.update')
+        router
+          .delete('authors/:id', [controllers.admin.Authors, 'destroy'])
+          .as('admin.authors.destroy')
+        router
+          .post('authors/:id/confirm-consent', [controllers.admin.Authors, 'confirmConsent'])
+          .as('admin.authors.confirm-consent')
+        router
+          .post('authors/:id/withdraw-consent', [controllers.admin.Authors, 'withdrawConsent'])
+          .as('admin.authors.withdraw-consent')
         router.get('stats', [controllers.admin.Dashboard, 'stats']).as('admin.stats')
 
         // Sous-groupe super_admin uniquement

@@ -4,6 +4,7 @@ import logger from '@adonisjs/core/services/logger'
 import ProductionStatus from '#enums/production_status'
 import FileStorageService from '#services/file_storage_service'
 import Production from '#models/production'
+import { slugify } from '#helpers/slug'
 
 /** Valeurs distinctes existantes (toutes statuts) pour l'auto-complétion du formulaire admin. */
 export type ProductionSuggestions = {
@@ -39,18 +40,10 @@ export default class ProductionService {
   /**
    * Slug de base dérivé d'un titre : translittération ASCII (accents retirés), minuscules,
    * non-alphanumériques → tirets, longueur max ~80. Fallback `'production'` si vide.
-   * ⚠️ Doit rester identique au `slugify` de la migration `add_slug_to_productions_table`.
+   * Translittération partagée : `#helpers/slug` (copie figée dans la migration `add_slug_to_productions_table`).
    */
   static generateSlug(title: string): string {
-    const base = (title ?? '')
-      .normalize('NFD')
-      .replace(new RegExp('[\\u0300-\\u036f]', 'g'), '')
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .slice(0, 80)
-      .replace(/-+$/g, '')
-    return base || 'production'
+    return slugify(title ?? '') || 'production'
   }
 
   /**
@@ -104,11 +97,14 @@ export default class ProductionService {
   /**
    * Retourne la liste des champs/conditions manquants pour publier (FR21).
    * Tableau vide ⇒ la production est publiable.
+   * `authorsCount` = lignes pivot (`ProductionAuthorService.count`, Story 9.7) : les noms de
+   * la colonne dénormalisée ne suffisent plus (production non convertie = auteurs manquants).
    */
   static getMissingForPublish(
     production: Production,
     hasFile: boolean,
-    hasLink: boolean
+    hasLink: boolean,
+    authorsCount: number
   ): string[] {
     const missing: string[] = []
 
@@ -117,7 +113,7 @@ export default class ProductionService {
       if (!value || value.trim() === '') missing.push(field)
     }
 
-    if (!production.authors || production.authors.length === 0) missing.push('authors')
+    if (authorsCount === 0) missing.push('authors')
     if (!production.subdomain || production.subdomain.length === 0) missing.push('subdomain')
     if (!production.tags || production.tags.length === 0) missing.push('tags')
     if (!production.workPublishedAt) missing.push('workPublishedAt')

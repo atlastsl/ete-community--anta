@@ -7,6 +7,7 @@ interface LogParams {
   actionType: ActionType
   resourceType?: string
   resourceId?: string
+  metadata?: Record<string, unknown>
 }
 
 export default class ActivityLogService {
@@ -17,6 +18,7 @@ export default class ActivityLogService {
         actionType: params.actionType,
         resourceType: params.resourceType ?? null,
         resourceId: params.resourceId ?? null,
+        metadata: params.metadata ?? null,
       })
     } catch (error) {
       logger.error({ err: error, ...params }, 'ActivityLogService: failed to create log')

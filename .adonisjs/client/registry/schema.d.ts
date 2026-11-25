@@ -67,6 +67,18 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/public/pages_controller').default['privacy']>>>
     }
   }
+  'health': {
+    methods: ["GET","HEAD"]
+    pattern: '/health'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: unknown
+      errorResponse: unknown
+    }
+  }
   'stats.view': {
     methods: ["POST"]
     pattern: '/stats/view'
@@ -341,6 +353,126 @@ export interface Registry {
       query: {}
       response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/links_controller').default['destroy']>>>
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/links_controller').default['destroy']>>>
+    }
+  }
+  'admin.authors.create': {
+    methods: ["GET","HEAD"]
+    pattern: '/admin/authors/create'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/authors_controller').default['create']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/authors_controller').default['create']>>>
+    }
+  }
+  'admin.authors.search': {
+    methods: ["GET","HEAD"]
+    pattern: '/admin/authors/search'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/authors_controller').default['search']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/authors_controller').default['search']>>>
+    }
+  }
+  'admin.authors.quick-store': {
+    methods: ["POST"]
+    pattern: '/admin/authors/quick'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/authors_controller').default['quickStore']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/authors_controller').default['quickStore']>>>
+    }
+  }
+  'admin.authors.edit': {
+    methods: ["GET","HEAD"]
+    pattern: '/admin/authors/:id/edit'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/authors_controller').default['edit']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/authors_controller').default['edit']>>>
+    }
+  }
+  'admin.authors': {
+    methods: ["GET","HEAD"]
+    pattern: '/admin/authors'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/authors_controller').default['index']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/authors_controller').default['index']>>>
+    }
+  }
+  'admin.authors.store': {
+    methods: ["POST"]
+    pattern: '/admin/authors'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/authors_controller').default['store']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/authors_controller').default['store']>>>
+    }
+  }
+  'admin.authors.update': {
+    methods: ["PUT"]
+    pattern: '/admin/authors/:id'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/authors_controller').default['update']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/authors_controller').default['update']>>>
+    }
+  }
+  'admin.authors.destroy': {
+    methods: ["DELETE"]
+    pattern: '/admin/authors/:id'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/authors_controller').default['destroy']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/authors_controller').default['destroy']>>>
+    }
+  }
+  'admin.authors.confirm-consent': {
+    methods: ["POST"]
+    pattern: '/admin/authors/:id/confirm-consent'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/authors_controller').default['confirmConsent']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/authors_controller').default['confirmConsent']>>>
+    }
+  }
+  'admin.authors.withdraw-consent': {
+    methods: ["POST"]
+    pattern: '/admin/authors/:id/withdraw-consent'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/authors_controller').default['withdrawConsent']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/authors_controller').default['withdrawConsent']>>>
     }
   }
   'admin.stats': {

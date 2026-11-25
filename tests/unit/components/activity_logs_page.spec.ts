@@ -28,6 +28,15 @@ test.group('Activity logs page | source', () => {
     assert.include(src, 'Pagination')
   })
 
+  test('ressource auteur : « Auteur — {nom} » via metadata, autres types inchangés', ({
+    assert,
+  }) => {
+    assert.include(src, "log.resourceType === 'author'")
+    assert.include(src, "t('activity.resource.author')")
+    assert.include(src, 'log.resourceName')
+    assert.include(src, '`${log.resourceType} ${shortId}`')
+  })
+
   test('libellés des types d’action via i18n', ({ assert }) => {
     assert.include(src, 'activity.action.${')
   })

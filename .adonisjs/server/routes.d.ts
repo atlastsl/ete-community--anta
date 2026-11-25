@@ -9,6 +9,7 @@ export type ScannedRoutes = {
     'production.show': { paramsTuple: [ParamValue]; params: {'slug': ParamValue} }
     'production.download': { paramsTuple: [ParamValue,ParamValue]; params: {'slug': ParamValue,'fileId': ParamValue} }
     'privacy-policy': { paramsTuple?: []; params?: {} }
+    'health': { paramsTuple?: []; params?: {} }
     'stats.view': { paramsTuple?: []; params?: {} }
     'new_account.create': { paramsTuple?: []; params?: {} }
     'new_account.store': { paramsTuple?: []; params?: {} }
@@ -32,6 +33,16 @@ export type ScannedRoutes = {
     'admin.productions.files.destroy': { paramsTuple: [ParamValue,ParamValue]; params: {'productionId': ParamValue,'fileId': ParamValue} }
     'admin.productions.links.store': { paramsTuple: [ParamValue]; params: {'productionId': ParamValue} }
     'admin.productions.links.destroy': { paramsTuple: [ParamValue,ParamValue]; params: {'productionId': ParamValue,'linkId': ParamValue} }
+    'admin.authors.create': { paramsTuple?: []; params?: {} }
+    'admin.authors.search': { paramsTuple?: []; params?: {} }
+    'admin.authors.quick-store': { paramsTuple?: []; params?: {} }
+    'admin.authors.edit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'admin.authors': { paramsTuple?: []; params?: {} }
+    'admin.authors.store': { paramsTuple?: []; params?: {} }
+    'admin.authors.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'admin.authors.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'admin.authors.confirm-consent': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'admin.authors.withdraw-consent': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'admin.stats': { paramsTuple?: []; params?: {} }
     'admin.users.create': { paramsTuple?: []; params?: {} }
     'admin.users': { paramsTuple?: []; params?: {} }
@@ -47,6 +58,7 @@ export type ScannedRoutes = {
     'production.show': { paramsTuple: [ParamValue]; params: {'slug': ParamValue} }
     'production.download': { paramsTuple: [ParamValue,ParamValue]; params: {'slug': ParamValue,'fileId': ParamValue} }
     'privacy-policy': { paramsTuple?: []; params?: {} }
+    'health': { paramsTuple?: []; params?: {} }
     'new_account.create': { paramsTuple?: []; params?: {} }
     'session.create': { paramsTuple?: []; params?: {} }
     'admin.login': { paramsTuple?: []; params?: {} }
@@ -54,6 +66,10 @@ export type ScannedRoutes = {
     'admin.productions.create': { paramsTuple?: []; params?: {} }
     'admin.productions.edit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'admin.productions': { paramsTuple?: []; params?: {} }
+    'admin.authors.create': { paramsTuple?: []; params?: {} }
+    'admin.authors.search': { paramsTuple?: []; params?: {} }
+    'admin.authors.edit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'admin.authors': { paramsTuple?: []; params?: {} }
     'admin.stats': { paramsTuple?: []; params?: {} }
     'admin.users.create': { paramsTuple?: []; params?: {} }
     'admin.users': { paramsTuple?: []; params?: {} }
@@ -65,6 +81,7 @@ export type ScannedRoutes = {
     'production.show': { paramsTuple: [ParamValue]; params: {'slug': ParamValue} }
     'production.download': { paramsTuple: [ParamValue,ParamValue]; params: {'slug': ParamValue,'fileId': ParamValue} }
     'privacy-policy': { paramsTuple?: []; params?: {} }
+    'health': { paramsTuple?: []; params?: {} }
     'new_account.create': { paramsTuple?: []; params?: {} }
     'session.create': { paramsTuple?: []; params?: {} }
     'admin.login': { paramsTuple?: []; params?: {} }
@@ -72,6 +89,10 @@ export type ScannedRoutes = {
     'admin.productions.create': { paramsTuple?: []; params?: {} }
     'admin.productions.edit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'admin.productions': { paramsTuple?: []; params?: {} }
+    'admin.authors.create': { paramsTuple?: []; params?: {} }
+    'admin.authors.search': { paramsTuple?: []; params?: {} }
+    'admin.authors.edit': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'admin.authors': { paramsTuple?: []; params?: {} }
     'admin.stats': { paramsTuple?: []; params?: {} }
     'admin.users.create': { paramsTuple?: []; params?: {} }
     'admin.users': { paramsTuple?: []; params?: {} }
@@ -90,16 +111,22 @@ export type ScannedRoutes = {
     'admin.productions.publish': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'admin.productions.files.store': { paramsTuple: [ParamValue]; params: {'productionId': ParamValue} }
     'admin.productions.links.store': { paramsTuple: [ParamValue]; params: {'productionId': ParamValue} }
+    'admin.authors.quick-store': { paramsTuple?: []; params?: {} }
+    'admin.authors.store': { paramsTuple?: []; params?: {} }
+    'admin.authors.confirm-consent': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'admin.authors.withdraw-consent': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'admin.users.store': { paramsTuple?: []; params?: {} }
     'admin.users.reset-password': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
   }
   PUT: {
     'admin.productions.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'admin.authors.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
   }
   DELETE: {
     'admin.productions.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'admin.productions.files.destroy': { paramsTuple: [ParamValue,ParamValue]; params: {'productionId': ParamValue,'fileId': ParamValue} }
     'admin.productions.links.destroy': { paramsTuple: [ParamValue,ParamValue]; params: {'productionId': ParamValue,'linkId': ParamValue} }
+    'admin.authors.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'admin.users.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
   }
   PATCH: {

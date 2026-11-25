@@ -11,7 +11,7 @@ async function createProduction(
 ): Promise<Production> {
   return Production.create({
     title: opts.title ?? `Production ${Math.floor(Math.random() * 1_000_000)}`,
-    authors: [],
+    authorNames: [],
     tags: [],
     status: 'published',
     category: opts.category ?? null,
