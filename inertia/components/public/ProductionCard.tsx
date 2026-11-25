@@ -94,36 +94,32 @@ export default function ProductionCard({
     </p>
   )
 
+  // Counters (Story 13.1): `aria-label` is prohibited on a plain `span` (axe
+  // `aria-prohibited-attr`, ignored by screen readers) → the full label is sr-only text and the
+  // visible short value is hidden from assistive technologies.
   const counters = (
     <div
       className={`mt-4 flex items-center text-sm text-stone-500 ${compact ? 'flex-wrap gap-x-4 gap-y-1' : 'gap-4'}`}
     >
-      <span
-        className="flex items-center gap-1"
-        aria-label={t('production_card.views', { count: viewsCount })}
-      >
+      <span className="flex items-center gap-1">
         <Eye className="size-4" aria-hidden />
-        {viewsCount}
+        <span aria-hidden="true">{viewsCount}</span>
+        <span className="sr-only">{t('production_card.views', { count: viewsCount })}</span>
       </span>
-      <span
-        className="flex items-center gap-1"
-        aria-label={t('production_card.downloads', { count: downloadsCount })}
-      >
+      <span className="flex items-center gap-1">
         <Download className="size-4" aria-hidden />
-        {downloadsCount}
+        <span aria-hidden="true">{downloadsCount}</span>
+        <span className="sr-only">{t('production_card.downloads', { count: downloadsCount })}</span>
       </span>
       {dateLabel && (
-        <span
-          className="flex items-center gap-1"
-          aria-label={t(
-            showWork ? 'production_card.work_published_at' : 'production_card.published_at',
-            {
-              date: dateLabel,
-            }
-          )}
-        >
+        <span className="flex items-center gap-1">
           <Calendar className="size-4" aria-hidden />
-          {dateLabel}
+          <span aria-hidden="true">{dateLabel}</span>
+          <span className="sr-only">
+            {t(showWork ? 'production_card.work_published_at' : 'production_card.published_at', {
+              date: dateLabel,
+            })}
+          </span>
         </span>
       )}
     </div>

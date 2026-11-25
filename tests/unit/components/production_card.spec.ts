@@ -31,4 +31,14 @@ test.group('ProductionCard | source analysis', () => {
     assert.include(source, '/productions/')
     assert.include(source, 'font-display')
   })
+
+  test('compteurs : libellé complet en sr-only, jamais aria-label sur un span (Story 13.1)', ({
+    assert,
+  }) => {
+    // axe `aria-prohibited-attr` : aria-label sur un élément générique est ignoré des AT.
+    assert.notInclude(source, "aria-label={t('production_card.views'")
+    assert.notInclude(source, "aria-label={t('production_card.downloads'")
+    assert.include(source, '<span className="sr-only">{t(\'production_card.views\'')
+    assert.include(source, '<span aria-hidden="true">{viewsCount}</span>')
+  })
 })

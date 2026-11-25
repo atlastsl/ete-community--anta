@@ -190,19 +190,22 @@ export default function ProductionShow({ production }: Props) {
         <aside className="lg:col-span-1">
           <div className="rounded-lg border border-stone-200 bg-white p-5">
             <div className="flex items-center gap-6">
-              <div
-                className="flex items-center gap-2 text-stone-700"
-                aria-label={t('production_card.views', { count: viewsCount })}
-              >
+              {/* Full label as sr-only text: `aria-label` is prohibited on a plain div (13.1). */}
+              <div className="flex items-center gap-2 text-stone-700">
                 <Eye className="size-5 text-green-700" aria-hidden />
-                <span className="text-lg font-semibold">{viewsCount}</span>
+                <span className="text-lg font-semibold" aria-hidden="true">
+                  {viewsCount}
+                </span>
+                <span className="sr-only">{t('production_card.views', { count: viewsCount })}</span>
               </div>
-              <div
-                className="flex items-center gap-2 text-stone-700"
-                aria-label={t('production_card.downloads', { count: downloadsCount })}
-              >
+              <div className="flex items-center gap-2 text-stone-700">
                 <Download className="size-5 text-green-700" aria-hidden />
-                <span className="text-lg font-semibold">{downloadsCount}</span>
+                <span className="text-lg font-semibold" aria-hidden="true">
+                  {downloadsCount}
+                </span>
+                <span className="sr-only">
+                  {t('production_card.downloads', { count: downloadsCount })}
+                </span>
               </div>
             </div>
 

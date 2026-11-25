@@ -67,7 +67,12 @@ function CheckboxRow({
   // Limite de 20 auteurs atteinte : ligne non cochée inerte (texte d'aide sous la recherche).
   if (disabled) {
     return (
-      <span aria-disabled="true" className={cn(ROW_CLASS, 'cursor-not-allowed text-stone-400')}>
+      <span
+        role="button"
+        aria-pressed={false}
+        aria-disabled="true"
+        className={cn(ROW_CLASS, 'cursor-not-allowed text-stone-400')}
+      >
         <CheckboxMark active={false} disabled />
         <span className="truncate">{label}</span>
       </span>
@@ -75,8 +80,11 @@ function CheckboxRow({
   }
 
   return (
+    // `role="button"` : `aria-pressed` n'est pas permis sur un lien (axe `aria-allowed-attr`,
+    // Story 13.1) ; le lien reste un lien natif (Entrée, clic milieu), annoncé comme bascule.
     <Link
       href={href}
+      role="button"
       aria-pressed={active}
       onKeyDown={handleKeyDown}
       {...SAME_PAGE}
