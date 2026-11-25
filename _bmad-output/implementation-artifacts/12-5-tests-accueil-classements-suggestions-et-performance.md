@@ -221,8 +221,8 @@ Revue de code du 2026-11-24 : 5 correctifs, 1 clarification, 3 questions PO.
 - [x] [Review][Patch] Dates écrites par `toSQL({ includeOffset: false })` : sous un fuseau Node non UTC, une date pouvait tomber dans le futur [database/seeders/production_demo_seeder.ts] — `toISO()` (avec décalage) pour `recorded_at` / `downloaded_at` et `anta_published_at` (trois colonnes `timestamptz` : sûr) ; `created_at` / `updated_at` inchangés.
 - [x] [Review][Patch] Garde-fou de base locale conservé strict (D-12.5-4) ; documenté dans le seeder et ici : noms de service Docker et sockets refusés volontairement, tunnel `localhost` vers une base distante non détecté.
 - [x] [Review][PO] NFR20 : « 50 visiteurs simultanés » = visiteurs avec pauses (tenue : p95 321 / 463 ms en local) ou saturation continue (non tenue : p95 1,3–2 s) ? — PO 2026-11-25 : visiteurs avec pauses.
-- [ ] [Review][PO] Les classements de productions utilisent un seq scan et non les index de 10.5 (D-12.5-5) : justifié par la sélectivité (fenêtre = 85–88 % des stats) et le cache de 10 min ; l'AC « index utilisés » n'est tenue que pour la requête auteurs. — Accepté par le PO le 2026-11-25.
-- [ ] [Review][PO] « Ordre des props » réinterprété (D-12.5-2) : ordre du rendu (lecture de source) + ensemble exact des props, l'ordre des clés JSON n'étant pas un contrat. — Accepté par le PO le 2026-11-25.
+- [x] [Review][PO] Les classements de productions utilisent un seq scan et non les index de 10.5 (D-12.5-5) : justifié par la sélectivité (fenêtre = 85–88 % des stats) et le cache de 10 min ; l'AC « index utilisés » n'est tenue que pour la requête auteurs. — Accepté par le PO le 2026-11-25.
+- [x] [Review][PO] « Ordre des props » réinterprété (D-12.5-2) : ordre du rendu (lecture de source) + ensemble exact des props, l'ordre des clés JSON n'étant pas un contrat. — Accepté par le PO le 2026-11-25.
 
 ## Questions ouvertes (non bloquantes)
 

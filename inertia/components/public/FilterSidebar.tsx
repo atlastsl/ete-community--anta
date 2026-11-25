@@ -27,6 +27,8 @@ import { facetValueLabel } from '~/lib/taxonomy'
  * (nouvelle clé) → recherche de facette, groupes dépliés et région `aria-live` perdus (10.6).
  */
 const SAME_PAGE = { preserveState: true, preserveScroll: true } as const
+/** Texte d'aide de la limite de 20 auteurs : décrit le champ de recherche et chaque ligne inerte. */
+const AUTHOR_LIMIT_ID = 'author-filter-limit'
 
 // ≥ 44 px targets (Story 13.2, EXPERIENCE.md « Cibles »).
 const ROW_CLASS = 'flex min-h-11 items-center gap-2 py-1 text-sm'
@@ -66,13 +68,15 @@ function CheckboxRow({
     if (action === 'visit') router.visit(href, SAME_PAGE)
   }
 
-  // Limite de 20 auteurs atteinte : ligne non cochée inerte (texte d'aide sous la recherche).
+  // Limite de 20 auteurs atteinte : ligne non cochée inerte, reliée au texte d'aide qui explique
+  // pourquoi elle est indisponible (`aria-describedby`, Story 13.4).
   if (disabled) {
     return (
       <span
         role="button"
         aria-pressed={false}
         aria-disabled="true"
+        aria-describedby={AUTHOR_LIMIT_ID}
         className={cn(ROW_CLASS, 'cursor-not-allowed text-stone-400')}
       >
         <CheckboxMark active={false} disabled />
@@ -150,12 +154,12 @@ function DimensionGroup({
             onChange={(e) => setAuthorQuery(e.target.value)}
             placeholder={t('filters.author_search')}
             aria-label={t('filters.author_search')}
-            aria-describedby={authorLimitReached ? 'author-filter-limit' : undefined}
+            aria-describedby={authorLimitReached ? AUTHOR_LIMIT_ID : undefined}
             className="mb-2 h-11 w-full rounded-md border border-stone-500 px-3 text-sm placeholder:text-stone-500 focus:border-green-700"
           />
         )}
         {authorLimitReached && (
-          <p id="author-filter-limit" className="mb-2 text-xs text-stone-600">
+          <p id={AUTHOR_LIMIT_ID} className="mb-2 text-xs text-stone-600">
             {t('filters.author_limit', { count: MAX_AUTHOR_FILTERS })}
           </p>
         )}

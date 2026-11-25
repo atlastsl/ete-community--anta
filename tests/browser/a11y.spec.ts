@@ -143,6 +143,64 @@ async function audit(
   return failures
 }
 
+/**
+ * Story 13.4 — interactive structure, beyond axe (`nested-interactive` ignores links): no link,
+ * button or other control inside a link or a button (no nested links in cards), and on cards with
+ * a stretched link (`::after` covering the card) every other control of the card stays clickable
+ * above the overlay (hit test at its centre). Today only the banner cards have such controls (their
+ * author links); author cards hold a single link, so nothing is hit-tested there.
+ * Passed as a string: the server `lib` of the typecheck has no DOM types.
+ */
+const structureScript = (hitTest: boolean) => `(() => {
+  const HIT_TEST = ${hitTest}
+  const CONTROLS = 'a[href], button, input, select, textarea, summary, iframe, ' +
+    'video[controls], audio[controls], [role="button"], [role="link"], [tabindex]:not([tabindex="-1"])'
+  const label = (el) => '<' + el.tagName.toLowerCase() + '> "' +
+    (el.textContent || '').trim().replace(/\\s+/g, ' ').slice(0, 40) + '"'
+  const failures = []
+  let stretched = 0
+  let hitTested = 0
+  for (const outer of document.querySelectorAll('a[href], button, [role="button"], [role="link"]')) {
+    const inner = outer.querySelector(CONTROLS)
+    if (inner) failures.push('nested control: ' + label(inner) + ' inside ' + label(outer))
+  }
+  for (const link of HIT_TEST ? document.querySelectorAll('a[href]') : []) {
+    const after = getComputedStyle(link, '::after')
+    if (after.content === 'none' || after.position !== 'absolute') continue
+    const card = link.closest('article')
+    if (!card) continue
+    stretched++
+    for (const control of card.querySelectorAll(CONTROLS)) {
+      if (control === link) continue
+      control.scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' })
+      const box = control.getBoundingClientRect()
+      if (box.width === 0 || box.height === 0) continue
+      hitTested++
+      const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2)
+      if (!hit || (hit !== control && !control.contains(hit))) {
+        failures.push('control covered by the stretched link: ' + label(control) +
+          ' (hit ' + (hit ? label(hit) : 'nothing') + ') in card ' + label(link))
+      }
+    }
+  }
+  return { failures, stretched, hitTested }
+})()`
+
+type Structure = { failures: string[]; stretched: number; hitTested: number }
+
+async function structure(page: Page, where: string, hitTest = true): Promise<Structure> {
+  const result = (await page.evaluate(structureScript(hitTest))) as Structure
+  return { ...result, failures: result.failures.map((failure) => `${failure} on ${where}`) }
+}
+
+/**
+ * Coverage guard of the hit test: the home page has 3 banner cards whose author links are
+ * hit-tested (a renamed class or a banner without bylines must not empty the check silently).
+ */
+const HIT_TEST_COVERAGE: Record<string, { stretched: number; hitTested: number }> = {
+  accueil: { stretched: 3, hitTested: 1 },
+}
+
 test.group('Accessibilité | axe WCAG 2.1 A/AA des pages publiques (13.1)', (group) => {
   group.setup(() =>
     setupData((seeded) => {
@@ -174,9 +232,21 @@ test.group('Accessibilité | axe WCAG 2.1 A/AA des pages publiques (13.1)', (gro
         const failures: string[] = []
         for (const viewport of VIEWPORTS) {
           await page.setViewportSize(viewport)
-          failures.push(
-            ...(await audit(page, `${pageCase.url()} (${locale}, ${viewport.width} px)`))
-          )
+          const where = `${pageCase.url()} (${locale}, ${viewport.width} px)`
+          failures.push(...(await audit(page, where)))
+          const checked = await structure(page, where)
+          failures.push(...checked.failures)
+          const expected = HIT_TEST_COVERAGE[pageCase.name]
+          if (expected && checked.stretched < expected.stretched) {
+            failures.push(
+              `${checked.stretched} stretched-link card(s) < ${expected.stretched} on ${where}`
+            )
+          }
+          if (expected && checked.hitTested < expected.hitTested) {
+            failures.push(
+              `${checked.hitTested} hit-tested control(s) < ${expected.hitTested} on ${where}`
+            )
+          }
         }
         assert.isTrue(failures.length === 0, failures.join('\n'))
       })
@@ -253,7 +323,12 @@ const STATES: StateCase[] = [
         .join('&')}`,
     viewport: { width: 1280, height: 800 },
     reach: async (page) => {
-      await atLeast(page, 'main span[role="button"][aria-disabled="true"]', 1)
+      // Each inert row explains why it is unavailable (Story 13.4).
+      await atLeast(
+        page,
+        'main span[role="button"][aria-disabled="true"][aria-describedby="author-filter-limit"]',
+        1
+      )
       await atLeast(page, '#author-filter-limit', 1)
     },
   },
@@ -347,6 +422,10 @@ test.group('Accessibilité | axe sur les états ouverts / fermés (13.2)', (grou
             state.disabledRules,
             state.include
           )
+          // No nested control in any state (Story 13.4), whole document; the hit test is left to
+          // the full pages (an open listbox or panel legitimately covers the cards).
+          const nested = await structure(page, `${state.name} (${locale})`, false)
+          failures.push(...nested.failures)
           if (state.stillThere) await state.stillThere(page)
           assert.isTrue(failures.length === 0, failures.join('\n'))
         } finally {

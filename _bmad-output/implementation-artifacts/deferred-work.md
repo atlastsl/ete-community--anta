@@ -217,3 +217,10 @@
 - **Cache public d'une heure** (`/sitemap.xml`, `/robots.txt`) : une production dépubliée ou un profil devenu non public peut rester listé jusqu'à une heure dans une copie en cache (la page elle-même répond 404 aussitôt). Accepté (un moteur recrawle bien plus rarement).
 - **`lastmod` d'une production rajeuni par les sauvegardes techniques** (ex. `ThumbnailService` qui pose la vignette) : `updated_at` bouge sans changement visible du contenu. Cosmétique.
 - **Ni `ETag` ni `Last-Modified`** sur `/sitemap.xml` : pas de requête conditionnelle (304) ; recalcul complet (deux requêtes légères) à chaque passage non caché.
+
+## Deferred from: code review of 13-4-tests-et-recette-accessibilite-phase-2 (2026-11-25)
+
+- **Liste `INTERACTIVE` de la règle « aucun lien imbriqué » (lecture de source)** : liste fermée de balises (`Link`, `a`, `button`, `Button`, champs, `AuthorByline`, `Pagination`) ; un autre composant interactif imbriqué ne serait vu que par le contrôle navigateur (`a11y.spec.ts`, D-13.4-4), qui couvre toutes les pages auditées.
+- **`sourcesUnder` non récursif** (`phase2_a11y.spec.ts`) : seuls les fichiers au premier niveau des dossiers sont lus ; un sous-dossier futur de `components/public` échapperait à la règle (garde de nombre minimal de fichiers seulement).
+- **Liens de pagination désactivés gardant leur `href`** (`Pagination.tsx`) : `aria-disabled` + `tabIndex=-1`, mais toujours cliquables à la souris (renvoient vers la page courante bornée) ; sans effet nuisible.
+- **Portes manuelles de la recette Phase 2** : Lighthouse (4 pages), audit NVDA / VoiceOver, contrôles visuels 375 / 1024 px (12.1–12.4, D-13.2-7), test de charge staging, portes de mise en service (migrations appliquées au démarrage du conteneur, conversion des auteurs 9.5–9.7, extraction 11.3, `ROBOTS_DISALLOW_ALL`), tests fonctionnels d'Aurélien des Epics 9–12 : tout est dans `recette-phase-2.md` § 3 et § 5.
