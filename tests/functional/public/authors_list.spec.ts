@@ -336,21 +336,35 @@ test.group('Public | liste des auteurs — tris et pagination', (group) => {
     return () => db.rollbackGlobalTransaction()
   })
 
-  test('défaut : vues 365 j ↓, vues hors fenêtre ignorées, 0 vue en fin, ex æquo nom puis prénom', async ({
+  test('défaut : vues 365 j ↓, vues hors fenêtre ignorées, 0 vue en fin, ex æquo dernière publication puis nom', async ({
     client,
     assert,
   }) => {
-    const { author: old } = await visibleAuthor({ lastNames: 'Aancien' })
+    const { author: old, production: oldFirst } = await visibleAuthor({ lastNames: 'Aancien' })
+    await oldFirst.merge({ antaPublishedAt: DateTime.now().minus({ days: 400 }) }).save()
     const oldProduction = await createProduction()
+    await oldProduction.merge({ antaPublishedAt: DateTime.now().minus({ days: 400 }) }).save()
     await link(oldProduction, old, 1)
     await addViews(oldProduction, 10, 366)
     const { author: recent } = await visibleAuthor({ lastNames: 'Recent', views: 2 })
-    const { author: tieB } = await visibleAuthor({ firstNames: 'Bea', lastNames: 'Egal', views: 1 })
-    const { author: tieA } = await visibleAuthor({ firstNames: 'Ada', lastNames: 'Egal', views: 1 })
+    const tie = { lastNames: 'Egal', views: 1 }
+    const { author: tieB, production: tieBProd } = await visibleAuthor({
+      ...tie,
+      firstNames: 'Bea',
+    })
+    const { author: tieA, production: tieAProd } = await visibleAuthor({
+      ...tie,
+      firstNames: 'Ada',
+    })
     const { author: zero } = await visibleAuthor({ lastNames: 'Zero' })
+    // Même dernière publication pour les ex æquo → nom puis prénom.
+    const sameDay = DateTime.now().minus({ days: 2 })
+    await tieBProd.merge({ antaPublishedAt: sameDay }).save()
+    await tieAProd.merge({ antaPublishedAt: sameDay }).save()
 
     const props = await propsOf(client, '/authors')
-    assert.deepEqual(slugsOf(props), [recent.slug, tieA.slug, tieB.slug, old.slug, zero.slug])
+    // 0 vue dans la fenêtre : « Zero » (publié après « Aancien ») passe devant (D36, PO 2026-11-25).
+    assert.deepEqual(slugsOf(props), [recent.slug, tieA.slug, tieB.slug, zero.slug, old.slug])
     // Le total de l'ancien compte toutes ses vues.
     assert.equal(props.authors.find((a: any) => a.slug === old.slug).viewsCount, 10)
   })
@@ -373,6 +387,32 @@ test.group('Public | liste des auteurs — tris et pagination', (group) => {
     const { author: oneB } = await visibleAuthor({ lastNames: 'Bun' })
     const props = await propsOf(client, '/authors?sort=productions')
     assert.deepEqual(slugsOf(props), [two.slug, one.slug, oneB.slug])
+  })
+
+  test('tri views : ex æquo départagés par la dernière publication, puis le nom (D36, PO 2026-11-25)', async ({
+    client,
+    assert,
+  }) => {
+    const { author: older, production: olderProd } = await visibleAuthor({
+      lastNames: 'Departageexemple A',
+      views: 2,
+    })
+    const { author: newer, production: newerProd } = await visibleAuthor({
+      lastNames: 'Departageexemple B',
+      views: 2,
+    })
+    const { author: newerTwin, production: twinProd } = await visibleAuthor({
+      lastNames: 'Departageexemple C',
+      views: 2,
+    })
+    const { author: top } = await visibleAuthor({ lastNames: 'Departageexemple D', views: 3 })
+    const recent = DateTime.now().minus({ days: 1 })
+    await olderProd.merge({ antaPublishedAt: DateTime.now().minus({ days: 30 }) }).save()
+    await newerProd.merge({ antaPublishedAt: recent }).save()
+    await twinProd.merge({ antaPublishedAt: recent }).save()
+    const props = await propsOf(client, '/authors?q=Departageexemple')
+    // newer et newerTwin : même date → nom (B avant C) ; older (publication plus ancienne) en dernier.
+    assert.deepEqual(slugsOf(props), [top.slug, newer.slug, newerTwin.slug, older.slug])
   })
 
   test('tri inconnu → défaut', async ({ client, assert }) => {

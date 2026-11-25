@@ -173,17 +173,15 @@ export default function Productions({
                   {t('productions.results_count', { count: pagination.total })}
                 </p>
                 <div className="flex items-end gap-3">
-                  {/* Tris D34 ; « Pertinence » désactivée sans recherche (D-12.1-4). */}
+                  {/* Tris D34 ; « Pertinence » masquée sans recherche (D-12.1-4, PO 2026-11-25). */}
                   <SortSelect
                     id="listing-sort"
                     value={sort}
                     onChange={handleSort}
                     className="flex-1 sm:w-56 sm:flex-none"
-                    options={LISTING_SORTS.map((value) => ({
-                      value,
-                      label: t(`listing.sort.${value}`),
-                      disabled: value === 'relevance' && !q,
-                    }))}
+                    options={LISTING_SORTS.filter((value) => value !== 'relevance' || q).map(
+                      (value) => ({ value, label: t(`listing.sort.${value}`) })
+                    )}
                   />
                   <ListingToggle value={view} onChange={changeView} />
                 </div>

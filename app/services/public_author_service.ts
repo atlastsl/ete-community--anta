@@ -256,9 +256,16 @@ export default class PublicAuthorService {
       )
     }
 
-    if (sort === 'views') query.orderBy('sv.window_views', 'desc')
-    else if (sort === 'productions') query.orderBy('published_count', 'desc')
-    // Ties (and the `name` sort): last names, first names, then id (stable pagination).
+    if (sort === 'views') {
+      // Same tie-break as the home ranking (D36, PO 2026-11-25): latest published production.
+      query.orderBy('sv.window_views', 'desc').orderByRaw(
+        `(SELECT max(p.anta_published_at) FROM production_authors pa
+            JOIN productions p ON p.id = pa.production_id AND p.status = ?
+           WHERE pa.author_id = authors.id) DESC NULLS LAST`,
+        [published]
+      )
+    } else if (sort === 'productions') query.orderBy('published_count', 'desc')
+    // Remaining ties (and the `name` sort): last names, first names, then id (stable pagination).
     query
       .orderBy('authors.last_names', 'asc')
       .orderBy('authors.first_names', 'asc')

@@ -101,7 +101,7 @@ afin de **poursuivre ma découverte sans nouvelle recherche** (FR61, D22, NFR18)
 - [x] [Review][Patch] HEAD et barre oblique finale passaient par le routeur (session + shield → `Set-Cookie` sur une réponse `public`) [app/middleware/suggestions_middleware.ts] — GET et HEAD acceptés, `\/?$` ; défense en profondeur : `suggestions(ctx, stateless)` répond `private, no-store` hors middleware ; tests HEAD, barre oblique (aucun `Set-Cookie`) et appel direct du contrôleur.
 - [x] [Review][Patch] Tailwind 4 : `sm:block` écrasait le `display: -webkit-box` de `line-clamp-2` (résumé jamais tronqué dès sm) [inertia/components/public/ProductionCard.tsx] — `line-clamp-2 max-sm:hidden` ; test de source mis à jour (aucun `sm:block`).
 - [ ] [Review][Defer] Erreur de base dans le middleware avant routeur → 500 non JSON sans `no-store` (comme `/media`) ; le client la traite comme vide — consigné dans deferred-work.md.
-- [ ] [Review][Defer][PO] D-12.4-5 : un délai ou une erreur passagère masque les suggestions de ce slug jusqu'au rechargement complet — question PO consignée dans deferred-work.md.
+- [x] [Review][Defer][PO] D-12.4-5 : un délai ou une erreur passagère masque les suggestions de ce slug jusqu'au rechargement complet — accepté par le PO le 2026-11-25.
 
 ## Dev Agent Record
 
@@ -154,3 +154,4 @@ Claude Opus 5.5 (claude-opus-5-5)
 - 2026-11-24 : story créée (contexte complet, statut ready-for-dev).
 - 2026-11-24 : implémentation (`SuggestionService`, endpoint `production.suggestions` sans cookie, `SuggestionsGrid` + helper `inertia/lib/suggestions.ts`, `Skeleton`, carte compacte, i18n) ; 1440 tests verts ; statut review.
 - 2026-11-24 : revue de code — 3 correctifs (domaine nul annulant la somme, HEAD / barre oblique finale + `private, no-store` hors middleware, `line-clamp-2 max-sm:hidden`), 2 reports (500 du middleware, [PO] mémoïsation d'un échec) ; 1444 tests verts ; statut done.
+- 2026-11-25 : décision PO — D-12.4-5 acceptée (échec mémorisé jusqu'au rechargement).

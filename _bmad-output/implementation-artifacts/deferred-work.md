@@ -182,9 +182,7 @@
 
 ## Deferred from: code review of 12-3-bloc-auteurs-les-plus-consultes (2026-11-24)
 
-- **[PO] Départage du tri par défaut de `/authors`** : le tri `views` (fenêtre 365 j) départage les ex æquo par nom seulement, sans le départage D36 (dernière production publiée sur Anta) du bloc « Auteurs les plus consultés ». Après « Voir plus », deux auteurs ex æquo sur les vues peuvent apparaître dans un ordre différent de celui de l'accueil. À trancher : aligner `/authors` sur D36 (ajout de `last_published_at` dans `PublicAuthorService.list`) ou accepter l'écart.
 
 ## Deferred from: code review of 12-4-suggestions-de-productions-similaires (2026-11-24)
 
 - **Erreur de base dans `SuggestionsMiddleware`** : comme pour `/media/*`, une exception levée avant le routeur (base indisponible) part au gestionnaire d'erreurs global → 500 non JSON, sans `Cache-Control: no-store`. Le client la traite comme 0 résultat (section retirée, D22) ; à reprendre avec `/media` (try/catch → 503 JSON `no-store`) si un cache intermédiaire est ajouté.
-- **[PO] Mémoïsation d'un échec (D-12.4-5)** : un délai dépassé ou une erreur passagère est mémorisé comme « aucune suggestion » ; la section reste absente pour ce slug jusqu'au rechargement complet de la page. À trancher : garder (« aucun nouveau chargement au retour arrière » au sens strict) ou ne mémoriser que les succès (nouvel essai au retour).

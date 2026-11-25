@@ -63,16 +63,16 @@ test.group('Listing | SortSelect (12.1, D34)', () => {
     assert.include(listing, "import SortSelect from '~/components/shared/SortSelect'")
     assert.include(listing, '<SortSelect')
     assert.include(listing, 'id="listing-sort"')
-    assert.include(listing, 'LISTING_SORTS.map(')
+    assert.include(listing, 'LISTING_SORTS.filter(')
     assert.include(listing, 't(`listing.sort.${value}`)')
     assert.notInclude(listing, "from '~/components/ui/select'")
     assert.notInclude(listing, 'SORT_VALUES')
   })
 
-  test('« Pertinence » désactivée sans q (D-12.1-4)', ({ assert }) => {
-    assert.include(listing, "disabled: value === 'relevance' && !q")
-    assert.include(sortSelect, 'disabled?: boolean')
-    assert.include(sortSelect, 'disabled={option.disabled}')
+  test('« Pertinence » masquée sans q (D-12.1-4, PO 2026-11-25)', ({ assert }) => {
+    assert.include(listing, "LISTING_SORTS.filter((value) => value !== 'relevance' || q)")
+    assert.notInclude(listing, 'disabled:')
+    assert.notInclude(sortSelect, 'disabled')
   })
 
   test('libellé visible associé au déclencheur (htmlFor / id)', ({ assert }) => {

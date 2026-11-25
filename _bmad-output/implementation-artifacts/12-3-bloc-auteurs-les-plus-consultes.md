@@ -98,7 +98,7 @@ afin d'**accéder à leur profil en deux clics** (FR45, FR46, FR53, D3, D5, D36)
 - [x] [Review][Patch] Le test de co-signature ne garde que ce qu'impose la clé primaire du pivot : conservé comme garde-fou de non-régression, commentaire ajouté ; il ne couvre pas la logique de la requête.
 - [x] [Review][Decision] D-12.3-1 : écart accepté avec l'épique (`RankingService.topAuthors()`) → `RankingService.topAuthorIds()` (cache) + `PublicAuthorService.topViewedAuthorIds()` / `cardsByIds()` (requête et cartes) ; `architecture.md` non modifié.
 - [x] [Review][Decision] D-12.3-3 : tri `last_published_at DESC NULLS LAST`, alors que le SQL de P2.3 s'appuie sur le `NULLS FIRST` implicite de Postgres pour `DESC` ; le code est correct, la documentation (P2.3) sera amendée plus tard.
-- [ ] [Review][Defer][PO] `/authors` (tri par défaut `views`) départage les ex æquo par nom seulement, sans le départage D36 : après « Voir plus », l'ordre d'auteurs ex æquo peut différer de l'accueil — consigné dans deferred-work.md.
+- [x] [Review][Defer][PO] `/authors` (tri par défaut `views`) départage les ex æquo par nom seulement, sans le départage D36 : après « Voir plus », l'ordre d'auteurs ex æquo peut différer de l'accueil — PO 2026-11-25 : départage par dernière publication ; appliqué aussi au tri `views` de `/authors` (`PublicAuthorService.list`).
 
 ## Dev Agent Record
 
@@ -142,3 +142,4 @@ Claude Opus 5.5 (claude-opus-5-5)
 - 2026-11-24 : story créée (contexte complet, statut ready-for-dev).
 - 2026-11-24 : implémentation (`topViewedAuthorIds` / `cardsByIds` sur la portée `visibleOnSite` et l'agrégat partagé de `/authors`, cache `topAuthors`, prop `topAuthors`, 4e `HomeBlock`, `AuthorCard` `headingLevel`, i18n) ; statut review.
 - 2026-11-24 : revue de code — 3 correctifs de tests (FR53 sans invalidation détectée, dépubliée datée ignorée au départage, portée du test de co-signature), 2 écarts documentés (D-12.3-1, D-12.3-3), 1 report PO (départage de `/authors`) ; statut done.
+- 2026-11-25 : décision PO — ex æquo départagés par la dernière publication (D36) sur l'accueil et dans le tri `views` de `/authors`.
