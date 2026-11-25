@@ -34,6 +34,11 @@ router.get('/privacy-policy', [controllers.public.Pages, 'privacy']).as('privacy
 // Servie avant le routeur par `MediaMiddleware` (sans session ni cookies) ; la route reste
 // déclarée pour le nommage et la construction d'URL.
 router.get('/media/*', [controllers.public.Media, 'show']).as('media.show')
+// Plan du site et robots.txt (Story 13.3, P2.7) : URL absolues depuis `APP_URL`. Servis avant le
+// routeur par `SeoFilesMiddleware` (cachables, sans session ni cookies) ; routes déclarées pour le
+// nommage et le repli.
+router.get('/sitemap.xml', [controllers.public.Sitemap, 'show']).as('sitemap')
+router.get('/robots.txt', [controllers.public.Sitemap, 'robots']).as('robots')
 
 // Health check (Docker / déploiement) — sans base de données ni rendu.
 // `revision` : commit de l'image, vérifié par le health check du déploiement (Story 8.4).

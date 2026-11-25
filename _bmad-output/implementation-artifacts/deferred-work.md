@@ -211,3 +211,9 @@
 - **`admin_layout.edge`** : `lang="fr"` codé en dur ; l'administration est hors périmètre de l'Epic 13 (pages publiques).
 - **Lecteurs vidéo / audio / PDF** : leur fonctionnement réel au clavier et au lecteur d'écran n'est prouvé que par la grille d'audit manuel (13.2) ; les tests navigateur prouvent l'arrêt de tabulation et la sortie.
 - **`DESIGN.md` D33** : texte à mettre à jour (bordure des champs et des cases `stone-500`) une fois la question PO 2 de 13.2 acceptée.
+
+## Deferred from: code review of 13-3-plan-du-site-sitemap-xml (2026-11-25)
+
+- **Cache public d'une heure** (`/sitemap.xml`, `/robots.txt`) : une production dépubliée ou un profil devenu non public peut rester listé jusqu'à une heure dans une copie en cache (la page elle-même répond 404 aussitôt). Accepté (un moteur recrawle bien plus rarement).
+- **`lastmod` d'une production rajeuni par les sauvegardes techniques** (ex. `ThumbnailService` qui pose la vignette) : `updated_at` bouge sans changement visible du contenu. Cosmétique.
+- **Ni `ETag` ni `Last-Modified`** sur `/sitemap.xml` : pas de requête conditionnelle (304) ; recalcul complet (deux requêtes légères) à chaque passage non caché.

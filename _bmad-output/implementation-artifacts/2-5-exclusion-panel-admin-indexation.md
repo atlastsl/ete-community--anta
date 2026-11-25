@@ -265,3 +265,4 @@ claude-opus-4-7
 ### Change Log
 
 - 2026-06-01 : Implémentation Story 2.5 (Exclusion panel admin de l'indexation, FR37). Création `public/robots.txt`, injection `<meta robots noindex, nofollow>` via Inertia `<Head>` dans les deux layouts admin. 5 nouveaux tests fonctionnels/unitaires + 1 anti-régression PublicLayout. Tests : 100/100 unit + 34/34 functional, lint+typecheck verts. Pages publiques restent indexables (FR36).
+- 2026-11-25 (Story 13.3, D-13.3-1) : `public/robots.txt` supprimé ; `robots.txt` est désormais rendu dynamiquement (`SitemapService.robots`, ligne `Sitemap:` absolue, option `ROBOTS_DISALLOW_ALL`) — amende l'AC1 (fichier statique) ; FR37 inchangé (`Disallow: /admin/` conservé).

@@ -28,6 +28,8 @@ server.use([
   () => import('#middleware/media_middleware'),
   // Suggestions JSON (`/productions/:slug/suggestions`), cachable: same treatment (Story 12.4).
   () => import('#middleware/suggestions_middleware'),
+  // `sitemap.xml` / `robots.txt` (absolute URLs from APP_URL), cachable: same treatment (Story 13.3).
+  () => import('#middleware/seo_files_middleware'),
   () => import('@adonisjs/static/static_middleware'),
   () => import('@adonisjs/cors/cors_middleware'),
   () => import('@adonisjs/vite/vite_middleware'),

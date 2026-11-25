@@ -17,6 +17,8 @@ export interface ApiDefinition {
   media: {
     show: typeof routes['media.show']
   }
+  sitemap: typeof routes['sitemap']
+  robots: typeof routes['robots']
   health: typeof routes['health']
   stats: {
     view: typeof routes['stats.view']
