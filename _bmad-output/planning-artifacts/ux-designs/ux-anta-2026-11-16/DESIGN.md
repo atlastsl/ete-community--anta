@@ -306,7 +306,7 @@ Un accent, des neutres, trois couleurs d'état. Ratios mesurés (WCAG 2.1) :
 
 **Noms d'auteurs liés** (D24) : soulignement `{colors.link-decoration}` (stone-300) sous un texte qui garde sa couleur (`{colors.text-secondary}` ou `{colors.text-body}`, ≥ 7:1) ; au survol, texte et soulignement passent en `{colors.primary}`. Le lien se distingue par la présence du soulignement, pas par la couleur (critère 1.4.1).
 
-**Bordure des champs** : `{colors.input}` fait 1,49:1 sur blanc. La barre de recherche et les filtres restent identifiables sans elle (icône, libellé visible ou placeholder, bouton plein ≥ 3:1), ce qui satisfait le critère 1.4.11 ; on ne renforce pas la bordure (D33). Point à recontrôler lors de l'audit manuel.
+**Bordure des champs** : sur le site public, les champs (recherche, filtres, tris) ont une bordure `stone-500` (4,8:1 sur blanc), comme la case non cochée des filtres et le chevron des groupes, pour satisfaire le critère 1.4.11 (D33 amendée par la Story 13.2, validée par le PO le 2026-11-25). `{colors.input}` (1,49:1) reste la bordure de l'administration.
 
 ## Typography
 

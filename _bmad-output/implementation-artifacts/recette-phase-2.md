@@ -163,7 +163,12 @@ VPS de dev, `doppler run -- …` (ou dans le conteneur du staging selon `docs/st
 
 ## 4. Questions `[PO]` ouvertes
 
-Questions encore sans réponse au 2026-11-25. Celles marquées « défaut appliqué » sont livrées avec le choix indiqué :
+**Décision du PO (2026-11-25) : toutes les recommandations et tous les défauts appliqués ci-dessous sont acceptés**,
+sauf 13-5 (à trancher après l'audit NVDA / VoiceOver, § 3.2). 13-1 → story Phase 3 (sous-titres) ; 13-4 → `stone-500`
+validé, DESIGN.md mis à jour ; 13-9 → portes manuelles § 3.4 / § 3.5 ; 13-10 → score Lighthouse consigné, 0 violation
+axe exigée. Les tableaux ci-dessous sont conservés pour mémoire.
+
+Questions telles qu'ouvertes au 2026-11-25. Celles marquées « défaut appliqué » sont livrées avec le choix indiqué :
 une réponse « d'accord » suffit pour les clore.
 
 ### Epic 13 (accessibilité, plan du site)

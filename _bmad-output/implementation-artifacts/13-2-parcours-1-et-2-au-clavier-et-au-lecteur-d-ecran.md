@@ -262,7 +262,7 @@ Revue de code du 2026-11-25 : 11 correctifs, 3 reports, 1 écarté, 1 question P
 - [x] [Review][Patch] Grille C8 contredisait `SuggestionsGrid` — le statut masqué « Chargement des productions similaires… » peut être lu pendant le chargement, puis une annonce polie unique.
 - [x] [Review][Patch] `content_lang` émettait des codes inconnus — liste blanche `Intl.DisplayNames` ; test unitaire (`xx`, `qq`, `zz-US`, `fr-ZZ`, `wo`).
 - [x] [Review][Patch] Valeur « Langue » du détail sans `lang` [inertia/pages/production.tsx] — `MetaRow` → `<dd lang>`.
-- [ ] [Review][PO] Exclusion de l'`iframe` des règles de structure (D-13.2-12) — question PO 4.
+- [x] [Review][PO] Exclusion de l'`iframe` des règles de structure (D-13.2-12) — question PO 4. — PO 2026-11-25 : défaut accepté.
 - [ ] [Review][Defer] `admin_layout.edge` : `lang="fr"` codé en dur (administration hors périmètre).
 - [ ] [Review][Defer] Fonctionnement réel des lecteurs vidéo / audio / PDF prouvé seulement par la grille manuelle.
 - [ ] [Review][Defer] Texte de D33 dans `DESIGN.md` à mettre à jour une fois la bordure `stone-500` acceptée (question PO 2).
@@ -360,3 +360,4 @@ Claude Opus 5.5 (claude-opus-5-5)
   chevron, liste blanche de langues, `lang` de la métadonnée, suggestions retenues tout l'audit, parcours 2 complet,
   grille C8…), 3 reports, question PO 4 ; statut review.
 - 2026-11-25 : revue de code vérifiée par l'orchestrateur, 11 correctifs appliqués ; 1530 tests verts ; statut done (audit NVDA/VoiceOver = porte manuelle du PO).
+- 2026-11-25 : décisions PO — exclusion `aria-hidden-focus` de la liste de tri ouverte, bordure `stone-500` (D33 amendée, DESIGN.md mis à jour), exclusion de l'`iframe` acceptées ; annonce « bouton bascule » des filtres à trancher après l'audit NVDA / VoiceOver.

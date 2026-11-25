@@ -105,8 +105,8 @@ afin que **la bannière ne montre jamais une production indisponible** (FR51, D2
 - [x] [Review][Patch] Commentaire périmé de `FeaturedService.save` sur le `CASCADE` → `removeProduction` prend le verrou de table, renvoi à D-11.4-5.
 - [x] [Review][Patch] Reformatage Prettier hors sujet annulé (`Productions/Index.tsx` bloc `Select`, `Edit.tsx` `toLocaleString`).
 - [x] [Review][Defer] Seeder de démo : purge directe des productions `SEED_DEMO` (trous de positions, pas de journal) — dev seulement, consigné dans `deferred-work.md`.
-- [ ] [Review][PO] Confirmation systématique de « Dépublier » dans le formulaire (D-11.5-4).
-- [ ] [Review][PO] Suppression de la vidéo d'une production à la une sans vignette : ni bloquée ni retirée (D-11.5-6).
+- [x] [Review][PO] Confirmation systématique de « Dépublier » dans le formulaire (D-11.5-4). — PO 2026-11-25 : défaut accepté.
+- [x] [Review][PO] Suppression de la vidéo d'une production à la une sans vignette : ni bloquée ni retirée (D-11.5-6). — PO 2026-11-25 : défaut accepté.
 
 ## Questions ouvertes (non bloquantes, défauts retenus)
 

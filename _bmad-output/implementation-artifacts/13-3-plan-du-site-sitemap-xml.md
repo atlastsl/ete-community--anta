@@ -161,7 +161,7 @@ Revue de code du 2026-11-25 : 6 correctifs, 3 reports, 6 écartés, 4 questions 
 - [ ] [Review][Defer] Cache public d'une heure : une production dépubliée reste listée jusqu'à une heure en cache.
 - [ ] [Review][Defer] `lastmod` rajeuni par les sauvegardes techniques (`ThumbnailService`) — cosmétique.
 - [ ] [Review][Defer] Ni `ETag` ni `Last-Modified` sur `/sitemap.xml`.
-- [ ] [Review][PO] Index de sitemaps au-delà de 50 000 URL (question 1), `/privacy-policy` (2), soumission aux
+- [x] [Review][PO] Index de sitemaps au-delà de 50 000 URL (question 1), `/privacy-policy` (2), soumission aux — PO 2026-11-25 : troncature journalisée et `/privacy-policy` hors sitemap acceptées ; soumission aux moteurs et `ROBOTS_DISALLOW_ALL` restent des portes manuelles (recette § 3).
   moteurs (3), `ROBOTS_DISALLOW_ALL=true` sur le staging (4).
 - [x] [Review][Dismiss] Erreur du middleware avant `inertia_middleware` — même chemin que `SuggestionsMiddleware`.
 - [x] [Review][Dismiss] Orthographes `%2E` (`/sitemap%2Exml`) — passent par la route de repli (`private, no-store`).

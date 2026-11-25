@@ -102,8 +102,8 @@ afin de **découvrir les productions que l'association met en avant** (FR48, FR4
 - [x] [Review][Patch] Contour de focus perdu sans `:has()` [inertia/css/app.css, FeaturedBanner.tsx] — `focus-visible:outline-none` retiré du lien ; contour supprimé seulement sous `@supports selector(:has(*))` ; test de source.
 - [x] [Review][Patch] Échelle de `BannerPreview` [inertia/components/admin/BannerPreview.tsx] — largeur publique 1232 px (`max-w-7xl` − `px-6`), et non 1152 (D-11.4-9 citait 1152) ; test de source.
 - [x] [Review][Patch] Documentation [story, inertia/lib/media.ts] — T2.4 (pas de codegen) et T3.2 (`featured_page.spec.ts` inchangé) reformulées ; « jamais sous-estimé » adouci (cas mesurés couverts, > 800 px → `w1600`).
-- [ ] [Review][PO] Production à la une sans image affichable : écartée de la bannière (D-11.6-2, cohérent avec l'aperçu admin) plutôt que montrée avec une zone vide — à confirmer, avec la question de 11.4 / 11.5 (bloquer la suppression de la vidéo ?).
-- [ ] [Review][PO] Annonce des compteurs « Vues : 1 214 » (maquette) plutôt que la forme pluralisée des cartes (« 1 214 vues ») — conservée telle que la maquette.
+- [x] [Review][PO] Production à la une sans image affichable : écartée de la bannière (D-11.6-2, cohérent avec l'aperçu admin) plutôt que montrée avec une zone vide — à confirmer, avec la question de 11.4 / 11.5 (bloquer la suppression de la vidéo ?). — PO 2026-11-25 : défaut accepté.
+- [x] [Review][PO] Annonce des compteurs « Vues : 1 214 » (maquette) plutôt que la forme pluralisée des cartes (« 1 214 vues ») — conservée telle que la maquette. — PO 2026-11-25 : défaut accepté.
 
 ## Dev Agent Record
 

@@ -208,3 +208,4 @@ Claude Opus 5.5 (claude-opus-5-5)
   recette : migrations au démarrage du conteneur, contrôles visuels 12.x, tests fonctionnels d'Aurélien, questions
   9.x), 3 reports, 3 écartés ; **1599 tests verts** (unit 942, functional 617, browser 40), lint 0, typecheck 0,
   build 0 ; statut done.
+- 2026-11-25 : décision PO — score Accessibilité Lighthouse consigné, critère bloquant = 0 violation A/AA axe.

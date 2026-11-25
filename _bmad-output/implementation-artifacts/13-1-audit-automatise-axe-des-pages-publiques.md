@@ -185,8 +185,8 @@ Revue de code du 2026-11-25 : 5 correctifs, 5 reports, 4 écartés, 2 questions 
 - [x] [Review][Dismiss] Nettoyage si le seed échoue : le groupe échoue, le rollback de la transaction globale n'a rien de persistant à défaire hors transaction (disque factice temporaire).
 - [x] [Review][Dismiss] Duplication des textes `sr-only` / valeurs visibles : voulue (D-13.1-7).
 - [x] [Review][Dismiss] Compromis `role="button"` sur les liens de filtre (D-13.1-6) : conservé, à confirmer à l'audit NVDA de 13.2.
-- [ ] [Review][PO] Sous-titres des vidéos (WCAG 1.2.2) — question ouverte 1.
-- [ ] [Review][PO] Contenu à l'intérieur des lecteurs non audité — question ouverte 2.
+- [x] [Review][PO] Sous-titres des vidéos (WCAG 1.2.2) — question ouverte 1. — PO 2026-11-25 : story Phase 3 (dépôt `.vtt` + `<track kind="captions">`), consignée dans deferred-work.md.
+- [x] [Review][PO] Contenu à l'intérieur des lecteurs non audité — question ouverte 2. — PO 2026-11-25 : défaut accepté.
 
 ## Portes manuelles (non exécutées par l'agent)
 

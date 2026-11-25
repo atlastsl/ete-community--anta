@@ -224,3 +224,7 @@
 - **`sourcesUnder` non récursif** (`phase2_a11y.spec.ts`) : seuls les fichiers au premier niveau des dossiers sont lus ; un sous-dossier futur de `components/public` échapperait à la règle (garde de nombre minimal de fichiers seulement).
 - **Liens de pagination désactivés gardant leur `href`** (`Pagination.tsx`) : `aria-disabled` + `tabIndex=-1`, mais toujours cliquables à la souris (renvoient vers la page courante bornée) ; sans effet nuisible.
 - **Portes manuelles de la recette Phase 2** : Lighthouse (4 pages), audit NVDA / VoiceOver, contrôles visuels 375 / 1024 px (12.1–12.4, D-13.2-7), test de charge staging, portes de mise en service (migrations appliquées au démarrage du conteneur, conversion des auteurs 9.5–9.7, extraction 11.3, `ROBOTS_DISALLOW_ALL`), tests fonctionnels d'Aurélien des Epics 9–12 : tout est dans `recette-phase-2.md` § 3 et § 5.
+
+## Phase 3 (décisions PO du 2026-11-25)
+
+- **Sous-titres des vidéos hébergées (WCAG 1.2.2, niveau A)** : story Phase 3 — dépôt d'un fichier `.vtt` par vidéo dans l'administration et `<track kind="captions">` dans le lecteur ; d'ici là, axe signale `video-caption` « à vérifier » (liste autorisée D-13.1-10).
