@@ -132,7 +132,7 @@ Claude Opus 5.5 (claude-opus-5-5)
 - `errors/not_found.tsx` : NotFoundPage (un `h1`, message `text-stone-600`, `nav` nommée, liens Accueil / Recherche avancée `min-h-11`), dans `PublicLayout` via `inertia/app.tsx`.
 - `privacy-policy.tsx` : section « Données des auteurs » (h2, intro, 5 points) entre « Durée de conservation » et « Vos droits ».
 - i18n : `privacy.authors.*` et `not_found.*` (public FR/EN) ; `not_found.*` aussi dans les locales admin (URL `/admin/*` inconnue).
-- **Porte manuelle (AC 2)** : texte `privacy.authors.*` à valider par Aurélien avant merge.
+- **Porte manuelle (AC 2)** : texte `privacy.authors.*` à valider par Aurélien avant merge — **validé par le PO le 2026-11-25** (texte tel quel).
 - Lien « Auteurs » de la 404 et pied de page : Story 10.5 (D-10.1-5).
 
 ### File List
@@ -162,3 +162,4 @@ Claude Opus 5.5 (claude-opus-5-5)
 - 2026-11-19 : story créée (contexte complet, statut ready-for-dev).
 - 2026-11-19 : implémentation (NotFoundPage traduite, section « Données des auteurs », titres serveur dédiés) ; 815 tests verts ; statut review. Texte `privacy.authors.*` en attente de validation d'Aurélien avant merge.
 - 2026-11-19 : revue de code — 5 correctifs (liens `<a>`, 404 traduite du téléchargement, cohérence de la politique, tests admin/`findOrFail`/status pages, Dev Agent Record), 2 décisions acceptées ; statut done.
+- 2026-11-25 : texte de la section « Données des auteurs » validé par le PO (porte AC 2 levée).
