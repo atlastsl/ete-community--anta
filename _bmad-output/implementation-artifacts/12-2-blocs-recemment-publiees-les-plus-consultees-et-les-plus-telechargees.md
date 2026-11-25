@@ -129,7 +129,7 @@ Aucune commande Ace ne publie ni ne dépublie (`thumbnails:extract-video-frames`
 - [x] [Review][Patch] Tests manquants : invalidation par `authors:apply` (et conservation en `--dry-run`) [tests/functional/admin/authors_conversion.spec.ts] ; départage par `id` de « Récemment publiées » [tests/functional/public/home.spec.ts].
 - [x] [Review][Patch] Libellé de la tâche 5.3 (« functional » → tests unitaires des services ; HTTP du consentement et des fiches auteur en 12.5).
 - [x] [Review][Defer] Savepoints : la seconde invalidation repose sur des champs internes de knex — consigné dans deferred-work.md (test de détection en place).
-- [ ] [Review][Defer][PO] Les commandes Ace (`authors:apply`) ne peuvent pas invalider le cache du processus web : `topAuthors` (12.3) et les blocs peuvent rester périmés jusqu'à 10 min après la conversion (D-12.2-4) — consigné dans deferred-work.md, à confirmer par le PO (redémarrage de l'application après la conversion si besoin).
+- [x] [Review][Defer][PO] Les commandes Ace (`authors:apply`) ne peuvent pas invalider le cache du processus web : `topAuthors` (12.3) et les blocs peuvent rester périmés jusqu'à 10 min après la conversion (D-12.2-4) — PO 2026-11-25 : accepté sans code ; attendre 10 min ou redémarrer l'application après `authors:apply`.
 
 ## Dev Agent Record
 
@@ -186,3 +186,4 @@ Claude Opus 5.5 (claude-opus-5-5)
 - 2026-11-24 : story créée (contexte complet, statut ready-for-dev).
 - 2026-11-24 : implémentation (`RankingService` + cache 10 min + invalidation après commit sur tous les chemins de mutation, props `recent` / `mostViewed` / `mostDownloaded`, `HomeBlock`, i18n `home.blocks.*`) ; 1385 tests verts ; statut review.
 - 2026-11-24 : revue de code — 5 correctifs (calcul en vol partagé, seconde invalidation à la fin de la transaction externe, `see_more_named` i18n, tests `authors:apply` et départage de « Récemment publiées », libellé 5.3), 2 reports (champs knex internes, cache périmé après une commande Ace) ; statut done.
+- 2026-11-25 : décision PO — cache web et commandes Ace : pas de code, redémarrage de l'application après `authors:apply` si besoin.

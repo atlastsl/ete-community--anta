@@ -194,7 +194,7 @@ tri, page). 0 erreur sur toutes les séries. Latence d'une requête isolée : 20
 Lecture : avec 50 visiteurs réels (temps de réflexion), **p95 < 0,5 s : NFR20 tenue** ; suggestions servies en
 < 0,6 s même en rafale (budget client NFR18 : 2 s). À saturation (50 requêtes en vol en continu, sans pause), le
 processus unique plafonne à ~45–57 req/s et le p95 dépasse 1 s (file d'attente : 50 / débit ≈ 0,9–1,1 s) —
-`[PO]` à trancher : définition de « 50 visiteurs simultanés » ; si c'est la saturation qui est visée, il faudra
+**PO 2026-11-25 : la définition retenue est celle des visiteurs avec pauses (NFR20 tenue).** Pour mémoire ; si c'est la saturation qui est visée, il faudra
 profiler le rendu du listing (piste, non mesurée : CPU Node du rendu Inertia / Edge et de l'hydratation) avant
 d'envisager plusieurs processus (incompatible avec le cache local P2.3 sans revoir l'invalidation).
 
@@ -209,7 +209,7 @@ d'envisager plusieurs processus (incompatible avec le cache local P2.3 sans revo
   - saturation : `node scripts/perf/load.mjs <URL du staging> 50 40 mix` ;
   - rafales : `node scripts/perf/load.mjs <URL du staging> 50 10 mix 1000 1000 1` ;
   - suggestions : `SLUGS=slug-a,slug-b node scripts/perf/load.mjs <URL du staging> 50 10 suggestions 0 0 1`.
-  Attendu p95 < 1 s (NFR20) selon la définition retenue (question PO ci-dessous). Résultat : —
+  Attendu p95 < 1 s (NFR20) pour les visiteurs avec pauses (définition retenue par le PO le 2026-11-25). Résultat : —
 
 ## Review Findings
 
@@ -220,14 +220,13 @@ Revue de code du 2026-11-24 : 5 correctifs, 1 clarification, 3 questions PO.
 - [x] [Review][Patch] `out_of_range` comparé à `now()`, figé au début de la transaction du test (instable) [tests/unit/seeders/production_demo_seeder.spec.ts] — `clock_timestamp()`.
 - [x] [Review][Patch] Dates écrites par `toSQL({ includeOffset: false })` : sous un fuseau Node non UTC, une date pouvait tomber dans le futur [database/seeders/production_demo_seeder.ts] — `toISO()` (avec décalage) pour `recorded_at` / `downloaded_at` et `anta_published_at` (trois colonnes `timestamptz` : sûr) ; `created_at` / `updated_at` inchangés.
 - [x] [Review][Patch] Garde-fou de base locale conservé strict (D-12.5-4) ; documenté dans le seeder et ici : noms de service Docker et sockets refusés volontairement, tunnel `localhost` vers une base distante non détecté.
-- [ ] [Review][PO] NFR20 : « 50 visiteurs simultanés » = visiteurs avec pauses (tenue : p95 321 / 463 ms en local) ou saturation continue (non tenue : p95 1,3–2 s) ?
-- [ ] [Review][PO] Les classements de productions utilisent un seq scan et non les index de 10.5 (D-12.5-5) : justifié par la sélectivité (fenêtre = 85–88 % des stats) et le cache de 10 min ; l'AC « index utilisés » n'est tenue que pour la requête auteurs. À accepter.
-- [ ] [Review][PO] « Ordre des props » réinterprété (D-12.5-2) : ordre du rendu (lecture de source) + ensemble exact des props, l'ordre des clés JSON n'étant pas un contrat. À accepter.
+- [x] [Review][PO] NFR20 : « 50 visiteurs simultanés » = visiteurs avec pauses (tenue : p95 321 / 463 ms en local) ou saturation continue (non tenue : p95 1,3–2 s) ? — PO 2026-11-25 : visiteurs avec pauses.
+- [ ] [Review][PO] Les classements de productions utilisent un seq scan et non les index de 10.5 (D-12.5-5) : justifié par la sélectivité (fenêtre = 85–88 % des stats) et le cache de 10 min ; l'AC « index utilisés » n'est tenue que pour la requête auteurs. — Accepté par le PO le 2026-11-25.
+- [ ] [Review][PO] « Ordre des props » réinterprété (D-12.5-2) : ordre du rendu (lecture de source) + ensemble exact des props, l'ordre des clés JSON n'étant pas un contrat. — Accepté par le PO le 2026-11-25.
 
 ## Questions ouvertes (non bloquantes)
 
-1. `[PO]` NFR20 : « 50 visiteurs simultanés » = 50 visiteurs avec temps de réflexion (tenu, p95 < 0,5 s en local) ou
-   50 requêtes en vol en continu (p95 1,3–2 s en local) ?
+1. ~~`[PO]` NFR20 : définition de « 50 visiteurs simultanés »~~ — tranché le 2026-11-25 : visiteurs avec temps de réflexion.
 
 ## Dev Agent Record
 
@@ -291,3 +290,4 @@ Claude Opus 5.5 (claude-opus-5-5)
   locale consignés ; 1454 tests verts, lint, typecheck, build ; statut review.
 - 2026-11-24 : revue de code — 5 correctifs (test de renommage prouvé par l'ordre, `scripts/perf/load.mjs`,
   `clock_timestamp()`, dates `toISO()`, garde-fou documenté), 3 questions PO ; 1454 tests verts, lint, typecheck, build ; statut done.
+- 2026-11-25 : décisions PO — NFR20 = visiteurs avec pauses ; seq scan des classements (D-12.5-5) et « ordre des props » (D-12.5-2) acceptés.
