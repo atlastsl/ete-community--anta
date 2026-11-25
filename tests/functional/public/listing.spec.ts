@@ -7,10 +7,16 @@ import StatsView from '#models/stats_view'
 import StatsDownload from '#models/stats_download'
 
 async function createProduction(
-  opts: { title?: string; category?: string | null; antaPublishedAt?: DateTime } = {}
+  opts: {
+    title?: string
+    summary?: string | null
+    category?: string | null
+    antaPublishedAt?: DateTime
+  } = {}
 ): Promise<Production> {
   return Production.create({
     title: opts.title ?? `Production ${Math.floor(Math.random() * 1_000_000)}`,
+    summary: opts.summary ?? null,
     authorNames: [],
     tags: [],
     status: 'published',
@@ -21,21 +27,21 @@ async function createProduction(
   })
 }
 
-async function addViews(production: Production, count: number) {
+async function addViews(production: Production, count: number, recordedAt = DateTime.now()) {
   for (let i = 0; i < count; i++) {
     await StatsView.create({
       productionId: production.id,
-      recordedAt: DateTime.now(),
+      recordedAt,
       ipHash: `v${i}`,
     })
   }
 }
 
-async function addDownloads(production: Production, count: number) {
+async function addDownloads(production: Production, count: number, downloadedAt = DateTime.now()) {
   for (let i = 0; i < count; i++) {
     await StatsDownload.create({
       productionId: production.id,
-      downloadedAt: DateTime.now(),
+      downloadedAt,
       ipHash: `d${i}`,
     })
   }
@@ -126,5 +132,81 @@ test.group('Public listing | pagination + persistance', (group) => {
     assert.lengthOf(props.results, 1)
     assert.equal(props.sort, 'views')
     assert.deepEqual(props.activeFilters.category, ['Livre'])
+  })
+})
+
+test.group('Public listing | tris D34 (12.1)', (group) => {
+  group.each.setup(async () => {
+    await db.beginGlobalTransaction()
+    return () => db.rollbackGlobalTransaction()
+  })
+
+  test('views et downloads trient sur les totaux, vues anciennes comprises (D7)', async ({
+    client,
+    assert,
+  }) => {
+    const twoYearsAgo = DateTime.now().minus({ years: 2 })
+    const recent = await createProduction({ title: 'RecenteSeulement' })
+    const old = await createProduction({ title: 'AncienneMaisPlusVue' })
+    await addViews(recent, 2)
+    await addViews(old, 5, twoYearsAgo)
+    await addDownloads(recent, 1)
+    await addDownloads(old, 4, twoYearsAgo)
+
+    const byViews = await getProps(client, '/productions?sort=views')
+    assert.deepEqual(titles(byViews.results), ['AncienneMaisPlusVue', 'RecenteSeulement'])
+    assert.equal(byViews.results[0].viewsCount, 5)
+
+    const byDownloads = await getProps(client, '/productions?sort=downloads')
+    assert.deepEqual(titles(byDownloads.results), ['AncienneMaisPlusVue', 'RecenteSeulement'])
+    assert.equal(byDownloads.sort, 'downloads')
+    assert.equal(byDownloads.results[0].downloadsCount, 4)
+  })
+
+  test('relevance avec q : ts_rank, et défaut avec q = relevance', async ({ client, assert }) => {
+    await createProduction({
+      title: 'Faible',
+      summary: 'mention unique de algebre ici',
+      antaPublishedAt: DateTime.now(),
+    })
+    await createProduction({
+      title: 'Algebre algebre',
+      summary: 'algebre algebre algebre',
+      antaPublishedAt: DateTime.now().minus({ days: 30 }),
+    })
+
+    const explicit = await getProps(client, '/productions?q=algebre&sort=relevance')
+    assert.equal(explicit.sort, 'relevance')
+    assert.deepEqual(titles(explicit.results), ['Algebre algebre', 'Faible'])
+
+    const implicit = await getProps(client, '/productions?q=algebre')
+    assert.equal(implicit.sort, 'relevance')
+    assert.deepEqual(titles(implicit.results), ['Algebre algebre', 'Faible'])
+
+    const byDate = await getProps(client, '/productions?q=algebre&sort=date')
+    assert.equal(byDate.sort, 'date')
+    assert.deepEqual(titles(byDate.results), ['Faible', 'Algebre algebre'])
+  })
+
+  test('relevance sans q retombe sur date, prop sort = date (D-12.1-3)', async ({
+    client,
+    assert,
+  }) => {
+    await createProduction({ title: 'Ancienne', antaPublishedAt: DateTime.fromISO('2026-01-01') })
+    await createProduction({ title: 'Nouvelle', antaPublishedAt: DateTime.fromISO('2026-05-01') })
+
+    const props = await getProps(client, '/productions?sort=relevance')
+    assert.deepEqual(titles(props.results), ['Nouvelle', 'Ancienne'])
+    assert.equal(props.sort, 'date')
+
+    const blank = await getProps(client, '/productions?q=%20%20&sort=relevance')
+    assert.equal(blank.sort, 'date')
+  })
+
+  test('sort invalide avec q → relevance (revue 12.1)', async ({ client, assert }) => {
+    await createProduction({ title: 'Algebre lineaire' })
+    const props = await getProps(client, '/productions?q=algebre&sort=bogus')
+    assert.equal(props.sort, 'relevance')
+    assert.deepEqual(titles(props.results), ['Algebre lineaire'])
   })
 })

@@ -135,21 +135,60 @@ export function clearFilters(search: string, { includeAuthor = false } = {}): st
   return toQueryString(params)
 }
 
-/** Définit (ou retire si vide) le terme de recherche `q`. Préserve les filtres, retire `page`. */
+/**
+ * Tris du listing (D34), dans l'ordre du sélecteur. Miroir de `SearchService.SORT_OPTIONS`
+ * (frontière TS6305).
+ */
+export const LISTING_SORTS = ['relevance', 'date', 'views', 'downloads'] as const
+export type ListingSort = (typeof LISTING_SORTS)[number]
+
+/** Tri par défaut : pertinence avec un terme de recherche, sinon date (`ProductionsController`). */
+export function defaultListingSort(q: string | null | undefined): ListingSort {
+  return q?.trim() ? 'relevance' : 'date'
+}
+
+/** Tri réellement appliqué : `relevance` sans terme retombe sur `date` (D-12.1-3). */
+export function effectiveListingSort(sort: string, q: string | null | undefined): string {
+  return sort === 'relevance' && !q?.trim() ? 'date' : sort
+}
+
+/** Retire `sort` quand il ne change rien au tri par défaut du `q` courant (D-12.1-5). */
+function dropDefaultSort(params: URLSearchParams): void {
+  const sort = params.get('sort')
+  const q = params.get('q')
+  if (sort !== null && effectiveListingSort(sort, q) === defaultListingSort(q)) {
+    params.delete('sort')
+  }
+}
+
+/**
+ * Définit (ou retire si vide) le terme de recherche `q`. Préserve les filtres, retire `page` ;
+ * un `sort` devenu le tri par défaut du nouveau terme est retiré (12.1).
+ */
 export function setQuery(search: string, value: string): string {
   const params = parse(search)
   params.delete('page')
   if (value) params.set('q', value)
   else params.delete('q')
+  dropDefaultSort(params)
   return toQueryString(params)
 }
 
-/** Définit le critère de tri. Préserve `q` + filtres, retire `page` (retour page 1). */
+/**
+ * Définit le critère de tri. Préserve `q` + filtres, retire `page` (retour page 1) ; la valeur
+ * par défaut (`relevance` avec `q`, `date` sans) est omise de l'URL (12.1, D-12.1-5).
+ */
 export function setSort(search: string, value: string): string {
   const params = parse(search)
   params.delete('page')
   params.set('sort', value)
+  dropDefaultSort(params)
   return toQueryString(params)
+}
+
+/** Destination de la barre de l'accueil : `/productions?q=…`, ou `/productions` si vide (12.1). */
+export function homeSearchHref(query: string): string {
+  return `/productions${setQuery('', query.trim())}`
 }
 
 /** Change uniquement la page, en préservant tout le reste (q + filtres + sort). */

@@ -8,7 +8,8 @@ import {
 } from '~/components/ui/select'
 import { cn } from '~/lib/utils'
 
-export type SortOption = { value: string; label: string }
+/** `disabled`: listed but not selectable (« Pertinence » without a search term, 12.1). */
+export type SortOption = { value: string; label: string; disabled?: boolean }
 
 type Props = {
   id: string
@@ -40,7 +41,7 @@ export default function SortSelect({ id, value, options, onChange, className }: 
         </SelectTrigger>
         <SelectContent>
           {options.map((option) => (
-            <SelectItem key={option.value} value={option.value}>
+            <SelectItem key={option.value} value={option.value} disabled={option.disabled}>
               {option.label}
             </SelectItem>
           ))}

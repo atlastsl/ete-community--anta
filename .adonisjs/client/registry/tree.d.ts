@@ -7,6 +7,7 @@ export interface ApiDefinition {
   production: {
     show: typeof routes['production.show']
     download: typeof routes['production.download']
+    suggestions: typeof routes['production.suggestions']
   }
   authors: {
     index: typeof routes['authors.index']

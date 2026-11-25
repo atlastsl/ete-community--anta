@@ -7,14 +7,9 @@ import FilterSidebar from '~/components/public/FilterSidebar'
 import ProductionCard, { ProductionCardData } from '~/components/public/ProductionCard'
 import ListingToggle, { ListingView } from '~/components/public/ListingToggle'
 import Pagination from '~/components/shared/Pagination'
+import SortSelect from '~/components/shared/SortSelect'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '~/components/ui/select'
-import {
+  LISTING_SORTS,
   setQuery,
   setSort,
   setPage,
@@ -28,7 +23,8 @@ import {
 import type { SeoMeta } from '~/lib/seo'
 
 const VIEW_KEY = 'anta:productions-view'
-const SORT_VALUES = ['relevance', 'date', 'views', 'downloads'] as const
+/** Ancre du haut des résultats (retour après un changement de tri, 12.1). */
+const RESULTS_ID = 'listing-results'
 
 type ProductionsProps = {
   results: ProductionCardData[]
@@ -83,7 +79,23 @@ export default function Productions({
   }
 
   function handleSort(value: string) {
-    router.visit(`/productions${setSort(search, value)}`)
+    // Page 1, valeur par défaut omise (`setSort`). `preserveState` : pas de remontage, le focus
+    // clavier reste sur #listing-sort (le Select le rend au déclencheur) ; vue, recherche et
+    // groupes de filtres dépliés gardent leur état (comme les bascules de FilterSidebar).
+    // Défilement ramené en haut des résultats s'ils commencent sous l'en-tête collant
+    // (décalage = `scroll-mt-24` de l'ancre), sinon gardé (12.1, D-12.1-7).
+    router.visit(`/productions${setSort(search, value)}`, {
+      preserveState: true,
+      preserveScroll: true,
+      onSuccess: () => {
+        const results = document.getElementById(RESULTS_ID)
+        if (!results) return
+        const offset = Number.parseFloat(getComputedStyle(results).scrollMarginTop) || 0
+        if (results.getBoundingClientRect().top < offset) {
+          results.scrollIntoView({ block: 'start' })
+        }
+      },
+    })
   }
 
   const grid = (
@@ -153,23 +165,26 @@ export default function Productions({
             </>
           ) : (
             <>
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div
+                id={RESULTS_ID}
+                className="flex scroll-mt-24 flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"
+              >
                 <p className="text-sm text-stone-600" aria-hidden="true">
                   {t('productions.results_count', { count: pagination.total })}
                 </p>
-                <div className="flex items-center gap-3">
-                  <Select value={sort} onValueChange={handleSort}>
-                    <SelectTrigger aria-label={t('sort.label')} className="w-44">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {SORT_VALUES.map((option) => (
-                        <SelectItem key={option} value={option}>
-                          {t(`sort.${option}`)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="flex items-end gap-3">
+                  {/* Tris D34 ; « Pertinence » désactivée sans recherche (D-12.1-4). */}
+                  <SortSelect
+                    id="listing-sort"
+                    value={sort}
+                    onChange={handleSort}
+                    className="flex-1 sm:w-56 sm:flex-none"
+                    options={LISTING_SORTS.map((value) => ({
+                      value,
+                      label: t(`listing.sort.${value}`),
+                      disabled: value === 'relevance' && !q,
+                    }))}
+                  />
                   <ListingToggle value={view} onChange={changeView} />
                 </div>
               </div>

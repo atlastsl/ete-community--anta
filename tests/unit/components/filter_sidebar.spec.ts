@@ -5,7 +5,6 @@ import { resolve } from 'node:path'
 // Story 10.6 — facette auteur du panneau de filtres, par lecture de source (TS6305).
 const read = (path: string) => readFileSync(resolve(process.cwd(), path), 'utf-8')
 const sidebar = read('inertia/components/public/FilterSidebar.tsx')
-const filterBar = read('inertia/components/public/FilterBar.tsx')
 const productionsPage = read('inertia/pages/productions.tsx')
 const filterChip = read('inertia/components/public/FilterChip.tsx')
 
@@ -31,7 +30,6 @@ test.group('FilterSidebar | facette auteur (10.6)', () => {
     assert.include(sidebar, 'const SAME_PAGE = { preserveState: true, preserveScroll: true }')
     assert.include(sidebar, 'router.visit(href, SAME_PAGE)')
     assert.equal(sidebar.split('{...SAME_PAGE}').length - 1, 2) // lignes + « Effacer filtres »
-    assert.include(filterBar, 'preserveState')
     assert.include(
       filterChip,
       'router.visit(href, { preserveState, preserveScroll: preserveState })'
@@ -63,7 +61,7 @@ test.group('FilterSidebar | facette auteur (10.6)', () => {
   })
 
   test('liens reconstruits depuis activeFilters.author (slugs ignorés retirés)', ({ assert }) => {
-    for (const source of [sidebar, filterBar, productionsPage]) {
+    for (const source of [sidebar, productionsPage]) {
       assert.include(source, 'withActiveAuthors(')
       assert.include(source, 'activeFilters.author')
     }
@@ -73,10 +71,8 @@ test.group('FilterSidebar | facette auteur (10.6)', () => {
     assert,
   }) => {
     // D-10.6-2 amendée (2026-11-21) : le filtre auteur survit à « Effacer les filtres ».
-    for (const source of [sidebar, filterBar]) {
-      assert.include(source, '{hasClearableFilters(activeFilters) && (')
-      assert.notInclude(source, 'hasActiveFilters(')
-    }
+    assert.include(sidebar, '{hasClearableFilters(activeFilters) && (')
+    assert.notInclude(sidebar, 'hasActiveFilters(')
   })
 
   test('état vide : la sortie garde l’auteur, sauf s’il est le seul filtre actif', ({ assert }) => {
@@ -84,9 +80,11 @@ test.group('FilterSidebar | facette auteur (10.6)', () => {
     assert.include(productionsPage, 'includeAuthor: !hasClearableFilters(activeFilters)')
   })
 
-  test('FilterBar (mode listing) lit la même forme de facette', ({ assert }) => {
-    assert.include(filterBar, 'facetOptions(facets, dim')
-    assert.include(filterBar, 'label={option.label}')
+  test('FilterSidebar lit la forme de facette unique { value, label } (FilterBar supprimé en 12.1)', ({
+    assert,
+  }) => {
+    assert.include(sidebar, 'facetOptions(facets, dim')
+    assert.include(sidebar, 'label={option.label}')
   })
 
   test('région aria-live toujours montée, hors des branches de résultats (flux 5)', ({

@@ -1,5 +1,5 @@
 import { test } from '@japa/runner'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 /**
@@ -15,7 +15,6 @@ function read(path: string): string {
 const publicLayout = read('inertia/layouts/PublicLayout.tsx')
 const appCss = read('inertia/css/app.css')
 const searchBar = read('inertia/components/public/SearchBar.tsx')
-const filterBar = read('inertia/components/public/FilterBar.tsx')
 const listingToggle = read('inertia/components/public/ListingToggle.tsx')
 const languageSwitcher = read('inertia/components/shared/LanguageSwitcher.tsx')
 
@@ -62,9 +61,10 @@ test.group('A11y | cibles tactiles >= 44px & scroll-snap', () => {
     assert.include(searchBar, 'w-full')
   })
 
-  test('FilterBar: scroll-snap horizontal (homepage)', ({ assert }) => {
-    assert.include(filterBar, 'snap-x')
-    assert.include(filterBar, 'overflow-x-auto')
+  test('FilterBar supprimé : plus de puces de catégories ni d’appelant (12.1, D8)', ({
+    assert,
+  }) => {
+    assert.isFalse(existsSync(resolve(process.cwd(), 'inertia/components/public/FilterBar.tsx')))
   })
 })
 
@@ -153,6 +153,7 @@ test.group('A11y | un seul <h1> sur l’arbre de l’accueil et de « À la une 
         'inertia/components/shared/FeaturedBanner.tsx',
         'inertia/components/public/AuthorByline.tsx',
         'inertia/components/public/ProductionCard.tsx',
+        'inertia/components/public/HomeBlock.tsx',
       ],
     },
     'inertia/pages/admin/Featured/Index.tsx': {

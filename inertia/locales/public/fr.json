@@ -36,10 +36,17 @@
     "hero_eyebrow": "Bibliothèque numérique",
     "hero_subtitle": "Découvrez, recherchez et consultez les productions de la communauté.",
     "search_placeholder": "Rechercher une production...",
-    "empty": "Aucune production publiée pour le moment.",
-    "sections": {
+    "hero": {
+      "advanced_search": "Recherche avancée"
+    },
+    "blocks": {
+      "recent": "Récemment publiées",
       "most_viewed": "Les plus consultées",
-      "recent": "Récemment ajoutées"
+      "most_downloaded": "Les plus téléchargées",
+      "window": "sur les 12 derniers mois",
+      "see_more": "Voir plus",
+      "see_more_named": "Voir plus : {{title}}",
+      "authors": "Auteurs les plus consultés"
     }
   },
   "featured": {
@@ -54,7 +61,6 @@
     "clear": "Effacer la recherche"
   },
   "filters": {
-    "label": "Filtres de recherche",
     "title": "Filtres",
     "author_search": "Rechercher un auteur...",
     "author_limit": "{{count}} auteurs au maximum : retirez-en un pour en choisir un autre.",
@@ -106,6 +112,12 @@
     "share_copied": "Lien copié dans le presse-papiers.",
     "share_failed": "Impossible de copier le lien. Copiez l'URL depuis la barre d'adresse."
   },
+  "suggestions": {
+    "title": "Productions similaires",
+    "loading": "Chargement des productions similaires…",
+    "announce_one": "{{count}} production similaire",
+    "announce_other": "{{count}} productions similaires"
+  },
   "media": {
     "pdf_viewer_title": "Lecteur PDF : {{name}}",
     "open_document": "Ouvrir le document",
@@ -126,16 +138,18 @@
     "download_unavailable": "Ce fichier n'est temporairement pas disponible."
   },
   "sort": {
-    "label": "Trier par",
-    "relevance": "Pertinence",
-    "date": "Date",
-    "views": "Vues",
-    "downloads": "Téléchargements"
+    "label": "Trier par"
   },
   "listing": {
     "view_label": "Affichage",
     "view_list": "Vue liste",
-    "view_grid": "Vue grille"
+    "view_grid": "Vue grille",
+    "sort": {
+      "relevance": "Pertinence",
+      "date": "Récemment publiées",
+      "views": "Les plus consultées",
+      "downloads": "Les plus téléchargées"
+    }
   },
   "privacy": {
     "title": "Politique de confidentialité",

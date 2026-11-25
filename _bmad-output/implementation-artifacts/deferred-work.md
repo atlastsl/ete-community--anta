@@ -129,7 +129,7 @@
 
 ## Deferred from: code review of 10-3-page-de-profil-d-un-auteur (2026-11-19)
 
-- **Tri « Titre (A → Z) » sensible aux accents** : `lower(title)` suit la collation de la base (un titre en « É » peut se ranger après « Z »). L'extension `unaccent` n'est pas installée (aucune migration) et n'est pas ajoutée (base partagée, P2.1 « normalisation applicative ») : à traiter avec le tri par titre de la liste (12.1), par une clé normalisée (`normalizeKey`) ou une collation ICU.
+- **Tri « Titre (A → Z) » sensible aux accents** : `lower(title)` suit la collation de la base (un titre en « É » peut se ranger après « Z »). L'extension `unaccent` n'est pas installée (aucune migration) et n'est pas ajoutée (base partagée, P2.1 « normalisation applicative ») : à traiter par une clé normalisée (`normalizeKey`) ou une collation ICU. Le listing n'a pas de tri par titre (D34 : quatre tris, D-12.1-8) : le report reste ouvert pour le profil d'auteur seul.
 - ~~**Titre d'onglet non rafraîchi en navigation interne**~~ — traité en 10.4 (le titre devenait même « Anta » après hydratation sur toutes les pages publiques). Ancien texte (rappel du report Epic 5) : pas de `<Head>` public, le titre du profil n'est juste qu'au premier chargement ; une navigation Inertia vers ou depuis un profil garde l'ancien titre. À traiter avec 10.4 (liens d'auteurs) / 10.7 (SEO).
 - **Slug en majuscules → 404** : `/authors/Jeanne-Exemple` ne retrouve pas `jeanne-exemple` (comparaison exacte), comme `/productions/:slug`. Accepté (slugs générés en minuscules) ; une redirection 301 vers le slug canonique reste possible.
 
@@ -141,6 +141,8 @@
 
 - **Lighthouse mobile 4G sur le staging (AC 3 de 10.8, NFR17)** : `/authors` et un profil, LCP < 3 s, à lancer par Aurélien après déploiement de l'Epic 10 et à consigner dans la story 10.8 (services distants hors des sessions de dev).
 - **Lighthouse mobile 4G sur le staging (AC 7 de 11.7, NFR17)** : accueil avec 3 productions à la une (image `lead` en LCP probable), LCP < 3 s, à lancer par Aurélien après déploiement de l'Epic 11 et à consigner dans la story 11.7.
+- **Lighthouse mobile 4G sur le staging (AC 5 de 12.5, NFR17, NFR18)** : accueil complet (bannière + 4 blocs) et une page de détail, LCP < 3 s, suggestions affichées < 2 s ; à lancer par Aurélien après déploiement de l'Epic 12 et à consigner dans la story 12.5.
+- **Test de charge sur le staging (AC 5 de 12.5, NFR20)** : 50 visiteurs simultanés sur la recherche et les filtres, p95 < 1 s ; seulement avec l'accord d'Aurélien (staging partagé). Mesure locale consignée dans la story 12.5 : p95 < 0,5 s avec un temps de réflexion de 1–3 s, mais **p95 1,3–2 s à saturation** (50 requêtes en vol en continu, un seul processus Node) → définition de « 50 visiteurs simultanés » à trancher par le PO.
 - ~~**Suite `browser` + axe (architecture P2.8)**~~ — **refusée par Aurélien le 2026-11-21** : pas de dépendance `@axe-core/playwright` ni de suite `browser` ; accessibilité couverte par les tests de source et l'audit Lighthouse manuel.
 - **`/media` sert la photo d'un auteur consentant sans production publiée** (question PO 10.8) : conforme à 10.2 (public = consentement), clé jamais exposée tant que le profil n'est pas visible ; aligner sur `visibleOnSite` si le PO le souhaite (le test de matrice l'indique).
 
@@ -167,3 +169,22 @@
 ## Deferred from: code review of 11-5-retrait-automatique-d-une-production-a-la-une (2026-11-21)
 
 - **Seeder de démo et productions à la une** : `production_demo_seeder.ts` supprime directement les productions `SEED_DEMO` (`Production.query().delete()`) ; le `CASCADE` retire leurs emplacements sans recompactage (trous de positions) ni journal `featured_auto_remove`. Développement seulement (jamais lancé sur la base partagée) ; `removeProduction` tolère les trous (les suivantes remontent depuis la position retirée). Corriger en passant par `FeaturedService.removeProduction` ou en vidant la une avant la purge si le seeder sert encore.
+
+## Deferred from: code review of 12-1-recherche-avancee-depuis-l-accueil-et-tris-du-listing (2026-11-24)
+
+- **Pas de sélecteur de tri dans la branche « résultats approchants »** (`inertia/pages/productions.tsx`, préexistant) : quand la recherche exacte est vide, les résultats approchants (OR / `pg_trgm`, 24 max) s'affichent sans `SortSelect` ni pagination ; leur ordre est celui de la proximité. À trancher : tri applicable aux approchants ou mention explicite de l'ordre.
+- **`FilterChip` sans appelant** depuis la suppression de `FilterBar` (12.1) : le composant, sa clé `filters.filter_by` et `filter_chip.spec.ts` restent ; à supprimer ou à réutiliser (puces de filtres actifs ?).
+
+## Deferred from: code review of 12-2-blocs-recemment-publiees-les-plus-consultees-et-les-plus-telechargees (2026-11-24)
+
+- **Cache des classements et commandes Ace** : `authors:apply` (et le seeder) tournent dans un autre processus que le serveur web ; leur `RankingService.invalidate()` ne vide pas le cache du serveur. Après la conversion, `topAuthors` (12.3) et les blocs peuvent rester périmés jusqu'à 10 min (TTL). Accepté (P2.3, D-12.2-4) ; à confirmer par le PO (redémarrer l'application après `authors:apply` si l'accueil doit être juste tout de suite).
+- **Savepoints et `after('commit')`** : Lucid exécute le hook d'une transaction imbriquée à la libération du savepoint. `invalidateAfterCommit` invalide aussi à la fin de la transaction la plus externe via les champs knex `parentTransaction` (non documenté) et `executionPromise` ; si une mise à jour de knex les retire, seul le hook du savepoint reste (test `ranking_service.spec.ts` « savepoint relâché puis COMMIT externe » pour le détecter).
+
+## Deferred from: code review of 12-3-bloc-auteurs-les-plus-consultes (2026-11-24)
+
+- **[PO] Départage du tri par défaut de `/authors`** : le tri `views` (fenêtre 365 j) départage les ex æquo par nom seulement, sans le départage D36 (dernière production publiée sur Anta) du bloc « Auteurs les plus consultés ». Après « Voir plus », deux auteurs ex æquo sur les vues peuvent apparaître dans un ordre différent de celui de l'accueil. À trancher : aligner `/authors` sur D36 (ajout de `last_published_at` dans `PublicAuthorService.list`) ou accepter l'écart.
+
+## Deferred from: code review of 12-4-suggestions-de-productions-similaires (2026-11-24)
+
+- **Erreur de base dans `SuggestionsMiddleware`** : comme pour `/media/*`, une exception levée avant le routeur (base indisponible) part au gestionnaire d'erreurs global → 500 non JSON, sans `Cache-Control: no-store`. Le client la traite comme 0 résultat (section retirée, D22) ; à reprendre avec `/media` (try/catch → 503 JSON `no-store`) si un cache intermédiaire est ajouté.
+- **[PO] Mémoïsation d'un échec (D-12.4-5)** : un délai dépassé ou une erreur passagère est mémorisé comme « aucune suggestion » ; la section reste absente pour ce slug jusqu'au rechargement complet de la page. À trancher : garder (« aucun nouveau chargement au retour arrière » au sens strict) ou ne mémoriser que les succès (nouvel essai au retour).

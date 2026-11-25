@@ -10,6 +10,7 @@ import AuthorAffiliation from '#models/author_affiliation'
 import { normalizeKey } from '#helpers/normalize'
 import FileStorageService from '#services/file_storage_service'
 import ProductionAuthorService from '#services/production_author_service'
+import RankingService from '#services/ranking_service'
 import { AUTHOR_PHOTO_VARIANTS, type ImageVariant } from '#services/image_service'
 import {
   affiliationRequiredError,
@@ -270,6 +271,9 @@ export default class AuthorService {
       await this.discardPhoto(newPrefix)
       throw error
     }
+    // Something was written (fields or consent): home rankings invalidated after the commit
+    // (Story 12.2, D-12.2-6; the author block of 12.3 shows names, photos, public profiles).
+    RankingService.invalidate()
     if (oldPrefix && oldPrefix !== newPrefix) await this.discardPhoto(oldPrefix)
     return { author, fields, consentConfirmed }
   }
@@ -280,7 +284,7 @@ export default class AuthorService {
    * affiliation is refused (D27).
    */
   static async confirmConsent(author: Author, adminId: string): Promise<ConsentConfirmResult> {
-    return db.transaction(async (trx): Promise<ConsentConfirmResult> => {
+    const result = await db.transaction(async (trx): Promise<ConsentConfirmResult> => {
       const locked = await Author.query({ client: trx })
         .where('id', author.id)
         .forUpdate()
@@ -295,6 +299,9 @@ export default class AuthorService {
       author.consentConfirmedById = locked.consentConfirmedById
       return 'confirmed'
     })
+    // After the commit, on a change only (Story 12.2, FR53).
+    if (result === 'confirmed') RankingService.invalidate()
+    return result
   }
 
   private static async affiliationsCount(
@@ -313,7 +320,7 @@ export default class AuthorService {
    * stay published. A card that is not public is left untouched.
    */
   static async withdrawConsent(author: Author): Promise<ConsentWithdrawResult> {
-    return db.transaction(async (trx): Promise<ConsentWithdrawResult> => {
+    const result = await db.transaction(async (trx): Promise<ConsentWithdrawResult> => {
       const locked = await Author.query({ client: trx })
         .where('id', author.id)
         .forUpdate()
@@ -327,6 +334,9 @@ export default class AuthorService {
       author.consentConfirmedById = null
       return 'withdrawn'
     })
+    // After the commit: a withdrawn profile never stays on the home page (Story 12.2, FR53).
+    if (result === 'withdrawn') RankingService.invalidate()
+    return result
   }
 
   /** Uploads the variants under a fresh prefix; on a failed upload, removes the sent ones. */
@@ -418,7 +428,10 @@ export default class AuthorService {
         await author.delete()
         return { deleted: true }
       })
-      if (result.deleted) await this.discardPhoto(photoKey)
+      if (result.deleted) {
+        RankingService.invalidate() // after the commit (Story 12.2)
+        await this.discardPhoto(photoKey)
+      }
       return result
     } catch (error) {
       if (!isProductionLinkViolation(error)) throw error

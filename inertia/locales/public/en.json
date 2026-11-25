@@ -36,10 +36,17 @@
     "hero_eyebrow": "Digital library",
     "hero_subtitle": "Discover, search and read the community's productions.",
     "search_placeholder": "Search for a production...",
-    "empty": "No production published yet.",
-    "sections": {
+    "hero": {
+      "advanced_search": "Advanced search"
+    },
+    "blocks": {
+      "recent": "Recently published",
       "most_viewed": "Most viewed",
-      "recent": "Recently added"
+      "most_downloaded": "Most downloaded",
+      "window": "over the last 12 months",
+      "see_more": "See more",
+      "see_more_named": "See more: {{title}}",
+      "authors": "Most viewed authors"
     }
   },
   "featured": {
@@ -54,7 +61,6 @@
     "clear": "Clear search"
   },
   "filters": {
-    "label": "Search filters",
     "title": "Filters",
     "author_search": "Search an author...",
     "author_limit": "{{count}} authors at most: remove one to choose another.",
@@ -106,6 +112,12 @@
     "share_copied": "Link copied to clipboard.",
     "share_failed": "Could not copy the link. Copy the URL from the address bar."
   },
+  "suggestions": {
+    "title": "Similar productions",
+    "loading": "Loading similar productions…",
+    "announce_one": "{{count}} similar production",
+    "announce_other": "{{count}} similar productions"
+  },
   "media": {
     "pdf_viewer_title": "PDF viewer: {{name}}",
     "open_document": "Open document",
@@ -126,16 +138,18 @@
     "download_unavailable": "This file is temporarily unavailable."
   },
   "sort": {
-    "label": "Sort by",
-    "relevance": "Relevance",
-    "date": "Date",
-    "views": "Views",
-    "downloads": "Downloads"
+    "label": "Sort by"
   },
   "listing": {
     "view_label": "Display",
     "view_list": "List view",
-    "view_grid": "Grid view"
+    "view_grid": "Grid view",
+    "sort": {
+      "relevance": "Relevance",
+      "date": "Recently published",
+      "views": "Most viewed",
+      "downloads": "Most downloaded"
+    }
   },
   "privacy": {
     "title": "Privacy Policy",

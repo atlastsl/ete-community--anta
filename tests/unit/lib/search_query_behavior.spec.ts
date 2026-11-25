@@ -21,6 +21,11 @@ type SearchQueryModule = {
   hasClearableFilters: (active: Record<string, string[]>) => boolean
   setPage: (search: string, page: number) => string
   setSort: (search: string, value: string) => string
+  setQuery: (search: string, value: string) => string
+  homeSearchHref: (query: string) => string
+  defaultListingSort: (q: string | null | undefined) => string
+  effectiveListingSort: (sort: string, q: string | null | undefined) => string
+  LISTING_SORTS: readonly string[]
   withActiveAuthors: (search: string, authors: string[]) => string
   MAX_AUTHOR_FILTERS: number
 }
@@ -135,5 +140,53 @@ test.group('keyboard | Espace sur un filtre-lien (10.6)', () => {
       assert.isNull(spaceToggle({ key: ' ', [modifier]: true }), modifier)
     }
     assert.isNull(spaceToggle({ key: 'Enter' }))
+  })
+})
+
+test.group('search_query | recherche de l’accueil et tris du listing (12.1)', () => {
+  test('LISTING_SORTS : quatre tris D34 dans l’ordre', async ({ assert }) => {
+    const { LISTING_SORTS } = await load()
+    assert.deepEqual([...LISTING_SORTS], ['relevance', 'date', 'views', 'downloads'])
+  })
+
+  test('défaut = relevance avec q, date sans ; relevance sans q = date', async ({ assert }) => {
+    const { defaultListingSort, effectiveListingSort } = await load()
+    assert.equal(defaultListingSort('x'), 'relevance')
+    assert.equal(defaultListingSort(null), 'date')
+    assert.equal(defaultListingSort('   '), 'date')
+    assert.equal(effectiveListingSort('relevance', null), 'date')
+    assert.equal(effectiveListingSort('relevance', 'x'), 'relevance')
+    assert.equal(effectiveListingSort('views', null), 'views')
+  })
+
+  test('setSort : page retirée, q et filtres gardés, valeur par défaut omise', async ({
+    assert,
+  }) => {
+    const { setSort } = await load()
+    assert.equal(setSort('?q=x&category=Livre&page=3', 'views'), '?q=x&category=Livre&sort=views')
+    assert.equal(setSort('?q=x&sort=views&page=2', 'relevance'), '?q=x')
+    assert.equal(setSort('?q=x', 'date'), '?q=x&sort=date')
+    assert.equal(setSort('?sort=views&page=4', 'date'), '')
+    assert.equal(setSort('?category=Livre', 'relevance'), '?category=Livre')
+    assert.equal(setSort('', 'downloads'), '?sort=downloads')
+  })
+
+  test('setQuery : un sort devenu redondant est retiré, un tri explicite survit', async ({
+    assert,
+  }) => {
+    const { setQuery } = await load()
+    assert.equal(setQuery('?q=x&sort=date&page=2', ''), '')
+    assert.equal(setQuery('?sort=relevance', 'y'), '?q=y')
+    assert.equal(setQuery('?sort=views', 'y'), '?sort=views&q=y')
+    assert.equal(setQuery('?sort=date', 'y'), '?sort=date&q=y')
+    assert.equal(setQuery('?q=x&author=a-b', 'z'), '?q=z&author=a-b')
+  })
+
+  test('homeSearchHref : /productions?q=… ou /productions si vide', async ({ assert }) => {
+    const { homeSearchHref } = await load()
+    assert.equal(homeSearchHref('x y'), '/productions?q=x+y')
+    assert.equal(homeSearchHref('  algèbre  '), '/productions?q=alg%C3%A8bre')
+    assert.equal(homeSearchHref(''), '/productions')
+    assert.equal(homeSearchHref('   '), '/productions')
   })
 })

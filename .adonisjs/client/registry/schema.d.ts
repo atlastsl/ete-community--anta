@@ -55,6 +55,18 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/public/productions_controller').default['download']>>>
     }
   }
+  'production.suggestions': {
+    methods: ["GET","HEAD"]
+    pattern: '/productions/:slug/suggestions'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { slug: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/public/productions_controller').default['suggestions']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/public/productions_controller').default['suggestions']>>>
+    }
+  }
   'authors.index': {
     methods: ["GET","HEAD"]
     pattern: '/authors'

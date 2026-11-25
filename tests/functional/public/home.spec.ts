@@ -5,9 +5,11 @@ import Production from '#models/production'
 import StatsView from '#models/stats_view'
 import StatsDownload from '#models/stats_download'
 import ProductionFile from '#models/production_file'
+import ProductionLink from '#models/production_link'
 import AdminUser from '#models/admin_user'
 import Author from '#models/author'
-import { PRODUCTION_CATEGORIES } from '#constants/production_taxonomy'
+import AuthorAffiliation from '#models/author_affiliation'
+import RankingService from '#services/ranking_service'
 
 type ProductionFixture = {
   title?: string
@@ -16,9 +18,11 @@ type ProductionFixture = {
   antaPublishedAt?: DateTime | null
 }
 
+let fixtureCounter = 0
+
 async function createProduction(opts: ProductionFixture = {}): Promise<Production> {
   return Production.create({
-    title: opts.title ?? `Production ${Math.floor(Math.random() * 1_000_000)}`,
+    title: opts.title ?? `Production ${fixtureCounter++}`,
     status: opts.status ?? 'draft',
     authorNames: [],
     tags: [],
@@ -29,13 +33,32 @@ async function createProduction(opts: ProductionFixture = {}): Promise<Productio
   })
 }
 
-async function addViews(production: Production, count: number) {
+/** Published production, published on Anta `daysAgo` days ago (distinct dates by default). */
+async function published(title: string, daysAgo = fixtureCounter++): Promise<Production> {
+  return createProduction({
+    title,
+    status: 'published',
+    antaPublishedAt: DateTime.now().minus({ days: daysAgo }),
+  })
+}
+
+async function addViews(production: Production, count: number, daysAgo = 0) {
   for (let i = 0; i < count; i++) {
     await StatsView.create({
       productionId: production.id,
-      recordedAt: DateTime.now(),
+      recordedAt: DateTime.now().minus({ days: daysAgo }),
       ipHash: `hash-${i}`,
       sessionId: null,
+    })
+  }
+}
+
+async function addDownloads(production: Production, count: number, daysAgo = 0) {
+  for (let i = 0; i < count; i++) {
+    await StatsDownload.create({
+      productionId: production.id,
+      downloadedAt: DateTime.now().minus({ days: daysAgo }),
+      ipHash: `hash-${i}`,
     })
   }
 }
@@ -46,13 +69,56 @@ function extractProps(body: string) {
   return JSON.parse(match[1].replace(/&quot;/g, '"')).props
 }
 
+const titles = (cards: { title: string }[]) => cards.map((card) => card.title)
+
+async function createAdmin(): Promise<AdminUser> {
+  return AdminUser.create({
+    email: `home-${fixtureCounter++}@anta.test`,
+    passwordHash: 'plain-password-hashed-by-mixin',
+    role: 'admin',
+    passwordChanged: true,
+    isActive: true,
+    createdById: null,
+  })
+}
+
+/** Draft that `POST /admin/productions/:id/publish` accepts (FR21: pivot author + link). */
+async function createPublishableDraft(title: string): Promise<Production> {
+  const production = await Production.create({
+    title,
+    summary: 'Résumé complet.',
+    authorNames: ['Awa Fictive'],
+    tags: ['maths'],
+    category: 'article',
+    domain: 'mathematics',
+    subdomain: ['topology'],
+    language: 'fr',
+    publicationCountry: 'Sénégal',
+    licenseStatus: 'member',
+    status: 'draft',
+    workPublishedAt: DateTime.fromISO('2024-03-15'),
+    createdById: null,
+  })
+  const author = await Author.create({ firstNames: 'Awa', lastNames: 'Fictive' })
+  await db
+    .table('production_authors')
+    .insert({ production_id: production.id, author_id: author.id, position: 1 })
+  await ProductionLink.create({
+    productionId: production.id,
+    url: 'https://example.com',
+    linkType: 'simple',
+    label: null,
+  })
+  return production
+}
+
 test.group('Public home | accès', (group) => {
   group.each.setup(async () => {
     await db.beginGlobalTransaction()
     return () => db.rollbackGlobalTransaction()
   })
 
-  test('GET / → 200 même base vide (sections vides, catégories fixes)', async ({
+  test('GET / → 200 même base vide : trois blocs vides, sans catégories', async ({
     client,
     assert,
   }) => {
@@ -60,81 +126,324 @@ test.group('Public home | accès', (group) => {
     response.assertStatus(200)
     const props = extractProps(response.text())
     assert.isNotNull(props)
-    assert.lengthOf(props.mostViewed, 0)
     assert.lengthOf(props.recent, 0)
-    assert.deepEqual(props.categories, [...PRODUCTION_CATEGORIES])
+    assert.lengthOf(props.mostViewed, 0)
+    assert.lengthOf(props.mostDownloaded, 0)
+    assert.notProperty(props, 'categories')
   })
 })
 
-test.group('Public home | sections', (group) => {
+// Story 12.2 — blocs de l'accueil (FR9, FR45, FR46, D4, D5, D6, P2.3). Données fictives.
+test.group('Public home | blocs (12.2)', (group) => {
   group.each.setup(async () => {
     await db.beginGlobalTransaction()
     return () => db.rollbackGlobalTransaction()
   })
 
-  test('mostViewed : publiées uniquement, triées par vues décroissantes, max 6', async ({
+  test('props : featured, recent, mostViewed, mostDownloaded, meta ; pas de categories', async ({
     client,
     assert,
   }) => {
-    const low = await createProduction({ title: 'Peu vue', status: 'published' })
-    const high = await createProduction({ title: 'Très vue', status: 'published' })
-    await createProduction({ title: 'Brouillon', status: 'draft' })
-    await addViews(low, 2)
-    await addViews(high, 10)
-
-    const response = await client.get('/')
-    response.assertStatus(200)
-    const props = extractProps(response.text())
-
-    assert.lengthOf(props.mostViewed, 2)
-    assert.equal(props.mostViewed[0].title, 'Très vue')
-    assert.equal(props.mostViewed[0].viewsCount, 10)
-    assert.equal(props.mostViewed[1].title, 'Peu vue')
-    assert.isFalse(props.mostViewed.some((p: { title: string }) => p.title === 'Brouillon'))
-  })
-
-  test('recent : triées par antaPublishedAt décroissant, max 6', async ({ client, assert }) => {
-    await createProduction({
-      title: 'Ancienne',
-      status: 'published',
-      antaPublishedAt: DateTime.fromISO('2026-01-01'),
-    })
-    await createProduction({
-      title: 'Nouvelle',
-      status: 'published',
-      antaPublishedAt: DateTime.fromISO('2026-05-01'),
-    })
+    await createProduction({ status: 'published', category: 'book' })
 
     const response = await client.get('/')
     const props = extractProps(response.text())
-
-    assert.equal(props.recent[0].title, 'Nouvelle')
-    assert.equal(props.recent[1].title, 'Ancienne')
+    assert.notProperty(props, 'categories')
+    assert.properties(props, ['featured', 'recent', 'mostViewed', 'mostDownloaded', 'meta'])
   })
 
-  test('limite à 6 items par section', async ({ client, assert }) => {
-    for (let i = 0; i < 8; i++) {
-      await createProduction({
-        title: `Prod ${i}`,
-        status: 'published',
-        antaPublishedAt: DateTime.now().minus({ days: i }),
-      })
+  test('recent : 3 publiées les plus récentes sur Anta, brouillon exclu', async ({
+    client,
+    assert,
+  }) => {
+    await published('Il y a 4 j', 4)
+    await published('Il y a 1 j', 1)
+    await published('Il y a 3 j', 3)
+    await published('Il y a 2 j', 2)
+    await createProduction({ title: 'Brouillon récent', antaPublishedAt: DateTime.now() })
+
+    const props = await homeProps(client)
+    assert.deepEqual(titles(props.recent), ['Il y a 1 j', 'Il y a 2 j', 'Il y a 3 j'])
+  })
+
+  test('recent : même anta_published_at → id ↑', async ({ client, assert }) => {
+    const date = DateTime.now().minus({ days: 1 })
+    const created = []
+    for (const title of ['R1', 'R2', 'R3', 'R4']) {
+      created.push(await createProduction({ title, status: 'published', antaPublishedAt: date }))
+    }
+    const expected = created
+      .sort((p, q) => (p.id < q.id ? -1 : 1))
+      .slice(0, 3)
+      .map((p) => p.title)
+
+    const props = await homeProps(client)
+    assert.deepEqual(titles(props.recent), expected)
+  })
+
+  test('mostViewed : vues des 365 derniers jours ↓, 3 éléments, totaux affichés', async ({
+    client,
+    assert,
+  }) => {
+    const a = await published('A')
+    const b = await published('B')
+    const c = await published('C')
+    const d = await published('D')
+    await addViews(a, 4)
+    await addViews(b, 3)
+    await addViews(c, 2, 364) // still inside the window
+    await addViews(d, 1)
+    // Old views: they count in the totals, never in the window (366 days ago).
+    await addViews(d, 10, 366)
+
+    const props = await homeProps(client)
+    assert.deepEqual(titles(props.mostViewed), ['A', 'B', 'C'])
+    assert.equal(props.mostViewed[0].viewsCount, 4)
+
+    // D: 1 view in the window, 11 in total: ranked on the window, shown with the total.
+    RankingService.invalidate()
+    await db.from('stats_views').where('production_id', a.id).delete()
+    await db.from('stats_views').where('production_id', b.id).delete()
+    const after = await homeProps(client)
+    assert.deepEqual(titles(after.mostViewed), ['C', 'D'])
+    assert.equal(after.mostViewed[1].viewsCount, 11)
+  })
+
+  test('mostViewed : stats de 366 j ignorées → production à 0 exclue (D5)', async ({
+    client,
+    assert,
+  }) => {
+    const old = await published('Vue il y a longtemps')
+    const never = await published('Jamais vue')
+    const recent = await published('Vue récemment')
+    await addViews(old, 50, 366)
+    await addViews(recent, 1)
+
+    const props = await homeProps(client)
+    assert.deepEqual(titles(props.mostViewed), ['Vue récemment'])
+    assert.notInclude(titles(props.mostViewed), never.title)
+  })
+
+  test('mostViewed : ex æquo départagés par anta_published_at ↓', async ({ client, assert }) => {
+    const older = await published('Plus ancienne', 10)
+    const newer = await published('Plus récente', 2)
+    await addViews(older, 2)
+    await addViews(newer, 2)
+
+    const props = await homeProps(client)
+    assert.deepEqual(titles(props.mostViewed), ['Plus récente', 'Plus ancienne'])
+  })
+
+  test('mostViewed : même compte et même date → id ↑', async ({ client, assert }) => {
+    const date = DateTime.now().minus({ days: 5 })
+    const one = await createProduction({ title: 'X', status: 'published', antaPublishedAt: date })
+    const two = await createProduction({ title: 'Y', status: 'published', antaPublishedAt: date })
+    await addViews(one, 1)
+    await addViews(two, 1)
+    const expected = [one, two].sort((p, q) => (p.id < q.id ? -1 : 1)).map((p) => p.title)
+
+    const props = await homeProps(client)
+    assert.deepEqual(titles(props.mostViewed), expected)
+  })
+
+  test('mostViewed : brouillon et dépubliée exclus même très vus', async ({ client, assert }) => {
+    const draft = await createProduction({ title: 'Brouillon', status: 'draft' })
+    const unpub = await createProduction({
+      title: 'Dépubliée',
+      status: 'unpublished',
+      antaPublishedAt: DateTime.now().minus({ days: 3 }),
+    })
+    const pub = await published('Publiée')
+    await addViews(draft, 9)
+    await addViews(unpub, 9)
+    await addViews(pub, 1)
+
+    const props = await homeProps(client)
+    assert.deepEqual(titles(props.mostViewed), ['Publiée'])
+  })
+
+  test('mostDownloaded : téléchargements 365 j ↓, 0 exclu, totaux affichés', async ({
+    client,
+    assert,
+  }) => {
+    const a = await published('Téléchargée récemment')
+    const b = await published('Téléchargée autrefois')
+    const c = await published('Peu téléchargée')
+    await addDownloads(a, 3)
+    await addDownloads(a, 5, 400)
+    await addDownloads(b, 7, 366)
+    await addDownloads(c, 1)
+    await addViews(c, 4)
+
+    const props = await homeProps(client)
+    assert.deepEqual(titles(props.mostDownloaded), ['Téléchargée récemment', 'Peu téléchargée'])
+    assert.equal(props.mostDownloaded[0].downloadsCount, 8) // total ≠ 3 in the window
+    assert.equal(props.mostDownloaded[1].viewsCount, 4)
+    assert.notInclude(titles(props.mostDownloaded), b.title)
+  })
+
+  test('blocs : 3 éléments au plus ; un classement sans stats sur 365 j est vide', async ({
+    client,
+    assert,
+  }) => {
+    for (let i = 0; i < 5; i++) {
+      const production = await published(`P${i}`, i + 1)
+      await addViews(production, 5 - i)
     }
 
-    const response = await client.get('/')
-    const props = extractProps(response.text())
-    assert.lengthOf(props.mostViewed, 6)
-    assert.lengthOf(props.recent, 6)
+    const props = await homeProps(client)
+    assert.lengthOf(props.recent, 3)
+    assert.deepEqual(titles(props.mostViewed), ['P0', 'P1', 'P2'])
+    assert.lengthOf(props.mostDownloaded, 0) // bloc absent côté client
   })
 
-  // Taxonomie unifiée (0a1541f) : liste fixe, indépendante des productions publiées.
-  test('categories : liste fixe de la taxonomie', async ({ client, assert }) => {
-    await createProduction({ status: 'published', category: 'book' })
-    await createProduction({ status: 'draft', category: 'thesis' })
+  test('cartes : forme du transformer, sans image (D37)', async ({ client, assert }) => {
+    const production = await published('Carte')
+    await addViews(production, 1)
+    await addDownloads(production, 2)
 
-    const response = await client.get('/')
-    const props = extractProps(response.text())
-    assert.deepEqual(props.categories, [...PRODUCTION_CATEGORIES])
+    const props = await homeProps(client)
+    for (const card of [props.recent[0], props.mostViewed[0], props.mostDownloaded[0]]) {
+      assert.containsSubset(card, { slug: production.slug, viewsCount: 1, downloadsCount: 2 })
+      assert.notProperty(card, 'imageUrl')
+      assert.notProperty(card, 'thumbnailKey')
+    }
+  })
+})
+
+// Story 12.2 — cache des classements (P2-06) et invalidation après commit.
+test.group('Public home | cache des classements (12.2)', (group) => {
+  group.each.setup(async () => {
+    await db.beginGlobalTransaction()
+    return () => db.rollbackGlobalTransaction()
+  })
+
+  test('les classements sont servis depuis le cache ; « Récemment publiées » ne l’est pas', async ({
+    client,
+    assert,
+  }) => {
+    const a = await published('A', 5)
+    await addViews(a, 2)
+    await client.get('/')
+    assert.sameMembers(RankingService.cachedKeys(), ['mostViewed', 'mostDownloaded', 'topAuthors'])
+
+    // New stats and a new publication written behind the service's back (no invalidation).
+    const b = await published('B', 1)
+    await addViews(b, 9)
+
+    const props = await homeProps(client)
+    assert.deepEqual(titles(props.mostViewed), ['A']) // cached ids
+    assert.equal(props.recent[0].title, 'B') // not cached
+  })
+
+  test('dépublication → cache invalidé (le 4e entre dans le bloc)', async ({ client, assert }) => {
+    const admin = await createAdmin()
+    const productions = []
+    for (const [index, title] of ['A', 'B', 'C', 'D'].entries()) {
+      const production = await published(title, index + 1)
+      await addViews(production, 4 - index)
+      productions.push(production)
+    }
+    let props = await homeProps(client)
+    assert.deepEqual(titles(props.mostViewed), ['A', 'B', 'C'])
+
+    const response = await client
+      .post(`/admin/productions/${productions[0].id}/unpublish`)
+      .loginAs(admin)
+      .withCsrfToken()
+      .redirects(0)
+    response.assertStatus(302)
+
+    props = await homeProps(client)
+    assert.deepEqual(titles(props.mostViewed), ['B', 'C', 'D'])
+  })
+
+  test('publication → cache invalidé', async ({ client, assert }) => {
+    const admin = await createAdmin()
+    const a = await published('A')
+    await addViews(a, 1)
+    const draft = await createPublishableDraft('Brouillon très vu')
+    await addViews(draft, 5)
+    let props = await homeProps(client)
+    assert.deepEqual(titles(props.mostViewed), ['A'])
+
+    const response = await client
+      .post(`/admin/productions/${draft.id}/publish`)
+      .loginAs(admin)
+      .withCsrfToken()
+      .redirects(0)
+    response.assertStatus(302)
+
+    props = await homeProps(client)
+    assert.deepEqual(titles(props.mostViewed), ['Brouillon très vu', 'A'])
+  })
+
+  test('suppression → cache invalidé', async ({ client, assert }) => {
+    const admin = await createAdmin()
+    const productions = []
+    for (const [index, title] of ['A', 'B', 'C', 'D'].entries()) {
+      const production = await published(title, index + 1)
+      await addDownloads(production, 4 - index)
+      productions.push(production)
+    }
+    let props = await homeProps(client)
+    assert.deepEqual(titles(props.mostDownloaded), ['A', 'B', 'C'])
+
+    const response = await client
+      .delete(`/admin/productions/${productions[1].id}`)
+      .loginAs(admin)
+      .withCsrfToken()
+      .redirects(0)
+    response.assertStatus(302)
+
+    props = await homeProps(client)
+    assert.deepEqual(titles(props.mostDownloaded), ['A', 'C', 'D'])
+  })
+
+  test('édition rendant la production incomplète → dépubliée et cache invalidé', async ({
+    client,
+    assert,
+  }) => {
+    const admin = await createAdmin()
+    const productions = []
+    for (const [index, title] of ['A', 'B', 'C', 'D'].entries()) {
+      const production = await createPublishableDraft(title)
+      production.status = 'published'
+      production.antaPublishedAt = DateTime.now().minus({ days: index + 1 })
+      await production.save()
+      await addViews(production, 4 - index)
+      productions.push(production)
+    }
+    let props = await homeProps(client)
+    assert.deepEqual(titles(props.mostViewed), ['A', 'B', 'C'])
+
+    // Summary emptied: the edit auto-unpublishes A (FR21), authors untouched (no `authorIds`).
+    const response = await client
+      .put(`/admin/productions/${productions[0].id}`)
+      .loginAs(admin)
+      .withCsrfToken()
+      .redirects(0)
+      .json({ title: 'A' })
+    response.assertStatus(302)
+    await productions[0].refresh()
+    assert.equal(productions[0].status, 'draft')
+
+    props = await homeProps(client)
+    assert.deepEqual(titles(props.mostViewed), ['B', 'C', 'D'])
+  })
+})
+
+// Story 12.1 (D8, P2.6) — prop `categories` toujours absente.
+test.group('Public home | categories (12.1)', (group) => {
+  group.each.setup(async () => {
+    await db.beginGlobalTransaction()
+    return () => db.rollbackGlobalTransaction()
+  })
+
+  test('categories : prop absente (D8)', async ({ client, assert }) => {
+    await createProduction({ status: 'published', category: 'book' })
+    const props = await homeProps(client)
+    assert.notProperty(props, 'categories')
   })
 })
 
@@ -370,14 +679,597 @@ test.group('Public home | bannière à la une (11.6)', (group) => {
     assert.notInclude(head, production.thumbnailKey!)
   })
 
-  test('sections existantes intactes avec une bannière', async ({ client, assert }) => {
+  test('blocs avec une bannière : aucun dédoublonnage (D6)', async ({ client, assert }) => {
     const production = await createFeaturable({ title: 'À la une et récente' })
+    await addViews(production, 1)
     await feature(production)
     const props = await homeProps(client)
     assert.lengthOf(props.featured, 1)
     assert.equal(props.recent[0].title, 'À la une et récente')
     assert.equal(props.mostViewed[0].title, 'À la une et récente')
-    assert.deepEqual(props.categories, [...PRODUCTION_CATEGORIES])
+    assert.notProperty(props, 'categories')
     assert.notProperty(props.recent[0], 'imageUrl')
+  })
+})
+
+// Story 12.3 — bloc « Auteurs les plus consultés » (FR45, FR46, FR53, D3, D5, D36, P2.3).
+// Noms fictifs (dépôt public).
+type AuthorFixture = { consent?: boolean; firstNames?: string }
+
+async function createAuthor(lastNames: string, opts: AuthorFixture = {}): Promise<Author> {
+  return Author.create({
+    firstNames: opts.firstNames ?? 'Awa',
+    lastNames,
+    consentConfirmedAt: opts.consent === false ? null : DateTime.now(),
+  })
+}
+
+async function link(production: Production, ...authors: Author[]) {
+  for (const author of authors) {
+    const row = await db
+      .from('production_authors')
+      .where('production_id', production.id)
+      .max('position as max')
+      .first()
+    await db.table('production_authors').insert({
+      production_id: production.id,
+      author_id: author.id,
+      position: Number(row?.max ?? 0) + 1,
+    })
+  }
+}
+
+const authorNames = (cards: { lastNames: string }[]) => cards.map((card) => card.lastNames)
+
+test.group('Public home | auteurs les plus consultés (12.3)', (group) => {
+  group.each.setup(async () => {
+    await db.beginGlobalTransaction()
+    return () => db.rollbackGlobalTransaction()
+  })
+
+  test('prop topAuthors : base vide → [] (bloc absent)', async ({ client, assert }) => {
+    const props = await homeProps(client)
+    assert.property(props, 'topAuthors')
+    assert.deepEqual(props.topAuthors, [])
+  })
+
+  test('vues 365 j ↓, 3 éléments, forme AuthorCard avec le total des vues (D3)', async ({
+    client,
+    assert,
+  }) => {
+    const authors = []
+    for (const [index, name] of ['UN', 'DEUX', 'TROIS', 'QUATRE'].entries()) {
+      const author = await createAuthor(name)
+      const production = await published(`Production de ${name}`)
+      await link(production, author)
+      await addViews(production, 4 - index)
+      authors.push(author)
+    }
+    // Old views of TROIS: in its total, never in the window.
+    const troisOld = await published('Ancienne de TROIS', 400)
+    await link(troisOld, authors[2])
+    await addViews(troisOld, 10, 366)
+
+    const props = await homeProps(client)
+    assert.deepEqual(authorNames(props.topAuthors), ['UN', 'DEUX', 'TROIS'])
+    assert.deepEqual(Object.keys(props.topAuthors[2]).sort(), [
+      'firstNames',
+      'lastNames',
+      'photoBase',
+      'primaryInstitution',
+      'productionsCount',
+      'slug',
+      'viewsCount',
+    ])
+    assert.equal(props.topAuthors[2].slug, authors[2].slug)
+    assert.equal(props.topAuthors[2].viewsCount, 12) // total ≠ 2 in the window
+    assert.equal(props.topAuthors[2].productionsCount, 2)
+  })
+
+  test('total des vues identique à la carte de /authors', async ({ client, assert }) => {
+    const author = await createAuthor('PAREIL')
+    const recent = await published('Récente')
+    const old = await published('Ancienne', 500)
+    await link(recent, author)
+    await link(old, author)
+    await addViews(recent, 3)
+    await addViews(old, 5, 400)
+
+    const home = await homeProps(client)
+    const listResponse = await client.get('/authors')
+    const list = extractProps(listResponse.text())
+    const listCard = list.authors.find((card: { slug: string }) => card.slug === author.slug)
+    assert.deepEqual(home.topAuthors[0], listCard)
+    assert.equal(home.topAuthors[0].viewsCount, 8)
+  })
+
+  test('profil non public exclu : sans consentement, ou sans production publiée', async ({
+    client,
+    assert,
+  }) => {
+    const noConsent = await createAuthor('SANSACCORD', { consent: false })
+    const p1 = await published('P1')
+    await link(p1, noConsent)
+    await addViews(p1, 9)
+
+    // Consent but only a draft (with views): not public, and draft views never count.
+    const draftOnly = await createAuthor('BROUILLON')
+    const draft = await createProduction({ title: 'Brouillon vu' })
+    await link(draft, draftOnly)
+    await addViews(draft, 9)
+
+    const visible = await createAuthor('VISIBLE')
+    const p2 = await published('P2')
+    await link(p2, visible)
+    await addViews(p2, 1)
+
+    const props = await homeProps(client)
+    assert.deepEqual(authorNames(props.topAuthors), ['VISIBLE'])
+  })
+
+  test('vues d’un brouillon ou d’une dépubliée ignorées pour un auteur visible', async ({
+    client,
+    assert,
+  }) => {
+    const a = await createAuthor('MIXTE')
+    const pub = await published('Publiée')
+    const unpublished = await createProduction({ title: 'Dépubliée', status: 'unpublished' })
+    await link(pub, a)
+    await link(unpublished, a)
+    await addViews(pub, 1)
+    await addViews(unpublished, 50)
+
+    const b = await createAuthor('DEUX')
+    const pb = await published('Pb')
+    await link(pb, b)
+    await addViews(pb, 2)
+
+    const props = await homeProps(client)
+    assert.deepEqual(authorNames(props.topAuthors), ['DEUX', 'MIXTE'])
+    assert.equal(props.topAuthors[1].viewsCount, 1)
+  })
+
+  test('auteur à 0 vue sur 365 j exclu (D5)', async ({ client, assert }) => {
+    const old = await createAuthor('ANCIEN')
+    const p = await published('Vue il y a longtemps')
+    await link(p, old)
+    await addViews(p, 7, 366)
+    const never = await createAuthor('JAMAIS')
+    await link(await published('Jamais vue'), never)
+
+    const props = await homeProps(client)
+    assert.deepEqual(props.topAuthors, [])
+  })
+
+  // Garde-fou de non-régression : l'unicité vient de la clé primaire du pivot, pas de la
+  // logique de la requête.
+  test('co-signature : chaque vue compte une fois pour chaque auteur', async ({
+    client,
+    assert,
+  }) => {
+    const a = await createAuthor('ALPHA')
+    const b = await createAuthor('BETA')
+    const c = await createAuthor('GAMMA')
+    const shared = await published('Co-signée', 10)
+    await link(shared, a, b)
+    await addViews(shared, 3)
+    const solo = await published('Solo', 20)
+    await link(solo, c)
+    await addViews(solo, 4)
+
+    const props = await homeProps(client)
+    // GAMMA 4 > ALPHA 3 = BETA 3 (same last publication → last name).
+    assert.deepEqual(authorNames(props.topAuthors), ['GAMMA', 'ALPHA', 'BETA'])
+    assert.deepEqual(
+      props.topAuthors.map((card: { viewsCount: number }) => card.viewsCount),
+      [4, 3, 3]
+    )
+  })
+
+  test('ex æquo : dernière production publiée sur Anta ↓ (toutes, même non vues)', async ({
+    client,
+    assert,
+  }) => {
+    const older = await createAuthor('AAA')
+    const newer = await createAuthor('ZZZ')
+    const p1 = await published('Vue de AAA', 30)
+    const p2 = await published('Vue de ZZZ', 30)
+    await link(p1, older)
+    await link(p2, newer)
+    await addViews(p1, 2)
+    await addViews(p2, 2)
+    // ZZZ's latest publication (never viewed) breaks the tie in its favour.
+    await link(await published('Récente de ZZZ, jamais vue', 1), newer)
+
+    const props = await homeProps(client)
+    assert.deepEqual(authorNames(props.topAuthors), ['ZZZ', 'AAA'])
+  })
+
+  test('ex æquo et même dernière publication : nom, puis prénom', async ({ client, assert }) => {
+    const shared = await published('Commune', 5)
+    const b = await createAuthor('DIOP', { firstNames: 'Binta' })
+    const a = await createAuthor('DIOP', { firstNames: 'Awa' })
+    const c = await createAuthor('BA', { firstNames: 'Zeyna' })
+    await link(shared, b, a, c)
+    await addViews(shared, 2)
+
+    const props = await homeProps(client)
+    assert.deepEqual(
+      props.topAuthors.map((card: { firstNames: string; lastNames: string }) => card.firstNames),
+      ['Zeyna', 'Awa', 'Binta']
+    )
+  })
+
+  test('retrait du consentement par l’admin → absent, le 4e remonte (FR53, cache invalidé)', async ({
+    client,
+    assert,
+  }) => {
+    const admin = await createAdmin()
+    const authors = []
+    for (const [index, name] of ['RETIRE', 'DEUX', 'TROIS', 'QUATRE'].entries()) {
+      const author = await createAuthor(name)
+      const production = await published(`Production de ${name}`)
+      await link(production, author)
+      await addViews(production, 5 - index)
+      authors.push(author)
+    }
+
+    let props = await homeProps(client)
+    assert.deepEqual(authorNames(props.topAuthors), ['RETIRE', 'DEUX', 'TROIS'])
+    assert.include(RankingService.cachedKeys(), 'topAuthors')
+
+    const response = await client
+      .post(`/admin/authors/${authors[0].id}/withdraw-consent`)
+      .withCsrfToken()
+      .loginAs(admin)
+      .redirects(0)
+    response.assertStatus(302)
+    assert.notInclude(RankingService.cachedKeys(), 'topAuthors')
+
+    // QUATRE enters only through a recomputation: the re-filtering alone (D-12.3-4) would
+    // leave ['DEUX', 'TROIS'].
+    props = await homeProps(client)
+    assert.deepEqual(authorNames(props.topAuthors), ['DEUX', 'TROIS', 'QUATRE'])
+  })
+
+  test('ex æquo : une production dépubliée garde sa date mais ne compte pas (D36)', async ({
+    client,
+    assert,
+  }) => {
+    const withUnpublished = await createAuthor('AAA')
+    const other = await createAuthor('ZZZ')
+    const old = await published('Ancienne de AAA', 30)
+    const recent = await published('Publiée de ZZZ', 10)
+    await link(old, withUnpublished)
+    await link(recent, other)
+    await addViews(old, 2)
+    await addViews(recent, 2)
+    // AAA's newest production, unpublished but still dated: ignored in the tie-break.
+    const unpublished = await createProduction({
+      title: 'Dépubliée récente de AAA',
+      status: 'unpublished',
+      antaPublishedAt: DateTime.now().minus({ days: 1 }),
+    })
+    await link(unpublished, withUnpublished)
+
+    const props = await homeProps(client)
+    assert.deepEqual(authorNames(props.topAuthors), ['ZZZ', 'AAA'])
+  })
+
+  test('identifiant resté en cache d’un profil devenu non public : jamais affiché (D-12.3-4)', async ({
+    client,
+    assert,
+  }) => {
+    const author = await createAuthor('PERIME')
+    const p = await published('P')
+    await link(p, author)
+    await addViews(p, 3)
+    let props = await homeProps(client)
+    assert.deepEqual(authorNames(props.topAuthors), ['PERIME'])
+
+    // Consent withdrawn behind the service's back (another process): no invalidation.
+    await db.from('authors').where('id', author.id).update({ consent_confirmed_at: null })
+    assert.include(RankingService.cachedKeys(), 'topAuthors')
+    props = await homeProps(client)
+    assert.deepEqual(props.topAuthors, [])
+  })
+
+  test('cache : identifiants servis depuis le cache jusqu’à invalidation', async ({
+    client,
+    assert,
+  }) => {
+    const a = await createAuthor('PREMIER')
+    const pa = await published('Pa')
+    await link(pa, a)
+    await addViews(pa, 2)
+    await homeProps(client)
+
+    const b = await createAuthor('SECOND')
+    const pb = await published('Pb')
+    await link(pb, b)
+    await addViews(pb, 9)
+
+    let props = await homeProps(client)
+    assert.deepEqual(authorNames(props.topAuthors), ['PREMIER'])
+    RankingService.invalidate()
+    props = await homeProps(client)
+    assert.deepEqual(authorNames(props.topAuthors), ['SECOND', 'PREMIER'])
+  })
+})
+
+// Story 12.5 — ordre des props (FR9) et invalidation du cache par chaque route admin restée
+// couverte par les seuls tests unitaires des services (sync, consentement, fiche auteur).
+// Preuve par recalcul observable (un auteur entre dans le bloc, ce que le re-filtrage
+// `visibleOnSite` seul ne produit pas, D-12.3-4) ou, si le classement ne change pas, par
+// `RankingService.cachedKeys()`. Noms fictifs (dépôt public).
+const ALL_KEYS = ['mostViewed', 'mostDownloaded', 'topAuthors']
+
+async function addAffiliation(author: Author) {
+  await AuthorAffiliation.create({
+    authorId: author.id,
+    position: 1,
+    institution: 'Université Fictive',
+    department: null,
+  })
+}
+
+/** Published, complete production (pivot + link) linked to `authors`, with `views` views. */
+async function publishedComplete(title: string, views: number, ...authors: Author[]) {
+  const production = await createPublishableDraft(title)
+  await db.from('production_authors').where('production_id', production.id).delete()
+  production.status = 'published'
+  production.antaPublishedAt = DateTime.now().minus({ days: 5 })
+  await production.save()
+  await link(production, ...authors)
+  await addViews(production, views)
+  return production
+}
+
+/** Full edit form of `publishedComplete` productions (nothing incomplete: no auto-unpublish). */
+function productionForm(title: string, authorIds: string[]) {
+  return {
+    title,
+    summary: 'Résumé complet.',
+    tags: ['maths'],
+    category: 'article',
+    domain: 'mathematics',
+    subdomain: ['topology'],
+    language: 'fr',
+    publicationCountry: 'Sénégal',
+    licenseStatus: 'member',
+    workPublishedAt: '2024-03-15',
+    authorIds,
+  }
+}
+
+test.group('Public home | ordre des props (12.5)', (group) => {
+  group.each.setup(async () => {
+    await db.beginGlobalTransaction()
+    return () => db.rollbackGlobalTransaction()
+  })
+
+  // L'ordre des clés JSON n'est pas un contrat (Inertia résout les props transformées après les
+  // autres) : l'ordre FR9 est celui du rendu, vérifié par lecture de source (`home_blocks.spec.ts`,
+  // D-12.5-2). Ici : l'ensemble exact des props de la page, sans `categories`.
+  test('props de la page : exactement featured, recent, mostViewed, mostDownloaded, topAuthors, meta', async ({
+    client,
+    assert,
+  }) => {
+    await published('A')
+    const response = await client.get('/')
+    const page = JSON.parse(
+      response
+        .text()
+        .match(/data-page="([^"]*)"/)![1]
+        .replace(/&quot;/g, '"')
+    )
+    const shared = new Set(Object.keys(page.props))
+    const own = ['featured', 'recent', 'mostViewed', 'mostDownloaded', 'topAuthors', 'meta']
+    for (const key of own) assert.isTrue(shared.has(key), key)
+    assert.notProperty(page.props, 'categories')
+    // Every other prop is shared by every public page (same set as `/productions`).
+    const listing = await client.get('/productions')
+    const listingKeys = new Set(Object.keys(extractProps(listing.text())))
+    const extra = [...shared].filter((key) => !own.includes(key) && !listingKeys.has(key))
+    assert.deepEqual(extra, [])
+  })
+})
+
+test.group('Public home | cache invalidé par les routes admin (12.5)', (group) => {
+  group.each.setup(async () => {
+    await db.beginGlobalTransaction()
+    return () => db.rollbackGlobalTransaction()
+  })
+
+  test('PUT /admin/productions/:id avec authorIds modifiés (sync) → topAuthors recalculé', async ({
+    client,
+    assert,
+  }) => {
+    const admin = await createAdmin()
+    const first = await createAuthor('PREMIER')
+    const added = await createAuthor('AJOUTE') // public, but linked to nothing yet: not visible
+    await addAffiliation(added)
+    const production = await publishedComplete('Production éditée', 5, first)
+
+    let props = await homeProps(client)
+    assert.deepEqual(authorNames(props.topAuthors), ['PREMIER'])
+    assert.sameMembers(RankingService.cachedKeys(), ALL_KEYS)
+
+    const response = await client
+      .put(`/admin/productions/${production.id}`)
+      .json(productionForm('Production éditée', [first.id, added.id]))
+      .loginAs(admin)
+      .withCsrfToken()
+      .redirects(0)
+    response.assertStatus(302)
+    await production.refresh()
+    assert.equal(production.status, 'published')
+    assert.deepEqual(RankingService.cachedKeys(), [])
+
+    props = await homeProps(client)
+    assert.deepEqual(authorNames(props.topAuthors), ['AJOUTE', 'PREMIER'])
+  })
+
+  test('PUT /admin/productions/:id sans changement d’auteurs → cache conservé (D-12.2-6)', async ({
+    client,
+    assert,
+  }) => {
+    const admin = await createAdmin()
+    const author = await createAuthor('STABLE')
+    const production = await publishedComplete('Avant', 3, author)
+    await homeProps(client)
+
+    const response = await client
+      .put(`/admin/productions/${production.id}`)
+      .json(productionForm('Après', [author.id]))
+      .loginAs(admin)
+      .withCsrfToken()
+      .redirects(0)
+    response.assertStatus(302)
+    await production.refresh()
+    assert.equal(production.title, 'Après')
+    assert.equal(production.status, 'published')
+    assert.sameMembers(RankingService.cachedKeys(), ALL_KEYS)
+    // Cards are hydrated on every render: the new title shows anyway (D-12.2-1).
+    const props = await homeProps(client)
+    assert.deepEqual(titles(props.mostViewed), ['Après'])
+  })
+
+  test('POST /admin/authors/:id/confirm-consent → l’auteur entre dans le bloc', async ({
+    client,
+    assert,
+  }) => {
+    const admin = await createAdmin()
+    const pending = await createAuthor('ENATTENTE', { consent: false })
+    await addAffiliation(pending)
+    const p = await published('Très vue')
+    await link(p, pending)
+    await addViews(p, 9)
+    const other = await createAuthor('AUTRE')
+    const q = await published('Peu vue')
+    await link(q, other)
+    await addViews(q, 1)
+
+    let props = await homeProps(client)
+    assert.deepEqual(authorNames(props.topAuthors), ['AUTRE'])
+
+    const response = await client
+      .post(`/admin/authors/${pending.id}/confirm-consent`)
+      .withCsrfToken()
+      .loginAs(admin)
+      .redirects(0)
+    response.assertStatus(302)
+    assert.notInclude(RankingService.cachedKeys(), 'topAuthors')
+
+    props = await homeProps(client)
+    assert.deepEqual(authorNames(props.topAuthors), ['ENATTENTE', 'AUTRE'])
+  })
+
+  test('PUT /admin/authors/:id case « consentement » cochée → l’auteur entre dans le bloc', async ({
+    client,
+    assert,
+  }) => {
+    const admin = await createAdmin()
+    const pending = await createAuthor('COCHE', { consent: false })
+    const p = await published('Très vue')
+    await link(p, pending)
+    await addViews(p, 9)
+    const other = await createAuthor('AUTRE')
+    const q = await published('Peu vue')
+    await link(q, other)
+    await addViews(q, 1)
+
+    let props = await homeProps(client)
+    assert.deepEqual(authorNames(props.topAuthors), ['AUTRE'])
+
+    const response = await client
+      .put(`/admin/authors/${pending.id}`)
+      .json({
+        lastNames: 'COCHE',
+        firstNames: 'Awa',
+        affiliations: [{ institution: 'Université Fictive' }],
+        consent: true,
+      })
+      .loginAs(admin)
+      .withCsrfToken()
+      .redirects(0)
+    response.assertStatus(302)
+    await pending.refresh()
+    assert.isNotNull(pending.consentConfirmedAt)
+    assert.notInclude(RankingService.cachedKeys(), 'topAuthors')
+
+    props = await homeProps(client)
+    assert.deepEqual(authorNames(props.topAuthors), ['COCHE', 'AUTRE'])
+  })
+
+  // Le renommage change le départage D36 (nom de famille) : seul un recalcul fait passer
+  // l'auteur renommé devant ; les cartes réhydratées garderaient l'ordre en cache.
+  test('PUT /admin/authors/:id renommage → classement recalculé (départage par nom)', async ({
+    client,
+    assert,
+  }) => {
+    const admin = await createAdmin()
+    const renamed = await createAuthor('ZED')
+    await addAffiliation(renamed)
+    const other = await createAuthor('MILIEU')
+    // Co-signed: same views, same last publication → ordered by last name (D36).
+    const p = await published('Co-signée')
+    await link(p, renamed, other)
+    await addViews(p, 2)
+    let props = await homeProps(client)
+    assert.deepEqual(authorNames(props.topAuthors), ['MILIEU', 'ZED'])
+    assert.sameMembers(RankingService.cachedKeys(), ALL_KEYS)
+
+    const response = await client
+      .put(`/admin/authors/${renamed.id}`)
+      .json({
+        lastNames: 'ALPHA',
+        firstNames: 'Awa',
+        affiliations: [{ institution: 'Université Fictive' }],
+      })
+      .loginAs(admin)
+      .withCsrfToken()
+      .redirects(0)
+    response.assertStatus(302)
+    assert.deepEqual(RankingService.cachedKeys(), [])
+
+    // Without invalidation: ['MILIEU', 'ALPHA'] (cached order, fresh names).
+    props = await homeProps(client)
+    assert.deepEqual(authorNames(props.topAuthors), ['ALPHA', 'MILIEU'])
+  })
+
+  test('DELETE /admin/authors/:id : fiche non liée supprimée → cache vidé ; fiche liée refusée → conservé', async ({
+    client,
+    assert,
+  }) => {
+    const admin = await createAdmin()
+    const linked = await createAuthor('LIEE')
+    const p = await published('P')
+    await link(p, linked)
+    await addViews(p, 2)
+    const unlinked = await createAuthor('SEULE')
+    await homeProps(client)
+    assert.sameMembers(RankingService.cachedKeys(), ALL_KEYS)
+
+    const refused = await client
+      .delete(`/admin/authors/${linked.id}`)
+      .loginAs(admin)
+      .withCsrfToken()
+      .redirects(0)
+    refused.assertStatus(302)
+    assert.include(JSON.stringify(refused.flashMessages()), 'authors.delete.refused')
+    assert.sameMembers(RankingService.cachedKeys(), ALL_KEYS)
+
+    const deleted = await client
+      .delete(`/admin/authors/${unlinked.id}`)
+      .loginAs(admin)
+      .withCsrfToken()
+      .redirects(0)
+    deleted.assertStatus(302)
+    assert.isNull(await Author.find(unlinked.id))
+    assert.deepEqual(RankingService.cachedKeys(), [])
+
+    const props = await homeProps(client)
+    assert.deepEqual(authorNames(props.topAuthors), ['LIEE'])
   })
 })

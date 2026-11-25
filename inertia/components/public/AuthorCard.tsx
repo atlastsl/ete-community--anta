@@ -23,10 +23,18 @@ export type AuthorCardData = {
  * Author card (DESIGN.md `AuthorCard`, D3, maquette `authors-list.html`): avatar, « Prénom NOM »,
  * primary institution, published productions and total views. A single link (the name) stretched
  * over the card (`after:absolute after:inset-0` on a `relative` card): never a card `onClick`,
- * never nested links (EXPERIENCE.md, stretched link).
+ * never nested links (EXPERIENCE.md, stretched link). Name in an `h2` on `/authors` (under the
+ * `h1`), in an `h3` in the home block (under its `h2`, maquette home.html, D-12.3-5).
  */
-export default function AuthorCard({ author }: { author: AuthorCardData }) {
+export default function AuthorCard({
+  author,
+  headingLevel = 'h2',
+}: {
+  author: AuthorCardData
+  headingLevel?: 'h2' | 'h3'
+}) {
   const { t, i18n } = useTranslation()
+  const Heading = headingLevel
   const name = formatAuthorName(author.firstNames, author.lastNames)
   const format = (value: number) => value.toLocaleString(i18n.language)
 
@@ -40,14 +48,14 @@ export default function AuthorCard({ author }: { author: AuthorCardData }) {
         alt=""
       />
       <div className="min-w-0">
-        <h2 className="font-display text-lg leading-snug text-stone-900">
+        <Heading className="font-display text-lg leading-snug text-stone-900">
           <Link
             href={urlFor('authors.show', { slug: author.slug })}
             className="after:absolute after:inset-0 after:rounded-lg hover:text-green-700 focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-green-700 focus-visible:after:ring-offset-2"
           >
             {name}
           </Link>
-        </h2>
+        </Heading>
         {author.primaryInstitution && (
           <p className="mt-0.5 truncate text-sm text-stone-600">{author.primaryInstitution}</p>
         )}

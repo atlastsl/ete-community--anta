@@ -2,8 +2,12 @@ import { test } from '@japa/runner'
 import db from '@adonisjs/lucid/services/db'
 import Author from '#models/author'
 import Production from '#models/production'
+import { DateTime } from 'luxon'
 import ProductionDemoSeeder, {
   SEED_AUTHOR_PREFIX,
+  STATS_SPREAD_DAYS,
+  assertLocalDatabase,
+  randomStatDate,
 } from '../../../database/seeders/production_demo_seeder.js'
 
 // Noms fictifs uniquement (dépôt public). Base locale de test seulement.
@@ -133,5 +137,75 @@ test.group('ProductionDemoSeeder | auteurs de démo (Story 9.7)', (group) => {
     assert.lengthOf(seedAuthors, 24)
     const links = await db.from('production_authors').where('production_id', real.id)
     assert.lengthOf(links, 1)
+  })
+})
+
+// Story 12.5 — statistiques datées sur 540 j et garde-fou de base locale.
+test.group('ProductionDemoSeeder | stats datées et base locale (Story 12.5)', (group) => {
+  group.each.setup(async () => {
+    await db.beginGlobalTransaction()
+    return () => db.rollbackGlobalTransaction()
+  })
+  group.each.timeout(60_000)
+
+  test('vues et téléchargements sur 540 j, jamais avant la publication, une partie hors 365 j', async ({
+    assert,
+  }) => {
+    await runSeeder()
+    for (const [table, column] of [
+      ['stats_views', 'recorded_at'],
+      ['stats_downloads', 'downloaded_at'],
+    ]) {
+      const result = await db.rawQuery(
+        `SELECT count(*) AS total,
+                count(*) FILTER (WHERE s.${column} < now() - interval '365 days') AS outside,
+                count(*) FILTER (WHERE s.${column} < clock_timestamp() - interval '${STATS_SPREAD_DAYS} days'
+                                    OR s.${column} > clock_timestamp()) AS out_of_range,
+                count(*) FILTER (WHERE s.${column} < p.anta_published_at) AS before_publication,
+                count(*) FILTER (WHERE p.status <> 'published') AS not_published,
+                count(DISTINCT date_trunc('day', s.${column})) AS days
+           FROM ${table} s JOIN productions p ON p.id = s.production_id
+          WHERE p.institution = 'SEED_DEMO'`
+      )
+      const row = result.rows[0]
+      assert.isAbove(Number(row.total), 0, table)
+      assert.isAbove(Number(row.outside), 0, `${table} : aucune stat hors fenêtre`)
+      assert.isBelow(
+        Number(row.outside),
+        Number(row.total),
+        `${table} : aucune stat dans la fenêtre`
+      )
+      assert.equal(Number(row.out_of_range), 0, table)
+      assert.equal(Number(row.before_publication), 0, table)
+      assert.equal(Number(row.not_published), 0, table)
+      assert.isAbove(Number(row.days), 100, `${table} : dates non étalées`)
+    }
+  })
+
+  test('randomStatDate : bornée par la publication et par 540 j, jamais dans le futur', ({
+    assert,
+  }) => {
+    const now = DateTime.fromISO('2026-06-01T12:00:00Z')
+    const floor = now.minus({ days: STATS_SPREAD_DAYS })
+    const recent = now.minus({ days: 10 })
+    for (let i = 0; i < 200; i++) {
+      const old = randomStatDate(now.minus({ days: 700 }), now)
+      assert.isTrue(old >= floor && old <= now)
+      const undated = randomStatDate(null, now)
+      assert.isTrue(undated >= floor && undated <= now)
+      const fresh = randomStatDate(recent, now)
+      assert.isTrue(fresh >= recent && fresh <= now)
+    }
+    // Published "in the future" (inconsistent data): never after now.
+    assert.equal(randomStatDate(now.plus({ days: 3 }), now).toMillis(), now.toMillis())
+  })
+
+  test('assertLocalDatabase : boucle locale acceptée, tout autre hôte refusé', ({ assert }) => {
+    for (const host of ['localhost', '127.0.0.1', '::1']) {
+      assert.doesNotThrow(() => assertLocalDatabase(host))
+    }
+    for (const host of ['db.example.com', '10.0.0.5', 'postgres', '', undefined, null]) {
+      assert.throws(() => assertLocalDatabase(host), /base non locale/)
+    }
   })
 })

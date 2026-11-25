@@ -6,6 +6,7 @@ import FileStorageService from '#services/file_storage_service'
 import ThumbnailService from '#services/thumbnail_service'
 import PosterService from '#services/poster_service'
 import FeaturedService from '#services/featured_service'
+import RankingService from '#services/ranking_service'
 import Production from '#models/production'
 import { slugify } from '#helpers/slug'
 
@@ -130,6 +131,8 @@ export default class ProductionService {
   /**
    * Publie la production. `anta_published_at` n'est défini qu'à la PREMIÈRE
    * publication (FR35) — conservé ensuite (dépublication/republication).
+   * Classements de l'accueil invalidés après le commit de la transaction de l'appelant
+   * (`production.$trx`), sinon tout de suite (Story 12.2, D-12.2-3).
    */
   static async publish(production: Production): Promise<void> {
     production.status = ProductionStatus.PUBLISHED
@@ -137,6 +140,7 @@ export default class ProductionService {
       production.antaPublishedAt = DateTime.now()
     }
     await production.save()
+    RankingService.invalidateAfterCommit(production.$trx)
   }
 
   /**
@@ -157,6 +161,8 @@ export default class ProductionService {
       production.status = locked.status
       production.updatedAt = locked.updatedAt
     })
+    // Après le commit : un rendu concurrent ne recache pas l'état d'avant (Story 12.2).
+    RankingService.invalidate()
   }
 
   /**
@@ -204,6 +210,7 @@ export default class ProductionService {
       }
     })
     production.$isDeleted = true
+    RankingService.invalidate() // après le commit (Story 12.2)
 
     const alreadyDeleted = new Set(production.files.map((file) => file.fileKey))
     for (const file of deleted.files) {
