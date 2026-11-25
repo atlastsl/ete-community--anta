@@ -40,4 +40,9 @@ test.group('Activity logs page | source', () => {
   test('libellés des types d’action via i18n', ({ assert }) => {
     assert.include(src, 'activity.action.${')
   })
+
+  test('ressource « Sélection à la une » sans identifiant (11.4)', ({ assert }) => {
+    assert.include(src, "log.resourceType === 'featured_selection'")
+    assert.include(src, "t('activity.resource.featured_selection')")
+  })
 })

@@ -18,6 +18,7 @@ declare module '@adonisjs/inertia/types' {
     'admin/Authors/Create': ExtractProps<(typeof import('../../inertia/pages/admin/Authors/Create.tsx'))['default']>
     'admin/Authors/Edit': ExtractProps<(typeof import('../../inertia/pages/admin/Authors/Edit.tsx'))['default']>
     'admin/Authors/Index': ExtractProps<(typeof import('../../inertia/pages/admin/Authors/Index.tsx'))['default']>
+    'admin/Featured/Index': ExtractProps<(typeof import('../../inertia/pages/admin/Featured/Index.tsx'))['default']>
     'admin/Productions/Create': ExtractProps<(typeof import('../../inertia/pages/admin/Productions/Create.tsx'))['default']>
     'admin/Productions/Edit': ExtractProps<(typeof import('../../inertia/pages/admin/Productions/Edit.tsx'))['default']>
     'admin/Productions/Index': ExtractProps<(typeof import('../../inertia/pages/admin/Productions/Index.tsx'))['default']>

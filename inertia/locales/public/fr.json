@@ -42,6 +42,12 @@
       "recent": "Récemment ajoutées"
     }
   },
+  "featured": {
+    "region": "Productions à la une",
+    "by": "Par",
+    "views": "Vues :",
+    "downloads": "Téléchargements :"
+  },
   "search": {
     "label": "Rechercher une production",
     "submit": "Rechercher",

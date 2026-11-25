@@ -1,8 +1,10 @@
+import { useState } from 'react'
 import { router } from '@inertiajs/react'
 import { Link } from '@adonisjs/inertia/react'
 import { useTranslation } from 'react-i18next'
 import { Loader2 } from 'lucide-react'
 import { Button } from '~/components/ui/button'
+import ProductionConfirmDialog from '~/components/admin/ProductionConfirmDialog'
 
 type Props = {
   /** Tous les champs requis remplis + attachement satisfait (CompletionIndicator vert). */
@@ -17,6 +19,8 @@ type Props = {
   /** Création : formulaire complet avec attachements en attente → Publier actif. */
   canPublishOnCreate?: boolean
   onPublishCreate?: () => void
+  /** Production à la une (édition) : avertissement D21 du dialog de dépublication (Story 11.5). */
+  isFeatured?: boolean
 }
 
 /**
@@ -28,6 +32,7 @@ type Props = {
  * Jamais deux primaires simultanés ; jamais "Publier" sur une production déjà publiée.
  *
  * "Enregistrer" = bouton submit du formulaire parent.
+ * "Dépublier" ouvre le dialog de confirmation de la liste (D-11.5-4).
  */
 export default function ProductionFormActions({
   isComplete,
@@ -37,8 +42,11 @@ export default function ProductionFormActions({
   saveLabelKey = 'productions.form.save_draft',
   canPublishOnCreate = false,
   onPublishCreate,
+  isFeatured = false,
 }: Props) {
   const { t } = useTranslation()
+  const [confirmUnpublish, setConfirmUnpublish] = useState(false)
+  const [unpublishing, setUnpublishing] = useState(false)
   const isPublished = status === 'published'
   const canPublish = (isComplete && !!productionId && !isPublished) || canPublishOnCreate
 
@@ -52,8 +60,17 @@ export default function ProductionFormActions({
   }
 
   function handleUnpublish() {
+    setConfirmUnpublish(false)
     if (!productionId) return
-    router.post(`/admin/productions/${productionId}/unpublish`, {}, { preserveScroll: true })
+    router.post(
+      `/admin/productions/${productionId}/unpublish`,
+      {},
+      {
+        preserveScroll: true,
+        onStart: () => setUnpublishing(true),
+        onFinish: () => setUnpublishing(false),
+      }
+    )
   }
 
   return (
@@ -72,8 +89,8 @@ export default function ProductionFormActions({
           <Button
             type="button"
             variant="outline"
-            onClick={handleUnpublish}
-            disabled={processing}
+            onClick={() => setConfirmUnpublish(true)}
+            disabled={processing || unpublishing}
             className="border-amber-700 text-amber-700 hover:bg-amber-50"
           >
             {t('productions.actions.unpublish')}
@@ -124,6 +141,17 @@ export default function ProductionFormActions({
           {t('actions.cancel')}
         </Button>
       </Link>
+
+      {isPublished && (
+        <ProductionConfirmDialog
+          kind="unpublish"
+          open={confirmUnpublish}
+          onOpenChange={setConfirmUnpublish}
+          onConfirm={handleUnpublish}
+          isFeatured={isFeatured}
+          processing={processing || unpublishing}
+        />
+      )}
     </div>
   )
 }

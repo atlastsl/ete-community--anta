@@ -4,7 +4,12 @@ import { DateTime } from 'luxon'
 import db from '@adonisjs/lucid/services/db'
 import drive from '@adonisjs/drive/services/main'
 import Author from '#models/author'
+import Production from '#models/production'
+import ProductionFile from '#models/production_file'
 import AuthorService from '#services/author_service'
+import ThumbnailService from '#services/thumbnail_service'
+import PosterService from '#services/poster_service'
+import ProductionAuthorService from '#services/production_author_service'
 
 // Noms fictifs uniquement (dépôt public). Octets factices : le contrôleur ne décode pas l'image.
 
@@ -325,5 +330,488 @@ test.group('Public media | author photos', (group) => {
 
     response.assertStatus(404)
     response.assertHeader('cache-control', 'no-store')
+  })
+})
+
+// Story 11.2 — vignettes de la bannière : clé courante d'une production publiée, cache d'un an.
+let sequence = 0
+
+async function createProduction(
+  options: { status?: 'draft' | 'published' | 'unpublished'; withThumbnail?: boolean } = {}
+): Promise<Production> {
+  sequence++
+  const production = await Production.create({
+    title: `Oeuvre vignette ${sequence}`,
+    summary: 'Résumé de test.',
+    authorNames: [],
+    tags: [],
+    category: 'Livre',
+    domain: 'Informatique',
+    subdomain: [],
+    language: 'fr',
+    publicationCountry: 'Sénégal',
+    licenseStatus: 'member',
+    status: options.status ?? 'published',
+    antaPublishedAt: DateTime.now(),
+  })
+  if (options.withThumbnail !== false) {
+    production.thumbnailKey = `thumbnails/${production.id}/${TOKEN}`
+    await production.save()
+  }
+  return production
+}
+
+async function putThumbnail(prefix: string) {
+  const disk = drive.use('r2')
+  for (const key of ThumbnailService.keys(prefix)) {
+    await disk.put(key, Buffer.from(`bytes of ${key}`), { contentType: 'image/webp' })
+  }
+}
+
+const YEAR = 'public, max-age=31536000, immutable'
+
+test.group('Public media | vignettes de la bannière (Story 11.2)', (group) => {
+  group.each.setup(async () => {
+    await db.beginGlobalTransaction()
+    return async () => {
+      drive.restore('r2')
+      await db.rollbackGlobalTransaction()
+    }
+  })
+
+  test('production publiée : w400 / w800 / w1600 en image/webp, cache d’un an immutable, corps', async ({
+    client,
+    assert,
+  }) => {
+    drive.fake('r2')
+    const production = await createProduction()
+    await putThumbnail(production.thumbnailKey!)
+
+    for (const variant of ['w400.webp', 'w800.webp', 'w1600.webp']) {
+      const response = await client.get(`/media/${production.thumbnailKey}/${variant}`)
+      response.assertStatus(200)
+      response.assertHeader('content-type', 'image/webp')
+      response.assertHeader('cache-control', YEAR)
+      assert.equal(
+        Buffer.from(response.response.body ?? response.text()).toString(),
+        `bytes of ${production.thumbnailKey}/${variant}`
+      )
+    }
+  })
+
+  test('ETag → 304 ; HEAD : en-têtes sans corps ; aucun Set-Cookie', async ({ client, assert }) => {
+    drive.fake('r2')
+    const production = await createProduction()
+    await putThumbnail(production.thumbnailKey!)
+    const url = `/media/${production.thumbnailKey}/w800.webp`
+
+    const first = await client.get(url)
+    const etag = first.header('etag')
+    assert.isString(etag)
+    const second = await client.get(url).header('If-None-Match', etag!)
+    second.assertStatus(304)
+    second.assertHeader('cache-control', YEAR)
+
+    const head = await rawRequest(url, 'HEAD')
+    assert.equal(head.status, 200)
+    assert.equal(head.headers['content-type'], 'image/webp')
+    assert.equal(head.headers['cache-control'], YEAR)
+    assert.equal(
+      head.headers['content-length'],
+      String(Buffer.byteLength(`bytes of ${production.thumbnailKey}/w800.webp`))
+    )
+    assert.equal(head.body, '')
+    assert.isUndefined(head.headers['set-cookie'])
+  })
+
+  test('brouillon ou dépubliée → 404 no-store, vide (jamais la NotFoundPage)', async ({
+    client,
+    assert,
+  }) => {
+    drive.fake('r2')
+    for (const status of ['draft', 'unpublished'] as const) {
+      const production = await createProduction({ status })
+      await putThumbnail(production.thumbnailKey!)
+
+      const response = await client.get(`/media/${production.thumbnailKey}/w400.webp`)
+      response.assertStatus(404)
+      response.assertHeader('cache-control', 'no-store')
+      assert.notInclude(response.text(), 'data-page', status)
+    }
+  })
+
+  test('ancienne clé (vignette remplacée) ou vignette retirée → 404 no-store', async ({
+    client,
+  }) => {
+    drive.fake('r2')
+    const production = await createProduction()
+    const oldPrefix = `thumbnails/${production.id}/${OTHER_TOKEN}`
+    await putThumbnail(oldPrefix)
+    await putThumbnail(production.thumbnailKey!)
+
+    const replaced = await client.get(`/media/${oldPrefix}/w400.webp`)
+    replaced.assertStatus(404)
+    replaced.assertHeader('cache-control', 'no-store')
+
+    const current = production.thumbnailKey!
+    production.thumbnailKey = null
+    await production.save()
+    const removed = await client.get(`/media/${current}/w400.webp`)
+    removed.assertStatus(404)
+    removed.assertHeader('cache-control', 'no-store')
+  })
+
+  test('jeton d’une production sous l’id d’une autre, variante inconnue, clé mal formée → 404', async ({
+    assert,
+  }) => {
+    drive.fake('r2')
+    const production = await createProduction()
+    // `other` a sa propre vignette (autre jeton) : seuls les croisements id/jeton sont testés.
+    const other = await createProduction({ withThumbnail: false })
+    other.thumbnailKey = `thumbnails/${other.id}/${OTHER_TOKEN}`
+    await other.save()
+    await putThumbnail(production.thumbnailKey!)
+    await putThumbnail(other.thumbnailKey)
+    // Objets présents sous les clés croisées : le refus vient de la base, pas de R2.
+    await putThumbnail(`thumbnails/${other.id}/${TOKEN}`)
+    await putThumbnail(`thumbnails/${production.id}/${OTHER_TOKEN}`)
+    await drive.use('r2').put(`${production.thumbnailKey}/original.png`, Buffer.from('x'))
+
+    const base = `/media/${production.thumbnailKey}`
+    const paths = [
+      `/media/thumbnails/${other.id}/${TOKEN}/w400.webp`,
+      `/media/thumbnails/${production.id}/${OTHER_TOKEN}/w400.webp`,
+      // 4 segments encodés dont la forme décodée est une clé valide existante : les segments
+      // bruts (non décodés) sont refusés par la liste blanche.
+      `${base}/w400%2Ewebp`,
+      `/media/thumbnails/${production.id}/${TOKEN.slice(0, 19)}%32/w400.webp`,
+      `/media/thumbnails%2F${production.id}/${TOKEN}/w400.webp`,
+      `/%6Dedia/${production.thumbnailKey}/w400.webp`,
+      `${base}/w128.webp`,
+      `${base}/og.jpg`,
+      `${base}/original.png`,
+      `${base}/W400.webp`,
+      `${base}/w400.webp/extra`,
+      `${base}//w400.webp`,
+      `/media/thumbnails/${production.id}/w400.webp`,
+      `/media/thumbnails/not-a-uuid/${TOKEN}/w400.webp`,
+      `/media/thumbnails/${production.id}/short/w400.webp`,
+      `${base}/%2e%2e/w400.webp`,
+      `/media/posters/${production.id}/${TOKEN}/w400.webp`,
+    ]
+    for (const path of paths) {
+      const response = await rawRequest(path)
+      assert.equal(response.status, 404, path)
+      assert.equal(response.headers['cache-control'], 'no-store', path)
+    }
+    const ok = await rawRequest(`${base}/w400.webp`)
+    assert.equal(ok.status, 200)
+    const otherOk = await rawRequest(`/media/${other.thumbnailKey}/w400.webp`)
+    assert.equal(otherOk.status, 200)
+  })
+
+  test('panne du stockage (autre que « introuvable ») → 503 no-store', async ({ assert }) => {
+    const fakeDisk = drive.fake('r2')
+    const production = await createProduction()
+    await putThumbnail(production.thumbnailKey!)
+    fakeDisk.getMetaData = async () => {
+      throw new Error('storage unavailable', { cause: { $metadata: { httpStatusCode: 500 } } })
+    }
+
+    const response = await rawRequest(`/media/${production.thumbnailKey}/w400.webp`)
+
+    assert.equal(response.status, 503)
+    assert.equal(response.headers['cache-control'], 'no-store')
+    assert.equal(response.headers['x-content-type-options'], 'nosniff')
+  })
+
+  test('objet absent de R2 (clé courante d’une production publiée) → 404 no-store', async ({
+    client,
+  }) => {
+    drive.fake('r2')
+    const production = await createProduction()
+
+    const response = await client.get(`/media/${production.thumbnailKey}/w1600.webp`)
+
+    response.assertStatus(404)
+    response.assertHeader('cache-control', 'no-store')
+  })
+
+  test('dépublication après un 200 : le serveur refuse une revalidation If-None-Match (404, pas 304) — le cache immutable du navigateur, lui, ne revalide pas', async ({
+    client,
+  }) => {
+    drive.fake('r2')
+    const production = await createProduction()
+    await putThumbnail(production.thumbnailKey!)
+    const url = `/media/${production.thumbnailKey}/w800.webp`
+
+    const first = await client.get(url)
+    first.assertStatus(200)
+    const etag = first.header('etag')!
+
+    production.status = 'unpublished'
+    await production.save()
+
+    const revalidation = await client.get(url).header('If-None-Match', etag)
+    revalidation.assertStatus(404)
+    revalidation.assertHeader('cache-control', 'no-store')
+  })
+})
+
+// Story 11.2 / D37 — la vignette n'apparaît que dans la bannière : aucune page publique
+// existante (blocs d'accueil, listing, profil, détail) n'expose la clé ni une URL d'image.
+test.group('Public pages | cartes texte malgré une vignette (D37)', (group) => {
+  group.each.setup(async () => {
+    await db.beginGlobalTransaction()
+    return () => db.rollbackGlobalTransaction()
+  })
+
+  test('accueil, listing, profil et détail : ni thumbnails/ ni /media/thumbnails', async ({
+    client,
+    assert,
+  }) => {
+    const production = await createProduction()
+    const author = await Author.create({
+      firstNames: 'Jeanne',
+      lastNames: 'Vignettefictive',
+      consentConfirmedAt: DateTime.now(),
+    })
+    await db.table('production_authors').insert({
+      production_id: production.id,
+      author_id: author.id,
+      position: 1,
+    })
+    await ProductionAuthorService.refreshDenormalizedNames([production.id])
+
+    const pages = [
+      '/',
+      `/productions?q=${encodeURIComponent(production.title)}`,
+      `/authors/${author.slug}`,
+      `/productions/${production.slug}`,
+    ]
+    for (const url of pages) {
+      const response = await client.get(url)
+      response.assertStatus(200)
+      const html = response.text()
+      assert.include(html, production.slug, `${url} : la production est bien rendue`)
+      assert.notInclude(html, 'thumbnails/', url)
+      assert.notInclude(html, production.thumbnailKey!, url)
+      assert.notInclude(html, 'thumbnailKey', url)
+      assert.notInclude(html, 'imageUrl', url)
+    }
+  })
+})
+
+// Revue 11.2 — `MediaMiddleware` court-circuite shield : `nosniff` est posé par le contrôleur.
+test.group('Public media | X-Content-Type-Options', (group) => {
+  group.each.setup(async () => {
+    await db.beginGlobalTransaction()
+    return async () => {
+      drive.restore('r2')
+      await db.rollbackGlobalTransaction()
+    }
+  })
+
+  test('nosniff sur 200, 304 et 404 (photos d’auteurs et vignettes), HEAD compris', async ({
+    assert,
+  }) => {
+    drive.fake('r2')
+    const author = await createAuthor({ consent: true })
+    await putVariants(author.photoKey!)
+    const production = await createProduction()
+    await putThumbnail(production.thumbnailKey!)
+    const draft = await createProduction({ status: 'draft' })
+    await putThumbnail(draft.thumbnailKey!)
+
+    for (const url of [
+      `/media/${author.photoKey}/w128.webp`,
+      `/media/${production.thumbnailKey}/w800.webp`,
+    ]) {
+      const served = await rawRequest(url)
+      assert.equal(served.status, 200, url)
+      assert.equal(served.headers['x-content-type-options'], 'nosniff', url)
+
+      const etag = served.headers['etag'] as string
+      const notModified = await new Promise<RawResponse>((resolve, reject) => {
+        const req = httpRequest(
+          {
+            host: process.env.HOST || 'localhost',
+            port: Number(process.env.PORT),
+            path: url,
+            headers: { 'If-None-Match': etag },
+          },
+          (res) => {
+            res.resume()
+            res.on('end', () =>
+              resolve({ status: res.statusCode ?? 0, headers: res.headers, body: '' })
+            )
+          }
+        )
+        req.on('error', reject)
+        req.end()
+      })
+      assert.equal(notModified.status, 304, url)
+      assert.equal(notModified.headers['x-content-type-options'], 'nosniff', url)
+
+      const head = await rawRequest(url, 'HEAD')
+      assert.equal(head.headers['x-content-type-options'], 'nosniff', url)
+    }
+
+    for (const url of [
+      `/media/authors/${author.id}/${OTHER_TOKEN}/w128.webp`,
+      `/media/${draft.thumbnailKey}/w400.webp`,
+      '/media/productions/abc/file.pdf',
+      '/media/thumbnails/%2e%2e/x/w400.webp',
+    ]) {
+      const refused = await rawRequest(url)
+      assert.equal(refused.status, 404, url)
+      assert.equal(refused.headers['x-content-type-options'], 'nosniff', url)
+    }
+  })
+})
+
+// Story 11.3 — image extraite d'une vidéo hébergée : poster courant d'un fichier vidéo d'une
+// production publiée, même cache que les vignettes.
+async function createVideoFile(
+  production: Production,
+  options: { token?: string | null; mimeType?: string } = {}
+): Promise<ProductionFile> {
+  const file = await ProductionFile.create({
+    productionId: production.id,
+    fileKey: `productions/${production.id}/video-${sequence++}.mp4`,
+    originalName: 'video.mp4',
+    mimeType: options.mimeType ?? 'video/mp4',
+    sizeBytes: 10,
+    storageProvider: 'r2',
+  })
+  if (options.token !== null) {
+    file.posterKey = `posters/${file.id}/${options.token ?? TOKEN}`
+    await file.save()
+  }
+  return file
+}
+
+async function putPoster(prefix: string) {
+  const disk = drive.use('r2')
+  for (const key of PosterService.keys(prefix)) {
+    await disk.put(key, Buffer.from(`bytes of ${key}`), { contentType: 'image/webp' })
+  }
+}
+
+test.group('Public media | image extraite des vidéos (Story 11.3)', (group) => {
+  group.each.setup(async () => {
+    await db.beginGlobalTransaction()
+    return async () => {
+      drive.restore('r2')
+      await db.rollbackGlobalTransaction()
+    }
+  })
+
+  test('production publiée : 3 variantes en image/webp, cache d’un an immutable, ETag, HEAD', async ({
+    client,
+    assert,
+  }) => {
+    drive.fake('r2')
+    const production = await createProduction({ withThumbnail: false })
+    const file = await createVideoFile(production)
+    await putPoster(file.posterKey!)
+
+    for (const variant of ['w400.webp', 'w800.webp', 'w1600.webp']) {
+      const response = await client.get(`/media/${file.posterKey}/${variant}`)
+      response.assertStatus(200)
+      response.assertHeader('content-type', 'image/webp')
+      response.assertHeader('cache-control', YEAR)
+      assert.equal(
+        Buffer.from(response.response.body ?? response.text()).toString(),
+        `bytes of ${file.posterKey}/${variant}`
+      )
+    }
+    const first = await rawRequest(`/media/${file.posterKey}/w800.webp`)
+    assert.isString(first.headers['etag'])
+    const head = await rawRequest(`/media/${file.posterKey}/w800.webp`, 'HEAD')
+    assert.equal(head.status, 200)
+    assert.equal(head.body, '')
+  })
+
+  test('brouillon, dépubliée, ancienne clé, fichier supprimé, non vidéo → 404 no-store', async ({
+    assert,
+  }) => {
+    drive.fake('r2')
+    const draft = await createProduction({ status: 'draft', withThumbnail: false })
+    const unpublished = await createProduction({ status: 'unpublished', withThumbnail: false })
+    const published = await createProduction({ withThumbnail: false })
+    const draftFile = await createVideoFile(draft)
+    const unpublishedFile = await createVideoFile(unpublished)
+    const replaced = await createVideoFile(published, { token: OTHER_TOKEN })
+    const removed = await createVideoFile(published)
+    const pdf = await createVideoFile(published, { mimeType: 'application/pdf' })
+    const removedKey = removed.posterKey!
+    await removed.delete()
+    const oldKey = `posters/${replaced.id}/${TOKEN}`
+    for (const prefix of [
+      draftFile.posterKey!,
+      unpublishedFile.posterKey!,
+      oldKey,
+      removedKey,
+      pdf.posterKey!,
+    ]) {
+      await putPoster(prefix)
+      const response = await rawRequest(`/media/${prefix}/w400.webp`)
+      assert.equal(response.status, 404, prefix)
+      assert.equal(response.headers['cache-control'], 'no-store', prefix)
+      assert.equal(response.body, '', prefix)
+    }
+  })
+
+  test('variante inconnue, jeton d’un autre fichier, clé mal formée → 404', async ({ assert }) => {
+    drive.fake('r2')
+    const production = await createProduction({ withThumbnail: false })
+    const file = await createVideoFile(production)
+    const other = await createVideoFile(production, { token: OTHER_TOKEN })
+    await putPoster(file.posterKey!)
+    await putPoster(other.posterKey!)
+    const base = `/media/${file.posterKey}`
+    const paths = [
+      `${base}/w128.webp`,
+      `${base}/og.jpg`,
+      `${base}/w400.webp/extra`,
+      `/media/posters/${file.id}/${OTHER_TOKEN}/w400.webp`,
+      `/media/posters/${other.id}/${TOKEN}/w400.webp`,
+      `/media/posters/not-a-uuid/${TOKEN}/w400.webp`,
+      `/media/posters/${file.id}/short/w400.webp`,
+      `${base}/w400%2Ewebp`,
+      `/media/posters/${production.id}/${TOKEN}/w400.webp`,
+    ]
+    for (const path of paths) {
+      const response = await rawRequest(path)
+      assert.equal(response.status, 404, path)
+      assert.equal(response.headers['cache-control'], 'no-store', path)
+    }
+    const ok = await rawRequest(`${base}/w400.webp`)
+    assert.equal(ok.status, 200)
+    const otherOk = await rawRequest(`/media/${other.posterKey}/w400.webp`)
+    assert.equal(otherOk.status, 200)
+  })
+
+  test('page de détail : posterUrl du lecteur vidéo (w1600), null sans poster', async ({
+    client,
+    assert,
+  }) => {
+    const production = await createProduction({ withThumbnail: false })
+    const withPoster = await createVideoFile(production)
+    const withoutPoster = await createVideoFile(production, { token: null })
+
+    drive.fake('r2')
+    const response = await client.get(`/productions/${production.slug}`)
+    response.assertStatus(200)
+    const match = response.text().match(/data-page="([^"]*)"/)
+    const props = JSON.parse(match![1].replace(/&quot;/g, '"')).props
+    const files = props.production.files as {
+      id: string
+      posterUrl: string | null
+    }[]
+    const byId = new Map(files.map((file) => [file.id, file.posterUrl]))
+    assert.equal(byId.get(withPoster.id), `/media/${withPoster.posterKey}/w1600.webp`)
+    assert.isNull(byId.get(withoutPoster.id))
   })
 })

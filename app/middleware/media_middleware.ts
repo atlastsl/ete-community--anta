@@ -10,6 +10,8 @@ const PREFIX = '/media/'
  * messages of the page being loaded are not consumed, the session cookie is not
  * rewritten), no `XSRF-TOKEN` cookie, no auth lookup — and the cacheable responses carry
  * no `Set-Cookie`. The `media.show` route stays registered for naming and URL building.
+ * Shield does not run either: `MediaController` sets `X-Content-Type-Options` itself. Served
+ * prefixes (`authors/`, `thumbnails/` since Story 11.2) are decided by `MediaService`.
  */
 export default class MediaMiddleware {
   async handle(ctx: HttpContext, next: NextFn) {
@@ -17,8 +19,13 @@ export default class MediaMiddleware {
     const path = ctx.request.url()
     if ((method !== 'GET' && method !== 'HEAD') || !path.startsWith(PREFIX)) return next()
 
-    // Raw (undecoded) segments: the strict key allow-list refuses any `%` escape.
-    ctx.params = { '*': path.slice(PREFIX.length).split('/') }
+    // Raw (undecoded) segments: `request.url()` is passed through `decodeURI` (unreserved
+    // escapes such as `%2E` are decoded), so the segments come from the Node request URL and
+    // the strict key allow-list refuses any `%` escape (review of 11.2). A path whose raw form
+    // does not start with `/media/` (e.g. `/%6Dedia/…`) gets no segment, hence a 404.
+    const rawPath = (ctx.request.request.url ?? '').split('?')[0]
+    const segments = rawPath.startsWith(PREFIX) ? rawPath.slice(PREFIX.length).split('/') : []
+    ctx.params = { '*': segments }
     return new MediaController().show(ctx)
   }
 }

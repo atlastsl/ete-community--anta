@@ -18,6 +18,8 @@ type ProductionFile = {
   mimeType: string
   sizeBytes: number
   url: string | null
+  /** Image extraite de la vidéo (Story 11.3), `null` sans poster. */
+  posterUrl: string | null
   downloadUrl: string
 }
 
@@ -217,16 +219,12 @@ export default function ProductionShow({ production }: Props) {
               <MetaRow
                 label={t('production_detail.category')}
                 value={
-                  production.category
-                    ? taxonomyLabel(t, 'categories', production.category)
-                    : null
+                  production.category ? taxonomyLabel(t, 'categories', production.category) : null
                 }
               />
               <MetaRow
                 label={t('production_detail.domain')}
-                value={
-                  production.domain ? taxonomyLabel(t, 'domains', production.domain) : null
-                }
+                value={production.domain ? taxonomyLabel(t, 'domains', production.domain) : null}
               />
               {production.subdomain.length > 0 && (
                 <div className="border-t border-stone-100 py-2">
@@ -246,7 +244,10 @@ export default function ProductionShow({ production }: Props) {
                 label={t('production_detail.language')}
                 value={languageLabel(production.language)}
               />
-              <MetaRow label={t('production_detail.country')} value={production.publicationCountry} />
+              <MetaRow
+                label={t('production_detail.country')}
+                value={production.publicationCountry}
+              />
               <MetaRow label={t('production_detail.work_published_at')} value={workDate} />
               <MetaRow
                 label={t('production_detail.license_label')}
@@ -274,11 +275,7 @@ export default function ProductionShow({ production }: Props) {
             )}
 
             <div className="mt-4 border-t border-stone-100 pt-4">
-              <ShareButton
-                slug={production.slug}
-                title={production.title}
-                className="w-full"
-              />
+              <ShareButton slug={production.slug} title={production.title} className="w-full" />
             </div>
           </div>
         </aside>

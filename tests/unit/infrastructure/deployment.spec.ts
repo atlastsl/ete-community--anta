@@ -23,6 +23,22 @@ test.group('Deployment (Docker + Caddy)', () => {
     assert.include(dockerfile, 'node ace migration:run --force && exec node bin/server.js')
   })
 
+  test('ffmpeg (apt) dans l’étape runtime avant USER node, et dans la CI (Story 11.3)', ({
+    assert,
+  }) => {
+    const dockerfile = read('Dockerfile')
+    const runtime = dockerfile.slice(dockerfile.search(/FROM .* AS runtime/))
+    const install = runtime.indexOf('apt-get install -y --no-install-recommends ffmpeg')
+    assert.isAbove(install, -1)
+    assert.isBelow(install, runtime.indexOf('USER node'))
+    assert.include(runtime, 'rm -rf /var/lib/apt/lists/*')
+
+    const ci = read('.github/workflows/ci.yml')
+    const ciInstall = ci.indexOf('apt-get install -y --no-install-recommends ffmpeg')
+    assert.isAbove(ciInstall, -1)
+    assert.isBelow(ciInstall, ci.indexOf('node ace test unit'))
+  })
+
   test('.dockerignore exclut les fichiers de secrets', ({ assert }) => {
     const ignore = read('.dockerignore').split('\n')
     assert.includeMembers(ignore, ['.env', '.env.*', 'node_modules', 'build'])

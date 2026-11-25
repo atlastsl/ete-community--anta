@@ -27,7 +27,7 @@ test.group('MediaViewer | dispatch par type MIME', () => {
 
   test('PDF -> PdfViewer ; vidéo/audio -> éléments natifs', ({ assert }) => {
     assert.include(mediaViewer, 'PdfViewer')
-    assert.include(mediaViewer, '<video controls')
+    assert.match(mediaViewer, /<video\s+controls/)
     assert.include(mediaViewer, '<audio controls')
   })
 
@@ -69,5 +69,12 @@ test.group('Page détail | liens externes (6.3)', () => {
   test('lien simple → nouvel onglet sécurisé', ({ assert }) => {
     assert.include(productionPage, 'target="_blank"')
     assert.include(productionPage, 'rel="noopener noreferrer"')
+  })
+})
+
+test.group('MediaViewer | poster de la vidéo (11.3)', () => {
+  test('attribut poster du lecteur vidéo depuis posterUrl (image extraite)', ({ assert }) => {
+    assert.include(mediaViewer, 'posterUrl?: string | null')
+    assert.include(mediaViewer, 'poster={posterUrl ?? undefined}')
   })
 })

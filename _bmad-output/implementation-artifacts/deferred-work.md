@@ -140,5 +140,30 @@
 ## Deferred from: dev of 10-8-tests-auteurs-sur-le-site-public (2026-11-19)
 
 - **Lighthouse mobile 4G sur le staging (AC 3 de 10.8, NFR17)** : `/authors` et un profil, LCP < 3 s, à lancer par Aurélien après déploiement de l'Epic 10 et à consigner dans la story 10.8 (services distants hors des sessions de dev).
+- **Lighthouse mobile 4G sur le staging (AC 7 de 11.7, NFR17)** : accueil avec 3 productions à la une (image `lead` en LCP probable), LCP < 3 s, à lancer par Aurélien après déploiement de l'Epic 11 et à consigner dans la story 11.7.
 - ~~**Suite `browser` + axe (architecture P2.8)**~~ — **refusée par Aurélien le 2026-11-21** : pas de dépendance `@axe-core/playwright` ni de suite `browser` ; accessibilité couverte par les tests de source et l'audit Lighthouse manuel.
 - **`/media` sert la photo d'un auteur consentant sans production publiée** (question PO 10.8) : conforme à 10.2 (public = consentement), clé jamais exposée tant que le profil n'est pas visible ; aligner sur `visibleOnSite` si le PO le souhaite (le test de matrice l'indique).
+
+## Deferred from: code review of 11-1-vignette-d-une-production-dans-le-panel-admin (2026-11-21)
+
+- **Erreurs serveur de `FileUploader` jamais affichées** : `files_controller.ts` utilise `session.flashErrors` (sac `errorsBag`), or seul `inputErrorsBag` devient la prop Inertia `errors` (`@adonisjs/inertia`, `getValidationErrors`) → `props.errors.file` reste vide (MIME falsifié, fichier absent). Corriger comme `thumbnails_controller.ts` (`flashValidationErrors`) dans une story de l'Epic 4/11.
+- ~~**Envois simultanés de vignettes (11.4)**~~ — **résolu** en 11.4 : verrou de page (`onBusyChange` de `ThumbnailField`, D-11.4-1).
+- ~~**Aperçu du poster vidéo dans `ThumbnailField` (11.3)**~~ — **résolu** en 11.3 (`posterPreviewUrl`), monté par `FeaturedSlot` en 11.4.
+
+## Deferred from: dev of 11-2-diffusion-publique-des-images-de-la-banniere (2026-11-21)
+
+- ~~**Test « ratios extrêmes » d'`image_service.spec.ts` (11.1) instable sous charge**~~ — **résolu** à la revue de 11.2 : budgets 15 s + `.timeout(30_000)`.
+- **Cache `immutable` des vignettes** : une image dépubliée reste affichée depuis le cache navigateur (jusqu'à un an) chez qui l'a chargée — accepté (P2-10), information PO ; évolution possible : `max-age` plus court sans `immutable`.
+- ~~**`sizes` de l'emplacement `lead` (11.6)**~~ — **résolu** en 11.6 (D-11.6-3) : image étirée en position absolue à partir de `lg`, `sizes` = largeur rendue par `object-cover` mesurée au navigateur (2 colonnes latérales + 400 px).
+
+## Deferred from: code review of 11-3-image-extraite-des-videos-hebergees (2026-11-21)
+
+- **Plafond mémoire d'ffmpeg** : l'extraction est bornée en temps (20 s, `SIGKILL`), en threads (`-threads 1`) et en taille d'image (réduction à 1600×900 minimum couvrant), mais pas en mémoire ; une vidéo malveillante pourrait faire grimper la RSS du décodeur. À poser au niveau du conteneur (`mem_limit` / `deploy.resources.limits.memory` dans `compose.yaml`) ou par processus (`prlimit --as`), selon la mémoire du VPS de production (8.6).
+
+## Deferred from: dev of 11-4-page-admin-a-la-une (2026-11-21)
+
+- **Suppression de la vidéo d'une production à la une sans vignette** : `FilesController.destroy` ne vérifie pas la règle FR50 ; la production reste à la une sans image (question PO de 11.4). Bloquer comme le retrait de vignette (`FeaturedService.assertThumbnailRemovable`) si le PO le souhaite. **Revu en 11.5 (D-11.5-6)** : hors FR51 (la production reste publiée), ni bloquée ni retirée automatiquement ; la page « À la une » signale « Vignette manquante » et 11.6 doit tolérer une carte sans image. **11.6 (D-11.6-2)** : la production sans image affichable est écartée de la bannière publique (comme l'aperçu admin), disposition recalculée. Question PO maintenue.
+
+## Deferred from: code review of 11-5-retrait-automatique-d-une-production-a-la-une (2026-11-21)
+
+- **Seeder de démo et productions à la une** : `production_demo_seeder.ts` supprime directement les productions `SEED_DEMO` (`Production.query().delete()`) ; le `CASCADE` retire leurs emplacements sans recompactage (trous de positions) ni journal `featured_auto_remove`. Développement seulement (jamais lancé sur la base partagée) ; `removeProduction` tolère les trous (les suivantes remontent depuis la position retirée). Corriger en passant par `FeaturedService.removeProduction` ou en vidant la une avant la purge si le seeder sert encore.

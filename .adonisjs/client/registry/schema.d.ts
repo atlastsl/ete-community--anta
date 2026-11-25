@@ -391,6 +391,30 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/links_controller').default['destroy']>>>
     }
   }
+  'admin.productions.thumbnail.store': {
+    methods: ["POST"]
+    pattern: '/admin/productions/:productionId/thumbnail'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/admin/thumbnail_validator').thumbnailValidator)>>
+      paramsTuple: [ParamValue]
+      params: { productionId: ParamValue }
+      query: ExtractQuery<InferInput<(typeof import('#validators/admin/thumbnail_validator').thumbnailValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/thumbnails_controller').default['store']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/thumbnails_controller').default['store']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'admin.productions.thumbnail.destroy': {
+    methods: ["DELETE"]
+    pattern: '/admin/productions/:productionId/thumbnail'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { productionId: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/thumbnails_controller').default['destroy']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/thumbnails_controller').default['destroy']>>>
+    }
+  }
   'admin.authors.create': {
     methods: ["GET","HEAD"]
     pattern: '/admin/authors/create'
@@ -509,6 +533,42 @@ export interface Registry {
       query: {}
       response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/authors_controller').default['withdrawConsent']>>>
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/authors_controller').default['withdrawConsent']>>>
+    }
+  }
+  'admin.featured.candidates': {
+    methods: ["GET","HEAD"]
+    pattern: '/admin/featured/candidates'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/featured_controller').default['candidates']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/featured_controller').default['candidates']>>>
+    }
+  }
+  'admin.featured': {
+    methods: ["GET","HEAD"]
+    pattern: '/admin/featured'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/featured_controller').default['index']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/featured_controller').default['index']>>>
+    }
+  }
+  'admin.featured.update': {
+    methods: ["PUT"]
+    pattern: '/admin/featured'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/admin/featured_validator').featuredValidator)>>
+      paramsTuple: []
+      params: {}
+      query: ExtractQuery<InferInput<(typeof import('#validators/admin/featured_validator').featuredValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/featured_controller').default['update']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/featured_controller').default['update']>>> | { status: 422; response: { errors: SimpleError[] } }
     }
   }
   'admin.stats': {

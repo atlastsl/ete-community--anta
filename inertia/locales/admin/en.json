@@ -2,6 +2,7 @@
   "nav": {
     "productions": "Productions",
     "authors": "Authors",
+    "featured": "Featured",
     "statistics": "Statistics",
     "users": "Users",
     "logout": "Sign out",
@@ -42,6 +43,7 @@
     "draft_saved": "Draft saved.",
     "update_success": "Changes saved.",
     "auto_unpublished": "Changes saved. The production was unpublished because it is now incomplete.",
+    "auto_unpublished_featured": "Changes saved. The production was unpublished because it is now incomplete, and removed from the featured banner.",
     "published": "Production published.",
     "unpublish_success": "Production unpublished.",
     "delete_success": "Production deleted.",
@@ -57,6 +59,9 @@
       "title": "Delete this production?",
       "description": "This action is irreversible. The production and its associated files will be permanently deleted.",
       "confirm": "Delete permanently"
+    },
+    "confirm": {
+      "featured_warning": "This production is featured: it will be removed from the banner."
     },
     "form": {
       "sections": {
@@ -482,10 +487,13 @@
       "delete": "Delete",
       "password_reset": "Password reset",
       "consent_confirm": "Consent confirmed",
-      "consent_withdraw": "Consent withdrawn"
+      "consent_withdraw": "Consent withdrawn",
+      "featured_update": "Featured selection changed",
+      "featured_auto_remove": "Automatically removed from featured"
     },
     "resource": {
-      "author": "Author"
+      "author": "Author",
+      "featured_selection": "Featured selection"
     }
   },
   "taxonomy": {
@@ -768,5 +776,107 @@
     "home": "Home",
     "search": "Advanced search",
     "authors": "Authors"
+  },
+  "thumbnail": {
+    "upload": "Upload a thumbnail",
+    "replace": "Replace thumbnail",
+    "remove": "Remove thumbnail",
+    "help": "JPEG, PNG or WebP · 5 MB max · 16:9 recommended (automatic cropping)",
+    "drop_hint": "or drop an image here",
+    "uploading": "Uploading thumbnail… {{percent}}%",
+    "preview_unavailable": "Preview unavailable",
+    "extracted": "Frame extracted from the video",
+    "uploaded": "Thumbnail saved.",
+    "removed": "Thumbnail removed.",
+    "errors": {
+      "no_file": "No image received.",
+      "invalid_type": "Choose a valid JPEG, PNG or WebP image.",
+      "too_large": "The thumbnail must not exceed 5 MB.",
+      "dimensions": "The image is too large (40 megapixels maximum).",
+      "not_found": "This production no longer exists.",
+      "storage": "The thumbnail could not be updated. Try again in a moment.",
+      "network": "The request failed. Check your connection and try again.",
+      "required_for_featured": "A thumbnail is required for a featured production."
+    }
+  },
+  "featured": {
+    "heading": "Featured",
+    "intro": "Up to 3 published productions, shown in this order at the top of the home page. Changes apply only after « Save ».",
+    "count": "{{count}} / 3 slots",
+    "slots_heading": "Slots",
+    "position": "Position {{n}}",
+    "empty_slot": "Free slot",
+    "by": "By {{names}}",
+    "badges": {
+      "shown": "Shown",
+      "missing": "Missing thumbnail",
+      "unavailable": "Not published"
+    },
+    "missing_notice": "This production has no thumbnail. Add one to save the selection.",
+    "actions": {
+      "move_up": "Move « {{title}} » up",
+      "move_down": "Move « {{title}} » down",
+      "remove": "Remove",
+      "remove_label": "Remove « {{title}} » from the featured selection"
+    },
+    "announce": {
+      "moved": "« {{title}} » moved to position {{n}}.",
+      "removed": "« {{title}} » removed from the selection.",
+      "added": "« {{title}} » added at position {{n}}."
+    },
+    "unsaved": "Unsaved changes",
+    "save": "Save",
+    "saving": "Saving…",
+    "save_blocked": "Cannot save: slot {{n}} has no thumbnail.",
+    "saved": "Featured selection saved.",
+    "leave_confirm": "The featured selection has unsaved changes. Leave the page anyway?",
+    "preview": {
+      "heading": "Banner preview",
+      "none": "No banner on the home page",
+      "shown_one": "{{count}} production shown",
+      "shown_other": "{{count}} productions shown",
+      "waiting_one": "slot {{slots}} is waiting for its thumbnail",
+      "waiting_other": "slots {{slots}} are waiting for their thumbnail",
+      "layouts": "Layout: 1 production = full width; 2 = two columns; 3 = the first on 2/3, the next two stacked.",
+      "by": "By",
+      "views": "Views:",
+      "downloads": "Downloads:"
+    },
+    "picker": {
+      "label": "Published production",
+      "placeholder": "Title or author…",
+      "help": "Only published productions are offered.",
+      "loading": "Searching…",
+      "no_results": "No published production found.",
+      "error": "Search unavailable, try again.",
+      "results_count_one": "{{count}} production found.",
+      "results_count_other": "{{count}} productions found."
+    },
+    "state": {
+      "thumbnail": "Thumbnail",
+      "poster": "Hosted video — extracted frame",
+      "missing": "No thumbnail — upload one"
+    },
+    "errors": {
+      "invalid": "Invalid selection. Reload the page and try again.",
+      "too_many": "Up to 3 productions can be featured.",
+      "duplicate": "A production can take only one slot.",
+      "not_found": "A chosen production no longer exists. Remove it and try again.",
+      "not_published": "Only published productions can be featured.",
+      "thumbnail_required": "A chosen production lacks its required thumbnail.",
+      "storage": "The selection could not be saved. Try again in a moment.",
+      "network": "The request failed. Check your connection and try again.",
+      "refresh": "The thumbnail states could not be refreshed.",
+      "not_saved": "The selection was not saved (session expired?). Reload the page and try again.",
+      "not_found_slot": "The production in slot {{n}} no longer exists. Remove it and try again.",
+      "not_published_slot": "The production in slot {{n}} is not published.",
+      "thumbnail_required_slot": "The production in slot {{n}} lacks its required thumbnail."
+    },
+    "add_heading": "Add a featured production",
+    "thumbnail_required": "Thumbnail required",
+    "unavailable_notice": "This production is no longer published: remove it from the selection.",
+    "save_blocked_unavailable": "Cannot save: the production in slot {{n}} is no longer published.",
+    "save_blocked_refresh": "Cannot save until the thumbnail states are refreshed.",
+    "retry": "Retry"
   }
 }

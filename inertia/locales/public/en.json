@@ -42,6 +42,12 @@
       "recent": "Recently added"
     }
   },
+  "featured": {
+    "region": "Featured productions",
+    "by": "By",
+    "views": "Views:",
+    "downloads": "Downloads:"
+  },
   "search": {
     "label": "Search for a production",
     "submit": "Search",
