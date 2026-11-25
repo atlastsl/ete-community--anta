@@ -92,11 +92,12 @@ test.group('Page de détail | suggestions (12.4)', () => {
     assert.include(page, '<SuggestionsGrid key={production.slug} slug={production.slug} />')
     // Après la fermeture de la grille `lg:grid-cols-3`, avant le ViewTracker.
     const gridAt = page.indexOf('lg:grid-cols-3')
-    const asideEnd = page.indexOf('</aside>')
+    // Metadata column: a plain container since Story 13.2 (was an aside element).
+    const metaAt = page.indexOf('<div className="lg:col-span-1">')
     const suggestionsAt = page.indexOf('<SuggestionsGrid')
     const trackerAt = page.indexOf('<ViewTracker')
-    assert.isAbove(asideEnd, gridAt)
-    assert.isAbove(suggestionsAt, asideEnd)
+    assert.isAbove(metaAt, gridAt)
+    assert.isAbove(suggestionsAt, metaAt)
     assert.isAbove(trackerAt, suggestionsAt)
   })
 })

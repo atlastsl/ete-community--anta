@@ -76,6 +76,8 @@ export type FeaturedBannerItem = {
   id: string
   slug: string
   title: string
+  /** Stored language: `lang` of the card title when it differs from the UI (Story 13.2). */
+  language: string | null
   authors: AuthorCredit[]
   imageUrl: string
   viewsCount: number
@@ -260,6 +262,7 @@ export default class FeaturedService {
       id: production.id,
       slug: production.slug,
       title: production.title,
+      language: production.language,
       authors: PublicBylineService.of(production),
       imageUrl,
       viewsCount: Number(production.$extras.viewsCount ?? 0),

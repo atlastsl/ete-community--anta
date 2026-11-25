@@ -104,3 +104,12 @@ jobs:
 
       - name: Run functional tests
         run: node ace test functional
+
+      # Story 13.1 (NFR16, P2-16) : audit axe WCAG 2.1 A/AA des pages publiques (FR et EN).
+      # Chromium de Playwright (version épinglée par `playwright` dans package.json) et ses
+      # bibliothèques système. Pas de `continue-on-error` : une violation bloque le merge.
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run browser tests (axe)
+        run: node ace test browser

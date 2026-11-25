@@ -41,6 +41,8 @@ $C restart app
 Mêmes clés que celles listées sans valeur dans `compose.yaml`, plus `DOMAIN=anta.peraha.com` (exigé par
 l'interpolation de `compose.yaml` même si Caddy est désactivé). Valeurs entre **apostrophes** (Compose
 n'interpole pas `$` dedans). `APP_URL=https://anta.peraha.com`, `APP_KEY` propre au staging.
+`ROBOTS_DISALLOW_ALL='true'` : `robots.txt` exclut tout le site (`Disallow: /`, pas de ligne `Sitemap:`) pour que le
+staging ne soit pas indexé (Story 13.3) ; absente ou `false` en production.
 
 Généré une fois depuis le VPS de dev (Doppler `anta/dev_personal` + surcharges staging), envoyé par
 `ssh … 'umask 077; cat > /opt/anta/.env'` sans fichier intermédiaire. Pour changer une valeur : éditer

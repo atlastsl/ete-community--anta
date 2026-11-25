@@ -143,7 +143,7 @@
 - **Lighthouse mobile 4G sur le staging (AC 7 de 11.7, NFR17)** : accueil avec 3 productions à la une (image `lead` en LCP probable), LCP < 3 s, à lancer par Aurélien après déploiement de l'Epic 11 et à consigner dans la story 11.7.
 - **Lighthouse mobile 4G sur le staging (AC 5 de 12.5, NFR17, NFR18)** : accueil complet (bannière + 4 blocs) et une page de détail, LCP < 3 s, suggestions affichées < 2 s ; à lancer par Aurélien après déploiement de l'Epic 12 et à consigner dans la story 12.5.
 - **Test de charge sur le staging (AC 5 de 12.5, NFR20)** : 50 visiteurs simultanés sur la recherche et les filtres, p95 < 1 s ; seulement avec l'accord d'Aurélien (staging partagé). Mesure locale consignée dans la story 12.5 : p95 < 0,5 s avec un temps de réflexion de 1–3 s, mais **p95 1,3–2 s à saturation** (50 requêtes en vol en continu, un seul processus Node) → PO 2026-11-25 : la définition retenue est celle des visiteurs avec pauses (p95 < 1 s attendu dans ce scénario).
-- ~~**Suite `browser` + axe (architecture P2.8)**~~ — **refusée par Aurélien le 2026-11-21** : pas de dépendance `@axe-core/playwright` ni de suite `browser` ; accessibilité couverte par les tests de source et l'audit Lighthouse manuel.
+- ~~**Suite `browser` + axe (architecture P2.8)**~~ — **refusée par Aurélien le 2026-11-21** : pas de dépendance `@axe-core/playwright` ni de suite `browser` ; accessibilité couverte par les tests de source et l'audit Lighthouse manuel. Refus limité aux Epics 10–12 : la suite `browser` + axe est livrée par la Story 13.1 (Epic 13).
 - **`/media` sert la photo d'un auteur consentant sans production publiée** (question PO 10.8) : conforme à 10.2 (public = consentement), clé jamais exposée tant que le profil n'est pas visible ; aligner sur `visibleOnSite` si le PO le souhaite (le test de matrice l'indique).
 
 ## Deferred from: code review of 11-1-vignette-d-une-production-dans-le-panel-admin (2026-11-21)
@@ -186,3 +186,45 @@
 ## Deferred from: code review of 12-4-suggestions-de-productions-similaires (2026-11-24)
 
 - **Erreur de base dans `SuggestionsMiddleware`** : comme pour `/media/*`, une exception levée avant le routeur (base indisponible) part au gestionnaire d'erreurs global → 500 non JSON, sans `Cache-Control: no-store`. Le client la traite comme 0 résultat (section retirée, D22) ; à reprendre avec `/media` (try/catch → 503 JSON `no-store`) si un cache intermédiaire est ajouté.
+
+## Deferred from: dev of 13-1-audit-automatise-axe-des-pages-publiques (2026-11-25)
+
+- **Sous-titres des vidéos (WCAG 1.2.2, niveau A)** : axe classe `video-caption` en « à vérifier » sur le détail vidéo (aucune piste `<track kind="captions">`) ; Anta ne permet pas de téléverser de sous-titres (WebVTT). Question PO 13.1 : nouvelle story (upload `.vtt` + `<track>`) ou exception documentée (contenus déposés par les auteurs).
+- **Contrastes non calculables par axe** (« à vérifier ») : accroche du hero sur dégradé (`green-700` sur `stone-100` = 4,53:1 au pire, sous-titre 7,0:1, `h1` 16:1, calculés depuis les couleurs Tailwind v4) ; `dt` des statistiques du profil à 375 px (`stone-500` sur blanc = 4,81:1). Conformes, marge faible pour l'accroche : à recontrôler à l'audit manuel (13.2).
+
+## Deferred from: code review of 13-1-audit-automatise-axe-des-pages-publiques (2026-11-25)
+
+- **CI Playwright** : pas de cache des navigateurs, `--with-deps` (apt) à chaque exécution ; durée ajoutée au gate de `deploy-staging.yml` (appelle `ci.yml`). Envisager `actions/cache` sur `~/.cache/ms-playwright` (clé = version de `playwright`).
+- **États fermés non audités** (`details` repliés, menus, ligne inerte « 20 auteurs ») : à couvrir par le parcours clavier automatisé de 13.2.
+- **Contraste de l'accroche du hero** (4,53:1) : recontrôle en 13.2.
+- **Règles « best-practice » de landmarks** (`region`, `landmark-*`) hors des tags WCAG de l'AC : suivi possible en 13.2 / 13.4.
+- **Photo du profil** : la garde ne vérifie que l'attribut `alt`, pas le chargement (`naturalWidth > 0`).
+
+## Deferred from: dev of 13-2-parcours-1-et-2-au-clavier-et-au-lecteur-d-ecran (2026-11-25)
+
+- Reports de la revue 13.1 traités en 13.2 : états fermés / ouverts audités (panneau mobile, groupes dépliés, vue grille, ligne inerte « 20 auteurs », liste de tri ouverte, suggestions en chargement), accroche du hero (`green-800`, 6,5:1), règles best-practice de landmarks et de titres (balayage de `keyboard.spec.ts`). Restent ouverts : cache Playwright en CI, `naturalWidth` de la photo du profil.
+- **Cadre PDF dans les tests navigateur** : avec `drive.fake('r2')`, l'URL signée du PDF est locale et le cadre affiche une page 404 d'Anta ; le parcours clavier prouve que le cadre est un arrêt de tabulation et qu'on en sort, pas le pilotage du lecteur PDF natif (absent de Chromium headless) → audit manuel (grille 13.2, étape B11).
+- **Lignes du panneau de filtres en « bouton bascule »** (D-13.1-6) : à confirmer à l'audit NVDA / VoiceOver (question PO 3 de 13.2) ; repli possible en cases à cocher natives.
+
+## Deferred from: code review of 13-2-parcours-1-et-2-au-clavier-et-au-lecteur-d-ecran (2026-11-25)
+
+- **`admin_layout.edge`** : `lang="fr"` codé en dur ; l'administration est hors périmètre de l'Epic 13 (pages publiques).
+- **Lecteurs vidéo / audio / PDF** : leur fonctionnement réel au clavier et au lecteur d'écran n'est prouvé que par la grille d'audit manuel (13.2) ; les tests navigateur prouvent l'arrêt de tabulation et la sortie.
+- **`DESIGN.md` D33** : texte à mettre à jour (bordure des champs et des cases `stone-500`) une fois la question PO 2 de 13.2 acceptée.
+
+## Deferred from: code review of 13-3-plan-du-site-sitemap-xml (2026-11-25)
+
+- **Cache public d'une heure** (`/sitemap.xml`, `/robots.txt`) : une production dépubliée ou un profil devenu non public peut rester listé jusqu'à une heure dans une copie en cache (la page elle-même répond 404 aussitôt). Accepté (un moteur recrawle bien plus rarement).
+- **`lastmod` d'une production rajeuni par les sauvegardes techniques** (ex. `ThumbnailService` qui pose la vignette) : `updated_at` bouge sans changement visible du contenu. Cosmétique.
+- **Ni `ETag` ni `Last-Modified`** sur `/sitemap.xml` : pas de requête conditionnelle (304) ; recalcul complet (deux requêtes légères) à chaque passage non caché.
+
+## Deferred from: code review of 13-4-tests-et-recette-accessibilite-phase-2 (2026-11-25)
+
+- **Liste `INTERACTIVE` de la règle « aucun lien imbriqué » (lecture de source)** : liste fermée de balises (`Link`, `a`, `button`, `Button`, champs, `AuthorByline`, `Pagination`) ; un autre composant interactif imbriqué ne serait vu que par le contrôle navigateur (`a11y.spec.ts`, D-13.4-4), qui couvre toutes les pages auditées.
+- **`sourcesUnder` non récursif** (`phase2_a11y.spec.ts`) : seuls les fichiers au premier niveau des dossiers sont lus ; un sous-dossier futur de `components/public` échapperait à la règle (garde de nombre minimal de fichiers seulement).
+- **Liens de pagination désactivés gardant leur `href`** (`Pagination.tsx`) : `aria-disabled` + `tabIndex=-1`, mais toujours cliquables à la souris (renvoient vers la page courante bornée) ; sans effet nuisible.
+- **Portes manuelles de la recette Phase 2** : Lighthouse (4 pages), audit NVDA / VoiceOver, contrôles visuels 375 / 1024 px (12.1–12.4, D-13.2-7), test de charge staging, portes de mise en service (migrations appliquées au démarrage du conteneur, conversion des auteurs 9.5–9.7, extraction 11.3, `ROBOTS_DISALLOW_ALL`), tests fonctionnels d'Aurélien des Epics 9–12 : tout est dans `recette-phase-2.md` § 3 et § 5.
+
+## Phase 3 (décisions PO du 2026-11-25)
+
+- **Sous-titres des vidéos hébergées (WCAG 1.2.2, niveau A)** : story Phase 3 — dépôt d'un fichier `.vtt` par vidéo dans l'administration et `<track kind="captions">` dans le lecteur ; d'ici là, axe signale `video-caption` « à vérifier » (liste autorisée D-13.1-10).

@@ -23,6 +23,8 @@ export default await Env.create(new URL('../', import.meta.url), {
   APP_URL: Env.schema.string({ format: 'url', tld: false }),
   // Commit de l'image Docker (ARG GIT_SHA), exposé par GET /health (Story 8.4)
   ANTA_REVISION: Env.schema.string.optional(),
+  // true = robots.txt exclut tout le site, sans ligne Sitemap (staging, Story 13.3) ; défaut false
+  ROBOTS_DISALLOW_ALL: Env.schema.boolean.optional(),
 
   // Database
   DB_HOST: Env.schema.string({ format: 'host' }),

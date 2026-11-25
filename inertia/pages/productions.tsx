@@ -136,6 +136,9 @@ export default function Productions({
         <FilterSidebar facets={facets} activeFilters={activeFilters} />
 
         <div className="min-w-0 flex-1">
+          {/* Heading order (Story 13.2): the result cards (h3) sit under a « Résultats » h2,
+              not under the « Filtres » h2 of the sidebar. */}
+          <h2 className="sr-only">{t('productions.results_heading')}</h2>
           {results.length === 0 ? (
             <div className="mt-8 text-center">
               <p className="text-stone-500">
@@ -147,7 +150,7 @@ export default function Productions({
                   href={`/productions${clearFilters(search, {
                     includeAuthor: !hasClearableFilters(activeFilters),
                   })}`}
-                  className="mt-3 inline-block text-sm text-green-700 hover:underline"
+                  className="mt-3 inline-flex min-h-11 items-center text-sm text-green-700 hover:underline"
                 >
                   {t('productions.reset_filters')}
                 </Link>
@@ -193,6 +196,7 @@ export default function Productions({
                 currentPage={pagination.currentPage}
                 lastPage={pagination.lastPage}
                 buildHref={(p) => `/productions${setPage(search, p)}`}
+                size="touch"
               />
             </>
           )}

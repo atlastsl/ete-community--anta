@@ -130,6 +130,7 @@
   },
   "productions": {
     "heading": "Production catalogue",
+    "results_heading": "Results",
     "results_count": "{{count}} result(s)",
     "no_results": "No production found.",
     "no_results_for": "No production found for \"{{term}}\"",

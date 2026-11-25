@@ -4,6 +4,7 @@ import SharedFeaturedBanner, { type FeaturedBannerCard } from '~/components/shar
 import AuthorByline from '~/components/public/AuthorByline'
 import type { AuthorCredit } from '~/components/public/ProductionCard'
 import { bannerImage, bannerSlot } from '~/lib/media'
+import { contentLang } from '~/lib/content_lang'
 
 /** Banner cards show 3 authors, then « et {n} autres », like the other cards (D36, D-11.6-6). */
 const BANNER_MAX_AUTHORS = 3
@@ -13,6 +14,8 @@ export type FeaturedBannerItem = {
   id: string
   slug: string
   title: string
+  /** Stored language: `lang` of the title when it differs from the UI (Story 13.2). */
+  language?: string | null
   authors: AuthorCredit[]
   /** Public base `/media/thumbnails/…` or `/media/posters/…`; variants added by `bannerImage`. */
   imageUrl: string
@@ -31,12 +34,14 @@ export default function FeaturedBanner({ items }: { items: FeaturedBannerItem[] 
   const { t, i18n } = useTranslation()
   if (items.length === 0) return null
 
+  const uiLanguage = i18n.resolvedLanguage ?? i18n.language
   const credits = new Map(items.map((item) => [item.id, item.authors]))
   const cards: FeaturedBannerCard[] = items.map((item, index) => {
     const image = bannerImage(item.imageUrl, bannerSlot(index, items.length))
     return {
       id: item.id,
       title: item.title,
+      lang: contentLang(item.language, uiLanguage),
       imageUrl: image?.src ?? null,
       imageSrcSet: image?.srcSet,
       imageSizes: image?.sizes,

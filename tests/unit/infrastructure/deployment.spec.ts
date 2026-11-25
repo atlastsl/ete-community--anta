@@ -172,6 +172,22 @@ test.group('Deployment staging | CI/CD', () => {
     assert.notProperty(functional, 'continue-on-error')
   })
 
+  test('ci.yml : suite browser (axe, Story 13.1) bloquante, après installation de Chromium', ({
+    assert,
+  }) => {
+    const steps = ci.jobs.test.steps as any[]
+    const install = steps.findIndex((st) => /npx playwright install\s.*chromium/.test(st.run ?? ''))
+    const browser = steps.findIndex((st) => /node ace test\s+browser/.test(st.run ?? ''))
+    assert.isAbove(install, -1)
+    assert.isAbove(browser, install)
+    assert.notProperty(steps[install], 'continue-on-error')
+    assert.notProperty(steps[browser], 'continue-on-error')
+    // Same Chromium in CI and locally: the version comes from the pinned `playwright`.
+    const pkg = JSON.parse(read('package.json'))
+    assert.match(pkg.devDependencies.playwright, /^\d+\.\d+\.\d+$/)
+    assert.match(pkg.devDependencies['@axe-core/playwright'], /^\d+\.\d+\.\d+$/)
+  })
+
   test('deploy-staging.yml : push staging + rollback manuel, sans concurrence', ({ assert }) => {
     assert.deepEqual(workflow.on.push.branches, ['staging'])
     assert.property(workflow.on.workflow_dispatch.inputs, 'image_tag')

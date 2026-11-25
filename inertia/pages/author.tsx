@@ -34,7 +34,9 @@ export default function AuthorPage({ author, stats, productions, pagination, sor
 
   function changeSort(value: string) {
     // Page back to 1; scroll brought back to the top of the results (EXPERIENCE.md).
+    // `preserveState` (Story 13.2): no remount, the focus stays on the sort trigger.
     router.visit(sortHref(author.slug, value), {
+      preserveState: true,
       preserveScroll: true,
       onSuccess: () => document.getElementById(SECTION_ID)?.scrollIntoView({ block: 'start' }),
     })

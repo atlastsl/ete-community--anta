@@ -130,6 +130,7 @@
   },
   "productions": {
     "heading": "Catalogue des productions",
+    "results_heading": "Résultats",
     "results_count": "{{count}} résultat(s)",
     "no_results": "Aucune production trouvée.",
     "no_results_for": "Aucune production trouvée pour « {{term}} »",

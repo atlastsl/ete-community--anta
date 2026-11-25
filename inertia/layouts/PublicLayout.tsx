@@ -37,7 +37,8 @@ export default function PublicLayout({ children }: { children: ReactElement<Data
       </a>
       <header className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-stone-200">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center" aria-label="Anta — Accueil">
+          {/* Translated name (Story 13.2): a French label inside an English page broke WCAG 3.1.2. */}
+          <Link href="/" className="flex items-center" aria-label={`Anta — ${t('nav.home')}`}>
             <img src="/images/logo_anta.png" alt="Anta" className="h-10 w-auto" />
           </Link>
           <LanguageSwitcher />
@@ -65,7 +66,9 @@ export default function PublicLayout({ children }: { children: ReactElement<Data
                 destination), Authors (Story 10.5), Privacy policy. */}
             <ul className="mt-3 space-y-2 text-sm text-stone-600">
               <li>
-                <Link href="/" className="hover:text-green-700">{t('nav.home')}</Link>
+                <Link href="/" className="hover:text-green-700">
+                  {t('nav.home')}
+                </Link>
               </li>
               <li>
                 <Link href="/productions" className="hover:text-green-700">

@@ -27,6 +27,7 @@ services:
       APP_KEY:
       APP_URL:
       APP_NAME:
+      ROBOTS_DISALLOW_ALL:
       DB_HOST:
       DB_PORT:
       DB_USER:

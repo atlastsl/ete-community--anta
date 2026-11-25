@@ -23,6 +23,7 @@ export const controllers = {
     Media: () => import('#controllers/public/media_controller'),
     Pages: () => import('#controllers/public/pages_controller'),
     Productions: () => import('#controllers/public/productions_controller'),
+    Sitemap: () => import('#controllers/public/sitemap_controller'),
     Stats: () => import('#controllers/public/stats_controller'),
   },
   Session: () => import('#controllers/session_controller'),

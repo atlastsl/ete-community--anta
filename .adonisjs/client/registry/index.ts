@@ -60,6 +60,18 @@ const routes = {
     tokens: [{"old":"/media/*","type":0,"val":"media","end":""},{"old":"/media/*","type":2,"val":"*","end":""}],
     types: placeholder as Registry['media.show']['types'],
   },
+  'sitemap': {
+    methods: ["GET","HEAD"],
+    pattern: '/sitemap.xml',
+    tokens: [{"old":"/sitemap.xml","type":0,"val":"sitemap.xml","end":""}],
+    types: placeholder as Registry['sitemap']['types'],
+  },
+  'robots': {
+    methods: ["GET","HEAD"],
+    pattern: '/robots.txt',
+    tokens: [{"old":"/robots.txt","type":0,"val":"robots.txt","end":""}],
+    types: placeholder as Registry['robots']['types'],
+  },
   'health': {
     methods: ["GET","HEAD"],
     pattern: '/health',

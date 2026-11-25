@@ -26,6 +26,8 @@ export default function FilterChip({
   // NAVIGUE, il ne coche pas un état de formulaire — annoncer « case à cocher » induirait
   // l'AT en erreur. Entrée navigue (lien natif) ; Espace simple déclenche aussi la bascule
   // (une seule visite si la touche est maintenue ; modificateurs laissés au navigateur).
+  // `role="button"` : `aria-pressed` n'est pas permis sur un lien nu (axe `aria-allowed-attr`,
+  // Story 13.1).
   function handleKeyDown(event: KeyboardEvent<HTMLAnchorElement>) {
     const action = spaceToggle(event)
     if (!action) return
@@ -36,6 +38,7 @@ export default function FilterChip({
   return (
     <Link
       href={href}
+      role="button"
       aria-pressed={active}
       aria-label={t('filters.filter_by', { label })}
       onKeyDown={handleKeyDown}

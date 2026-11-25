@@ -23,7 +23,7 @@ export default function PdfViewer({ url, name }: { url: string; name: string }) 
         <button
           type="button"
           onClick={goFullscreen}
-          className="inline-flex min-h-9 items-center gap-1.5 rounded-md px-2 text-sm text-stone-600 transition-colors hover:bg-stone-100 hover:text-green-700"
+          className="inline-flex min-h-11 items-center gap-1.5 rounded-md px-3 text-sm text-stone-600 transition-colors hover:bg-stone-100 hover:text-green-700"
         >
           <Maximize className="size-4" aria-hidden />
           {t('media.fullscreen')}

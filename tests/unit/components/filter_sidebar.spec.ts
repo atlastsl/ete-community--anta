@@ -58,6 +58,9 @@ test.group('FilterSidebar | facette auteur (10.6)', () => {
       assert.notInclude(source, "if (event.key === ' ')")
     }
     assert.include(sidebar, 'aria-pressed={active}')
+    // `aria-pressed` n'est pas permis sur un lien nu (axe `aria-allowed-attr`, Story 13.1).
+    assert.match(sidebar, /role="button"\s+aria-pressed=\{active\}/)
+    assert.match(filterChip, /role="button"\s+aria-pressed=\{active\}/)
   })
 
   test('liens reconstruits depuis activeFilters.author (slugs ignorés retirés)', ({ assert }) => {

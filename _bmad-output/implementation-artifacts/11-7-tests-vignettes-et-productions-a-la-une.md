@@ -236,7 +236,7 @@ Revue de code du 2026-11-21 : 4 correctifs (tests et story seulement, aucun code
 - [x] [Review][Patch] Ordre du journal instable [featured_flows.spec.ts, `logsOf`] — `createdAt` à la milliseconde peut être ex æquo : tri secondaire par `id`, et comparaison par membres (`sameDeepMembers`) là où l'ordre n'est pas le sujet (sélection posée puis vidée).
 - [x] [Review][Patch] Gabarit hors `t()` non vérifié [tests/unit/i18n/featured_keys.spec.ts] — `setError(`thumbnail.errors.${invalid}`)` de `ThumbnailField` : gabarits littéraux des espaces `thumbnail.` / `featured.` détectés aussi hors `t()`, dépliés depuis `ThumbnailClientError` (`inertia/lib/thumbnail.ts`). Preuves : préfixe faussé dans `ThumbnailField` → test de couverture en échec ; valeur `bogus` ajoutée à l'union → 2 échecs.
 - [x] [Review][Patch] Story : D-11.7-4 reformulée (FR51 ne dit pas que le retrait est définitif ; comportement conforme), nombre de tests de `featured.spec.ts` corrigé (29 → 28).
-- [ ] [Review][PO] Republication après retrait automatique : pas de retour à la une (D-11.7-4).
+- [x] [Review][PO] Republication après retrait automatique : pas de retour à la une (D-11.7-4). — PO 2026-11-25 : défaut accepté.
 
 ### Lighthouse (AC 7)
 

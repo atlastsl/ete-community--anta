@@ -3,6 +3,7 @@ import { ReactElement } from 'react'
 import { client } from './client'
 import PublicLayout from '~/layouts/PublicLayout'
 import { publicI18n } from '~/lib/i18n/public'
+import { documentLang } from '~/lib/content_lang'
 import { Data } from '@generated/data'
 import { createRoot } from 'react-dom/client'
 import { createInertiaApp } from '@inertiajs/react'
@@ -11,6 +12,15 @@ import { TuyauProvider } from '@adonisjs/inertia/react'
 import { resolvePageComponent } from '@adonisjs/inertia/helpers'
 
 const appName = import.meta.env.VITE_APP_NAME || 'Anta'
+
+// `<html lang>` follows the interface language (Story 13.2, WCAG 3.1.1): the server renders it
+// from the `i18n_lang` cookie only, while i18next may detect another language (localStorage,
+// browser) and `LanguageSwitcher` changes it without a reload.
+const syncDocumentLang = (language?: string) => {
+  document.documentElement.lang = documentLang(language)
+}
+syncDocumentLang(publicI18n.resolvedLanguage ?? publicI18n.language)
+publicI18n.on('languageChanged', syncDocumentLang)
 
 createInertiaApp({
   // Public titles come complete from `SeoService` (« … — Anta ») through PublicLayout's <Head>.

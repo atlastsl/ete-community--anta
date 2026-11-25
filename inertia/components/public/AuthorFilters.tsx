@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '~/components/ui/select'
-import SortSelect from '~/components/shared/SortSelect'
+import SortSelect, { OPTION_FOCUS } from '~/components/shared/SortSelect'
 import { taxonomyLabel } from '~/lib/taxonomy'
 import { AUTHORS_LIST_SORTS, type AuthorsListState } from '~/lib/authors_list_query'
 
@@ -17,6 +17,13 @@ import { AUTHORS_LIST_SORTS, type AuthorsListState } from '~/lib/authors_list_qu
 const ALL_VALUE = '__all__'
 
 const LABEL = 'mb-1 block text-xs font-medium uppercase tracking-wide text-stone-500'
+
+/**
+ * Fields (Story 13.2): border ≥ 3:1 (stone-500, 4.8:1 — WCAG 1.4.11, D33 amended: the fields are
+ * not identifiable without it) and a solid 2 px focus ring instead of shadcn's 50 % one.
+ */
+const FIELD =
+  'border-stone-500 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
 
 type Props = {
   state: AuthorsListState
@@ -31,7 +38,12 @@ type Props = {
  * name search (`q`, submitted with Enter), Institution and Domain (single choice), Sort. Visible
  * labels, 44 px controls; stacked < sm, 2 columns sm, 4 columns lg. The state lives in the URL.
  */
-export default function AuthorFilters({ state, institutionOptions, domainOptions, onChange }: Props) {
+export default function AuthorFilters({
+  state,
+  institutionOptions,
+  domainOptions,
+  onChange,
+}: Props) {
   const { t, i18n } = useTranslation()
   const [q, setQ] = useState(state.q ?? '')
 
@@ -71,7 +83,7 @@ export default function AuthorFilters({ state, institutionOptions, domainOptions
           </label>
           <div className="relative">
             <Search
-              className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-stone-400"
+              className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-stone-500"
               aria-hidden
             />
             <Input
@@ -82,7 +94,7 @@ export default function AuthorFilters({ state, institutionOptions, domainOptions
               onChange={(event) => setQ(event.target.value)}
               placeholder={t('authors.list.search_placeholder')}
               enterKeyHint="search"
-              className="min-h-11 bg-white pl-9"
+              className={`min-h-11 bg-white pl-9 placeholder:text-stone-500 ${FIELD}`}
             />
           </div>
         </div>
@@ -97,14 +109,16 @@ export default function AuthorFilters({ state, institutionOptions, domainOptions
           >
             <SelectTrigger
               aria-labelledby="authors-institution-label"
-              className="min-h-11 w-full bg-white"
+              className={`min-h-11 w-full bg-white ${FIELD}`}
             >
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="max-h-72">
-              <SelectItem value={ALL_VALUE}>{t('authors.list.institution_all')}</SelectItem>
+              <SelectItem value={ALL_VALUE} className={OPTION_FOCUS}>
+                {t('authors.list.institution_all')}
+              </SelectItem>
               {institutionOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
+                <SelectItem key={option.value} value={option.value} className={OPTION_FOCUS}>
                   {option.label}
                 </SelectItem>
               ))}
@@ -120,13 +134,18 @@ export default function AuthorFilters({ state, institutionOptions, domainOptions
             value={domain}
             onValueChange={(v) => change({ domain: v === ALL_VALUE ? null : v })}
           >
-            <SelectTrigger aria-labelledby="authors-domain-label" className="min-h-11 w-full bg-white">
+            <SelectTrigger
+              aria-labelledby="authors-domain-label"
+              className={`min-h-11 w-full bg-white ${FIELD}`}
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="max-h-72">
-              <SelectItem value={ALL_VALUE}>{t('authors.list.domain_all')}</SelectItem>
+              <SelectItem value={ALL_VALUE} className={OPTION_FOCUS}>
+                {t('authors.list.domain_all')}
+              </SelectItem>
               {domains.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
+                <SelectItem key={option.value} value={option.value} className={OPTION_FOCUS}>
                   {option.label}
                 </SelectItem>
               ))}
