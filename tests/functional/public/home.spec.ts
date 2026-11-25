@@ -528,7 +528,11 @@ test.group('Public home | bannière à la une (11.6)', (group) => {
   })
 
   test('ordre des positions et forme publique stricte (FR49)', async ({ client, assert }) => {
-    const a = await createFeaturable({ title: 'Alpha fictive', authorNames: ['Awa FICTIVE'] })
+    const a = await createFeaturable({
+      title: 'Alpha fictive',
+      authorNames: ['Awa FICTIVE'],
+      language: 'en',
+    })
     const b = await createFeaturable({ title: 'Bêta fictive' })
     const c = await createFeaturable({ title: 'Gamma fictive' })
     await feature(c, a, b)
@@ -544,6 +548,8 @@ test.group('Public home | bannière à la une (11.6)', (group) => {
       id: a.id,
       slug: a.slug,
       title: 'Alpha fictive',
+      // Story 13.2: `lang` of the card title when it differs from the UI.
+      language: 'en',
       authors: [{ name: 'Awa FICTIVE', slug: null }],
       imageUrl: `/media/${a.thumbnailKey}`,
       viewsCount: 3,

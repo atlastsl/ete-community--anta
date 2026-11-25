@@ -1,19 +1,17 @@
 import { test } from '@japa/runner'
-import { readFileSync } from 'node:fs'
 import { AxeBuilder } from '@axe-core/playwright'
-import { DateTime } from 'luxon'
-import db from '@adonisjs/lucid/services/db'
-import drive from '@adonisjs/drive/services/main'
-import sharp from 'sharp'
-import type { BrowserContext, Page } from 'playwright'
-import Author from '#models/author'
-import AuthorAffiliation from '#models/author_affiliation'
-import Production from '#models/production'
-import ProductionFile from '#models/production_file'
-import ProductionLink from '#models/production_link'
-import StatsDownload from '#models/stats_download'
-import StatsView from '#models/stats_view'
-import ProductionAuthorService from '#services/production_author_service'
+import type { Page } from 'playwright'
+import {
+  LOCALES,
+  TRANSLATIONS,
+  atLeast,
+  prepareContext,
+  createAuthor,
+  createPublished,
+  setupData,
+  suggestionsLoaded,
+  type Fixtures,
+} from './helpers/public_fixtures.js'
 
 /**
  * Story 13.1 (NFR16, P2-16) — axe WCAG 2.1 A/AA audit of every public page, in French and in
@@ -28,10 +26,6 @@ import ProductionAuthorService from '#services/production_author_service'
  */
 
 const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']
-const LOCALES = ['fr', 'en'] as const
-type Locale = (typeof LOCALES)[number]
-
-const TOKEN = 'AbCdEfGhIjKlMnOp_-12'
 /** Desktop then mobile (375 px, D35): both layouts are audited in each test. */
 const VIEWPORTS = [
   { width: 1280, height: 800 },
@@ -45,215 +39,7 @@ const VIEWPORTS = [
  */
 const ALLOWED_INCOMPLETE = new Set(['color-contrast', 'video-caption'])
 
-/** Public translations: proves the client rendered the requested language, not only `<html lang>`. */
-const TRANSLATIONS = Object.fromEntries(
-  LOCALES.map((locale) => [
-    locale,
-    JSON.parse(readFileSync(`inertia/locales/public/${locale}.json`, 'utf-8')),
-  ])
-) as Record<Locale, { a11y: { skip_to_content: string }; footer: { explore: string } }>
-
-const baseUrl = () => `http://${process.env.HOST}:${process.env.PORT}`
-
-type Fixtures = {
-  author: Author
-  pdf: Production
-  epub: Production
-  video: Production
-  audio: Production
-}
-
 let fixtures: Fixtures
-let counter = 0
-
-/** Writes the WebP variants of an image key to the fake R2 disk (served by `/media`). */
-async function storeImage(
-  key: string,
-  variants: { name: string; width: number; height: number }[]
-) {
-  for (const variant of variants) {
-    const buffer = await sharp({
-      create: {
-        width: variant.width,
-        height: variant.height,
-        channels: 3,
-        background: { r: 21, g: 128, b: 61 },
-      },
-    })
-      .webp()
-      .toBuffer()
-    await drive.use('r2').put(`${key}/${variant.name}`, buffer)
-  }
-}
-
-async function createAuthor(firstNames: string, lastNames: string, photo = false) {
-  const author = await Author.create({
-    firstNames,
-    lastNames,
-    googleScholarUrl: 'https://scholar.google.com/citations?user=FICTIF01',
-    consentConfirmedAt: DateTime.now(),
-  })
-  await AuthorAffiliation.create({
-    authorId: author.id,
-    position: 1,
-    institution: 'Université fictive de Dakar',
-    department: 'Département de mathématiques',
-  })
-  if (photo) {
-    author.photoKey = `authors/${author.id}/${TOKEN}`
-    await author.save()
-    await storeImage(author.photoKey, [
-      { name: 'w128.webp', width: 128, height: 128 },
-      { name: 'w384.webp', width: 384, height: 384 },
-    ])
-  }
-  return author
-}
-
-async function createPublished(
-  title: string,
-  opts: { authors: Author[]; daysAgo: number; language?: string; category?: string }
-): Promise<Production> {
-  const production = await Production.create({
-    title,
-    summary: `Résumé fictif de « ${title} », utilisé par l'audit d'accessibilité.`,
-    authorNames: [],
-    tags: ['essai', 'accessibilité'],
-    category: opts.category ?? 'article',
-    domain: 'mathematics',
-    subdomain: ['topology'],
-    language: opts.language ?? 'fr',
-    publicationCountry: 'Sénégal',
-    journal: 'Revue fictive',
-    licenseStatus: 'member',
-    status: 'published',
-    workPublishedAt: DateTime.fromISO('2024-03-15'),
-    antaPublishedAt: DateTime.now().minus({ days: opts.daysAgo }),
-    createdById: null,
-  })
-  for (const [index, author] of opts.authors.entries()) {
-    await db
-      .table('production_authors')
-      .insert({ production_id: production.id, author_id: author.id, position: index + 1 })
-  }
-  await ProductionAuthorService.refreshDenormalizedNames([production.id])
-  return production
-}
-
-async function attachFile(production: Production, mimeType: string, name: string) {
-  return ProductionFile.create({
-    productionId: production.id,
-    fileKey: `productions/${production.id}/${name}`,
-    originalName: name,
-    mimeType,
-    sizeBytes: 123_456,
-    storageProvider: 'r2',
-  })
-}
-
-async function addStats(production: Production, views: number, downloads: number) {
-  for (let i = 0; i < views; i++) {
-    await StatsView.create({
-      productionId: production.id,
-      recordedAt: DateTime.now().minus({ days: (i % 30) + 1 }),
-      ipHash: `a11y-view-${counter++}`,
-      sessionId: null,
-    })
-  }
-  for (let i = 0; i < downloads; i++) {
-    await StatsDownload.create({
-      productionId: production.id,
-      downloadedAt: DateTime.now().minus({ days: (i % 30) + 1 }),
-      ipHash: `a11y-download-${counter++}`,
-    })
-  }
-}
-
-/**
- * Banner with 3 productions (thumbnails), the 4 home blocks filled, visible authors (one with a
- * photo), detail pages for each media type sharing tags / authors (suggestions).
- */
-async function seed(): Promise<Fixtures> {
-  const author = await createAuthor('Awa', 'Fictive', true)
-  const second = await createAuthor('Moussa', 'Exemplaire')
-  const third = await createAuthor('Fatou', 'Imaginaire')
-
-  const pdf = await createPublished('Topologie des espaces fictifs', {
-    authors: [author, second],
-    daysAgo: 1,
-  })
-  await attachFile(pdf, 'application/pdf', 'topologie.pdf')
-  const epub = await createPublished('Essai sur les nombres imaginaires', {
-    authors: [second],
-    daysAgo: 2,
-    category: 'book',
-  })
-  await attachFile(epub, 'application/epub+zip', 'essai.epub')
-  const video = await createPublished('A lecture on fictional geometry', {
-    authors: [author],
-    daysAgo: 3,
-    language: 'en',
-    category: 'video',
-  })
-  await attachFile(video, 'video/mp4', 'lecture.mp4')
-  // Links section: an embedded player (iframe, title fallback = section label) and an external
-  // link without label (fallback text). Their hosts are never reached (aborted by the browser).
-  await ProductionLink.create({
-    productionId: video.id,
-    url: 'https://www.youtube-nocookie.com/embed/FICTIF00000',
-    linkType: 'embed',
-    label: null,
-  })
-  await ProductionLink.create({
-    productionId: video.id,
-    url: 'https://example.org/source-fictive',
-    linkType: 'simple',
-    label: null,
-  })
-  const audio = await createPublished('Entretien sonore sur les suites', {
-    authors: [third],
-    daysAgo: 4,
-    category: 'podcast',
-  })
-  await attachFile(audio, 'audio/mpeg', 'entretien.mp3')
-  const extra = await createPublished('Notes de cours fictives', {
-    authors: [third, author],
-    daysAgo: 5,
-  })
-  await attachFile(extra, 'application/pdf', 'notes.pdf')
-
-  await addStats(pdf, 12, 5)
-  await addStats(epub, 8, 9)
-  await addStats(video, 5, 2)
-  await addStats(audio, 3, 1)
-
-  // Banner: 3 featured productions with a thumbnail (D37).
-  await db.from('featured_productions').delete()
-  for (const [index, production] of [pdf, video, audio].entries()) {
-    production.thumbnailKey = `thumbnails/${production.id}/${'T'.repeat(16)}000${index}`
-    await production.save()
-    await storeImage(production.thumbnailKey, [
-      { name: 'w400.webp', width: 400, height: 225 },
-      { name: 'w800.webp', width: 800, height: 450 },
-      { name: 'w1600.webp', width: 1600, height: 900 },
-    ])
-    await db
-      .table('featured_productions')
-      .insert({ position: index + 1, production_id: production.id, created_by_id: null })
-  }
-
-  return { author, pdf, epub, video, audio }
-}
-
-/** Only the local server may be reached; the interface language comes from `i18n_lang`. */
-async function prepareContext(context: BrowserContext, locale: Locale) {
-  const origin = new URL(baseUrl()).origin
-  await context.route(
-    (url) => url.origin !== origin,
-    (route) => route.abort()
-  )
-  await context.addCookies([{ name: 'i18n_lang', value: locale, url: baseUrl() }])
-}
 
 type PageCase = {
   name: string
@@ -263,31 +49,8 @@ type PageCase = {
   ready?: (page: Page) => Promise<void>
 }
 
-/** Fails when the test data no longer reaches the page (the audit would silently shrink). */
-async function atLeast(page: Page, selector: string, min: number) {
-  const count = await page.locator(selector).count()
-  if (count < min) throw new Error(`expected at least ${min} "${selector}", found ${count}`)
-}
-
-const SUGGESTION_CARDS = 'section:has(> p[aria-live]) article'
-
-/**
- * Suggestions loaded with cards (otherwise they were not audited). The fetch is abandoned after
- * 2 s by design (D22): under load (cold Vite, CI) the section may be dropped → one reload.
- */
-async function suggestionsLoaded(page: Page) {
-  for (let attempt = 0; attempt < 2; attempt++) {
-    await page.locator('[aria-busy="true"]').waitFor({ state: 'detached' })
-    if ((await page.locator(SUGGESTION_CARDS).count()) > 0) return
-    if (attempt === 0) {
-      await page.reload()
-      await page.waitForLoadState('networkidle')
-    }
-  }
-  await atLeast(page, SUGGESTION_CARDS, 1)
-}
-
-const detail = (key: keyof Omit<Fixtures, 'author'>) => () => `/productions/${fixtures[key].slug}`
+const detail = (key: 'pdf' | 'epub' | 'video' | 'audio') => () =>
+  `/productions/${fixtures[key].slug}`
 
 const PAGES: PageCase[] = [
   {
@@ -353,16 +116,39 @@ function formatViolations(violations: Awaited<ReturnType<AxeBuilder['analyze']>>
     .join('\n')
 }
 
+/** axe A/AA on the current state of the page: violations and unexpected incomplete rules. */
+async function audit(
+  page: Page,
+  where: string,
+  disabledRules: string[] = [],
+  include?: string
+): Promise<string[]> {
+  const failures: string[] = []
+  let builder = new AxeBuilder({ page }).withTags(WCAG_TAGS).disableRules(disabledRules)
+  if (include) builder = builder.include(include)
+  const results = await builder.analyze()
+  if (results.violations.length > 0) {
+    failures.push(
+      `${results.violations.length} violation(s) on ${where}:\n` +
+        formatViolations(results.violations)
+    )
+  }
+  const unexpected = results.incomplete.filter((r) => !ALLOWED_INCOMPLETE.has(r.id))
+  if (unexpected.length > 0) {
+    failures.push(
+      `${unexpected.length} unexpected incomplete rule(s) on ${where}:\n` +
+        formatViolations(unexpected)
+    )
+  }
+  return failures
+}
+
 test.group('Accessibilité | axe WCAG 2.1 A/AA des pages publiques (13.1)', (group) => {
-  group.setup(async () => {
-    drive.fake('r2')
-    await db.beginGlobalTransaction()
-    fixtures = await seed()
-    return async () => {
-      await db.rollbackGlobalTransaction()
-      drive.restore('r2')
-    }
-  })
+  group.setup(() =>
+    setupData((seeded) => {
+      fixtures = seeded
+    })
+  )
 
   for (const pageCase of PAGES) {
     for (const locale of LOCALES) {
@@ -388,23 +174,184 @@ test.group('Accessibilité | axe WCAG 2.1 A/AA des pages publiques (13.1)', (gro
         const failures: string[] = []
         for (const viewport of VIEWPORTS) {
           await page.setViewportSize(viewport)
-          const results = await new AxeBuilder({ page }).withTags(WCAG_TAGS).analyze()
-          const where = `${pageCase.url()} (${locale}, ${viewport.width} px)`
-          if (results.violations.length > 0) {
-            failures.push(
-              `${results.violations.length} violation(s) on ${where}:\n` +
-                formatViolations(results.violations)
-            )
-          }
-          const unexpected = results.incomplete.filter((r) => !ALLOWED_INCOMPLETE.has(r.id))
-          if (unexpected.length > 0) {
-            failures.push(
-              `${unexpected.length} unexpected incomplete rule(s) on ${where}:\n` +
-                formatViolations(unexpected)
-            )
-          }
+          failures.push(
+            ...(await audit(page, `${pageCase.url()} (${locale}, ${viewport.width} px)`))
+          )
         }
         assert.isTrue(failures.length === 0, failures.join('\n'))
+      })
+    }
+  }
+})
+
+/**
+ * Story 13.2 — states not audited by 13.1 (its review defers): opened mobile filter panel with
+ * every group expanded, grid view, inert row once 20 authors are selected, opened sort listbox,
+ * suggestions while loading. Each state is reached like a user would (clicks, keys, URL).
+ */
+type StateCase = {
+  name: string
+  url: () => string
+  viewport: { width: number; height: number }
+  /** Puts the page in the audited state, and checks it was reached. */
+  reach: (page: Page) => Promise<void>
+  /** Before the visit (e.g. delayed route). */
+  before?: (page: Page) => Promise<void>
+  /**
+   * Rules not applicable to this state, each justified in the story (D-13.2-n) and asked to the
+   * PO; the state itself must prove why (e.g. focus trapped in the open listbox).
+   */
+  disabledRules?: string[]
+  /** Audit restricted to this selector (state too short-lived for a full-page audit). */
+  include?: string
+  /** After the audit: the state must still be there (it was audited, not its end). */
+  stillThere?: (page: Page) => Promise<void>
+  /** Cleanup after the audit (e.g. release a held request). */
+  after?: () => void
+}
+
+/** Held suggestions requests, released once the audit is over. */
+let releaseSuggestions: (() => void)[] = []
+
+/** 21 visible authors: selecting 20 of them leaves an inert 21st row (MAX_AUTHOR_FILTERS). */
+let crowd: { slug: string }[] = []
+
+const STATES: StateCase[] = [
+  {
+    name: 'listing mobile, panneau de filtres ouvert, groupes dépliés',
+    url: () => '/productions?q=fictive',
+    viewport: { width: 375, height: 800 },
+    reach: async (page) => {
+      const toggle = page.locator('main aside > button[aria-expanded]')
+      await toggle.click()
+      if ((await toggle.getAttribute('aria-expanded')) !== 'true') throw new Error('panel closed')
+      const summaries = page.locator('main aside details:not([open]) > summary')
+      // Bounded: a summary that does not open must fail clearly, not loop forever.
+      for (let clicks = 0; (await summaries.count()) > 0; clicks++) {
+        if (clicks >= 20) throw new Error('filter groups do not open on click (20 clicks)')
+        await summaries.first().click()
+      }
+      await atLeast(page, 'main aside details[open]', 3)
+    },
+  },
+  {
+    name: 'listing en vue grille',
+    url: () => '/productions',
+    viewport: { width: 1280, height: 800 },
+    reach: async (page) => {
+      await page.locator('main [role="group"] button[aria-pressed="false"]').first().click()
+      await atLeast(page, 'main [role="group"] button[aria-pressed="true"]', 1)
+      await atLeast(page, 'main .grid article', 1)
+    },
+  },
+  {
+    name: 'listing, limite de 20 auteurs (ligne inerte)',
+    url: () =>
+      `/productions?${crowd
+        .slice(0, 20)
+        .map((a) => `author=${a.slug}`)
+        .join('&')}`,
+    viewport: { width: 1280, height: 800 },
+    reach: async (page) => {
+      await atLeast(page, 'main span[role="button"][aria-disabled="true"]', 1)
+      await atLeast(page, '#author-filter-limit', 1)
+    },
+  },
+  {
+    name: 'liste des auteurs, liste de tri ouverte',
+    url: () => '/authors',
+    viewport: { width: 1280, height: 800 },
+    reach: async (page) => {
+      await page.locator('#authors-sort').focus()
+      await page.keyboard.press('Enter')
+      await page.locator('[role="option"]:focus').waitFor()
+      await atLeast(page, '[role="listbox"] [role="option"]', 2)
+      // Radix hides the rest of the page (`aria-hidden`) while its listbox is open, and keeps the
+      // focus in it: Tab never reaches the hidden controls (axe `aria-hidden-focus` cannot see
+      // the trap, D-13.2-6); Escape closes it and gives the focus back to the trigger.
+      await page.keyboard.press('Tab')
+      const inListbox = await page.evaluate(
+        `!!document.activeElement && !!document.activeElement.closest('[role="listbox"]')`
+      )
+      if (!inListbox) throw new Error('Tab left the open sort listbox')
+    },
+    disabledRules: ['aria-hidden-focus'],
+  },
+  {
+    name: 'détail, suggestions en cours de chargement',
+    url: () => `/productions/${fixtures.pdf.slug}`,
+    viewport: { width: 1280, height: 800 },
+    // The suggestions answer is held until the audit is over, and the client's 2 s abandon timer
+    // (D22, another state: section removed) is postponed for this page only, so a loaded machine
+    // cannot end the state mid-audit. Only the busy section is audited (the full page is audited
+    // by 13.1), and it must still be busy afterwards.
+    // 2000 = SUGGESTIONS_TIMEOUT_MS (inertia/lib/suggestions.ts, not importable: TS6305).
+    before: async (page) => {
+      await page.addInitScript(`{
+        const original = window.setTimeout
+        window.setTimeout = (handler, delay, ...rest) =>
+          original(handler, delay === 2000 ? 2147483647 : delay, ...rest)
+      }`)
+      // Only the suggestions endpoint (a glob would also hold the `lib/suggestions.ts` module).
+      await page.route(
+        (url) => /^\/productions\/[^/]+\/suggestions$/.test(url.pathname),
+        async (route) => {
+          await new Promise<void>((resolve) => releaseSuggestions.push(resolve))
+          await route.continue().catch(() => {})
+        }
+      )
+    },
+    reach: async (page) => {
+      await atLeast(page, 'section[aria-busy="true"]', 1)
+    },
+    include: 'main section[aria-busy="true"]',
+    stillThere: async (page) => {
+      await atLeast(page, 'section[aria-busy="true"]', 1)
+    },
+    after: () => {
+      for (const release of releaseSuggestions) release()
+      releaseSuggestions = []
+    },
+  },
+]
+
+test.group('Accessibilité | axe sur les états ouverts / fermés (13.2)', (group) => {
+  group.setup(() =>
+    setupData(async (seeded) => {
+      fixtures = seeded
+      const authors = []
+      for (let index = 0; index < 21; index++) {
+        authors.push(await createAuthor(`Auteur${String.fromCharCode(65 + index)}`, 'Foule'))
+      }
+      await createPublished('Ouvrage collectif fictif', { authors, daysAgo: 6 })
+      crowd = authors
+    })
+  )
+
+  for (const state of STATES) {
+    for (const locale of LOCALES) {
+      test(`${state.name} (${locale}) : 0 violation A/AA`, async ({ assert, browserContext }) => {
+        await prepareContext(browserContext, locale)
+        const page = await browserContext.newPage()
+        await page.setViewportSize(state.viewport)
+        if (state.before) await state.before(page)
+        await page.goto(state.url())
+        // No `networkidle` here: the held suggestions request would end the busy state.
+        await page.locator('main').first().waitFor()
+        await atLeast(page, `a:text-is("${TRANSLATIONS[locale].a11y.skip_to_content}")`, 1)
+        await state.reach(page)
+        try {
+          const failures = await audit(
+            page,
+            `${state.name} (${locale})`,
+            state.disabledRules,
+            state.include
+          )
+          if (state.stillThere) await state.stillThere(page)
+          assert.isTrue(failures.length === 0, failures.join('\n'))
+        } finally {
+          state.after?.()
+        }
       })
     }
   }

@@ -8,6 +8,17 @@ import {
 } from '~/components/ui/select'
 import { cn } from '~/lib/utils'
 
+/** Border ≥ 3:1 (WCAG 1.4.11, D33 amended) and solid 2 px focus ring (Story 13.2). */
+const TRIGGER =
+  'min-h-11 w-full border-stone-500 bg-white focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
+
+/**
+ * Options of the public lists (review 13.2): the shadcn item only tints its background on
+ * focus (`outline-hidden`, which also zeroes `--tw-outline-style`: hence `outline-solid`); a 2 px inset outline makes the focused option visible (2.4.7).
+ */
+export const OPTION_FOCUS =
+  'focus:outline-solid focus:outline-2 focus:-outline-offset-2 focus:outline-ring'
+
 export type SortOption = { value: string; label: string }
 
 type Props = {
@@ -35,12 +46,12 @@ export default function SortSelect({ id, value, options, onChange, className }: 
         {t('sort.label')}
       </label>
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger id={id} className="min-h-11 w-full bg-white">
+        <SelectTrigger id={id} className={TRIGGER}>
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
           {options.map((option) => (
-            <SelectItem key={option.value} value={option.value}>
+            <SelectItem key={option.value} value={option.value} className={OPTION_FOCUS}>
               {option.label}
             </SelectItem>
           ))}

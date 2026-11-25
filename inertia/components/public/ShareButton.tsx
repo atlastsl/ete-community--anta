@@ -59,7 +59,8 @@ export default function ShareButton({ slug, title, className }: Props) {
       disabled={busy}
       onClick={() => void handleShare()}
       className={cn(
-        'shrink-0 border-green-700 text-green-700 hover:bg-green-50',
+        // Solid 2 px focus ring like every public control (Story 13.2), not shadcn's 50 % one.
+        'min-h-11 shrink-0 border-green-700 text-green-700 hover:bg-green-50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
         className
       )}
       aria-label={t('production_detail.share_label')}

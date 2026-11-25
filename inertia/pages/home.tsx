@@ -47,7 +47,9 @@ export default function Home({
   return (
     <div>
       <section className="rounded-2xl border border-stone-200 bg-gradient-to-b from-stone-100 to-background px-6 py-12 text-center sm:py-16">
-        <p className="mb-3 text-sm font-medium uppercase tracking-widest text-green-700">
+        {/* green-800 (6.5:1 on the stone-100 top of the gradient): green-700 was 4.6:1, too close
+            to the 4.5:1 floor for small text (Story 13.2). */}
+        <p className="mb-3 text-sm font-medium uppercase tracking-widest text-green-800">
           {t('home.hero_eyebrow')}
         </p>
         <h1 className="font-display text-3xl leading-tight text-stone-900 sm:text-4xl">

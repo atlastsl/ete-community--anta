@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Eye, Download, Calendar } from 'lucide-react'
 import { taxonomyLabel } from '~/lib/taxonomy'
 import AuthorByline from '~/components/public/AuthorByline'
+import { contentLang } from '~/lib/content_lang'
 
 /** One author of a byline: `slug` only for a profile visible on the site (Story 10.4, D12). */
 export type AuthorCredit = { name: string; slug: string | null }
@@ -18,6 +19,8 @@ export type ProductionCardData = {
   category?: string | null
   domain?: string | null
   summary?: string | null
+  /** Stored language of the production: `lang` of title / summary when ≠ UI (13.2, WCAG 3.1.2). */
+  language?: string | null
   viewsCount: number
   downloadsCount: number
   publishedAt?: string | null
@@ -69,8 +72,11 @@ export default function ProductionCard({
       })
     : null
 
+  // Title and summary in the production's language when it differs from the UI (13.2).
+  const lang = contentLang(production.language, i18n.resolvedLanguage ?? i18n.language)
+
   const titleLink = (
-    <Link href={`/productions/${slug}`} className="hover:text-green-700">
+    <Link href={`/productions/${slug}`} lang={lang} className="hover:text-green-700">
       {title}
     </Link>
   )
@@ -134,7 +140,9 @@ export default function ProductionCard({
         {byline}
         {meta}
         {summary && (
-          <p className="mt-3 line-clamp-2 max-sm:hidden text-sm text-stone-700">{summary}</p>
+          <p lang={lang} className="mt-3 line-clamp-2 max-sm:hidden text-sm text-stone-700">
+            {summary}
+          </p>
         )}
         <div className="mt-auto">{counters}</div>
       </article>
@@ -147,7 +155,11 @@ export default function ProductionCard({
         <h3 className="font-display text-lg leading-snug text-stone-900">{titleLink}</h3>
         {byline}
         {meta}
-        {summary && <p className="mt-3 line-clamp-2 text-sm text-stone-700">{summary}</p>}
+        {summary && (
+          <p lang={lang} className="mt-3 line-clamp-2 text-sm text-stone-700">
+            {summary}
+          </p>
+        )}
         {counters}
       </article>
     )
@@ -158,7 +170,11 @@ export default function ProductionCard({
       <h3 className="font-display text-lg leading-snug text-stone-900">{titleLink}</h3>
       {byline}
       {meta}
-      {summary && <p className="mt-3 line-clamp-3 text-sm text-stone-700">{summary}</p>}
+      {summary && (
+        <p lang={lang} className="mt-3 line-clamp-3 text-sm text-stone-700">
+          {summary}
+        </p>
+      )}
       {counters}
     </article>
   )

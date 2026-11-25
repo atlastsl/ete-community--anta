@@ -286,6 +286,7 @@ test.group('Suggestions | GET /productions/:slug/suggestions', (group) => {
       'domain',
       'downloadsCount',
       'id',
+      'language',
       'publishedAt',
       'slug',
       'summary',

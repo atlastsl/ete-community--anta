@@ -9,7 +9,8 @@ import ShareButton from '~/components/public/ShareButton'
 import AuthorByline from '~/components/public/AuthorByline'
 import SuggestionsGrid from '~/components/public/SuggestionsGrid'
 import type { AuthorCredit } from '~/components/public/ProductionCard'
-import { languageLabel } from '~/lib/languages'
+import { LANGUAGE_LABELS, languageLabel } from '~/lib/languages'
+import { contentLang } from '~/lib/content_lang'
 import { taxonomyLabel } from '~/lib/taxonomy'
 import type { SeoMeta } from '~/lib/seo'
 
@@ -78,13 +79,27 @@ export default function ProductionShow({ production }: Props) {
       : null
 
   const workDate = formatDate(production.workPublishedAt)
+  // Title (h1, breadcrumb) and summary in the production's language when it differs from the
+  // interface (Story 13.2, WCAG 3.1.2); unknown language → inherits `<html lang>`.
+  const lang = contentLang(production.language, i18n.resolvedLanguage ?? i18n.language)
 
   // Ligne de métadonnée : rendue uniquement si la valeur est présente (AC1 — pas de label vide).
-  const MetaRow = ({ label, value }: { label: string; value: string | null | undefined }) =>
+  const MetaRow = ({
+    label,
+    value,
+    lang: valueLang,
+  }: {
+    label: string
+    value: string | null | undefined
+    /** `lang` of the value (language name shown in its own language, Story 13.2). */
+    lang?: string
+  }) =>
     value && value.trim() !== '' ? (
       <div className="border-t border-stone-100 py-2 first:border-t-0">
         <dt className="text-xs uppercase tracking-wide text-stone-500">{label}</dt>
-        <dd className="mt-0.5 text-sm text-stone-900">{value}</dd>
+        <dd lang={valueLang} className="mt-0.5 text-sm text-stone-900">
+          {value}
+        </dd>
       </div>
     ) : null
 
@@ -109,7 +124,7 @@ export default function ProductionShow({ production }: Props) {
           <li aria-hidden className="text-stone-300">
             /
           </li>
-          <li aria-current="page" className="max-w-[20rem] truncate text-stone-700">
+          <li aria-current="page" lang={lang} className="max-w-[20rem] truncate text-stone-700">
             {production.title}
           </li>
         </ol>
@@ -117,7 +132,9 @@ export default function ProductionShow({ production }: Props) {
 
       <header className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 flex-1">
-          <h1 className="font-display text-3xl leading-tight text-stone-900">{production.title}</h1>
+          <h1 lang={lang} className="font-display text-3xl leading-tight text-stone-900">
+            {production.title}
+          </h1>
           {production.authors.length > 0 && (
             <p className="mt-2 text-stone-600">
               {t('production_card.by')} <AuthorByline authors={production.authors} />
@@ -133,7 +150,9 @@ export default function ProductionShow({ production }: Props) {
           {production.summary && (
             <section>
               <h2 className="text-xl text-stone-900">{t('production_detail.summary')}</h2>
-              <p className="mt-3 whitespace-pre-line text-stone-700">{production.summary}</p>
+              <p lang={lang} className="mt-3 whitespace-pre-line text-stone-700">
+                {production.summary}
+              </p>
             </section>
           )}
 
@@ -187,7 +206,10 @@ export default function ProductionShow({ production }: Props) {
         </div>
 
         {/* Aside (~1/3) : compteurs + métadonnées secondaires */}
-        <aside className="lg:col-span-1">
+        {/* Plain container (Story 13.2): counters and metadata belong to the production; an
+            aside element nested in the article was a complementary landmark that is not
+            top-level (axe `landmark-complementary-is-top-level`). */}
+        <div className="lg:col-span-1">
           <div className="rounded-lg border border-stone-200 bg-white p-5">
             <div className="flex items-center gap-6">
               {/* Full label as sr-only text: `aria-label` is prohibited on a plain div (13.1). */}
@@ -247,6 +269,11 @@ export default function ProductionShow({ production }: Props) {
               <MetaRow
                 label={t('production_detail.language')}
                 value={languageLabel(production.language)}
+                // Native name (« English ») read in its language when it differs from the UI;
+                // a raw stored value (e.g. « Anglais ») is not a native name: no attribute.
+                lang={
+                  production.language && production.language in LANGUAGE_LABELS ? lang : undefined
+                }
               />
               <MetaRow
                 label={t('production_detail.country')}
@@ -282,7 +309,7 @@ export default function ProductionShow({ production }: Props) {
               <ShareButton slug={production.slug} title={production.title} className="w-full" />
             </div>
           </div>
-        </aside>
+        </div>
       </div>
 
       {/* Productions similaires (Story 12.4) : pleine largeur, chargées après la page (NFR18) */}

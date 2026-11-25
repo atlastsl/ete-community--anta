@@ -287,6 +287,7 @@ test.group('Public | profil d’auteur — contenu', (group) => {
       'domain',
       'downloadsCount',
       'id',
+      'language',
       'publishedAt',
       'slug',
       'summary',

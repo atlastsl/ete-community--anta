@@ -8,6 +8,8 @@ import { bannerLayout } from '~/lib/featured'
 export type FeaturedBannerCard = {
   id: string
   title: string
+  /** `lang` of the title when the production's language differs from the UI (13.2, WCAG 3.1.2). */
+  lang?: string
   /** Thumbnail, else extracted video frame; `null` → empty muted area. */
   imageUrl: string | null
   imageSrcSet?: string
@@ -95,6 +97,7 @@ function FeaturedCard({ item, lead, stretched, labels, format, renderAuthors }: 
       </div>
       <div className="p-5">
         <h3
+          lang={item.lang}
           className={cn(
             'font-display font-semibold text-stone-900',
             lead ? 'line-clamp-3 text-2xl leading-[1.3]' : 'line-clamp-2 text-lg leading-[1.375]'

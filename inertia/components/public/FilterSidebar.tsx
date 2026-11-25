@@ -28,14 +28,16 @@ import { facetValueLabel } from '~/lib/taxonomy'
  */
 const SAME_PAGE = { preserveState: true, preserveScroll: true } as const
 
-const ROW_CLASS = 'flex items-center gap-2 py-1.5 text-sm'
+// ≥ 44 px targets (Story 13.2, EXPERIENCE.md « Cibles »).
+const ROW_CLASS = 'flex min-h-11 items-center gap-2 py-1 text-sm'
 
 function CheckboxMark({ active, disabled = false }: { active: boolean; disabled?: boolean }) {
   return (
     <span
       className={cn(
         'flex size-4 shrink-0 items-center justify-center rounded border',
-        active ? 'border-green-700 bg-green-700 text-white' : 'border-stone-300',
+        // Unchecked border ≥ 3:1 (stone-500, 4.8:1 — WCAG 1.4.11, review 13.2).
+        active ? 'border-green-700 bg-green-700 text-white' : 'border-stone-500',
         disabled && 'bg-stone-100'
       )}
     >
@@ -130,15 +132,17 @@ function DimensionGroup({
       open={expanded}
       onToggle={(event) => setExpanded(event.currentTarget.open)}
     >
-      <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-medium text-stone-900 [&::-webkit-details-marker]:hidden">
+      <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between text-sm font-medium text-stone-900 [&::-webkit-details-marker]:hidden">
         <span>
           {t(`filters.dimensions.${dim}`)}
           {activeCount > 0 && <span className="ml-1 text-green-700">({activeCount})</span>}
         </span>
-        <ChevronDown className="size-4 text-stone-400" aria-hidden />
+        <ChevronDown className="size-4 text-stone-500" aria-hidden />
       </summary>
 
-      <div className="mt-2 max-h-60 overflow-y-auto pr-1">
+      {/* `p-1` + `scroll-p-1`: room for the 2 px focus outline offset by 2 px, never clipped
+          by the scroll box, even when Tab scrolls a row to its edge (review 13.2). */}
+      <div className="mt-1 max-h-80 scroll-p-1 overflow-y-auto p-1">
         {isAuthor && (
           <input
             type="search"
@@ -147,7 +151,7 @@ function DimensionGroup({
             placeholder={t('filters.author_search')}
             aria-label={t('filters.author_search')}
             aria-describedby={authorLimitReached ? 'author-filter-limit' : undefined}
-            className="mb-2 h-9 w-full rounded-md border border-stone-300 px-2 text-sm outline-none focus:border-green-700"
+            className="mb-2 h-11 w-full rounded-md border border-stone-500 px-3 text-sm placeholder:text-stone-500 focus:border-green-700"
           />
         )}
         {authorLimitReached && (
@@ -167,7 +171,7 @@ function DimensionGroup({
             />
           )
         })}
-        {shown.length === 0 && <p className="py-1 text-xs text-stone-400">—</p>}
+        {shown.length === 0 && <p className="py-1 text-xs text-stone-500">—</p>}
       </div>
     </details>
   )
@@ -201,7 +205,7 @@ export default function FilterSidebar({
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        className="mb-3 flex w-full items-center justify-between rounded-md border border-stone-300 px-4 py-2 text-sm font-medium lg:hidden"
+        className="mb-3 flex min-h-11 w-full items-center justify-between rounded-md border border-stone-300 px-4 py-2 text-sm font-medium lg:hidden"
       >
         <span className="flex items-center gap-2">
           <SlidersHorizontal className="size-4" aria-hidden />
@@ -226,7 +230,7 @@ export default function FilterSidebar({
             <Link
               href={`/productions${clearFilters(search)}`}
               {...SAME_PAGE}
-              className="text-xs text-green-700 hover:underline"
+              className="inline-flex min-h-11 items-center text-xs text-green-700 hover:underline"
             >
               {t('actions.clear_filters')}
             </Link>

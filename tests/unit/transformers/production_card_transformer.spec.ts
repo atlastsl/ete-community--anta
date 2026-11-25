@@ -15,6 +15,7 @@ test.group('ProductionCardTransformer', () => {
     p.category = 'Livre'
     p.domain = 'Informatique'
     p.summary = 'Résumé.'
+    p.language = 'en'
     p.antaPublishedAt = DateTime.fromISO('2026-01-02T03:04:05.000Z', { zone: 'utc' })
     p.$extras = {
       viewsCount: '4',
@@ -39,6 +40,8 @@ test.group('ProductionCardTransformer', () => {
       category: 'Livre',
       domain: 'Informatique',
       summary: 'Résumé.',
+      // Story 13.2: `lang` of the title / summary when it differs from the UI.
+      language: 'en',
       viewsCount: 4,
       downloadsCount: 2,
       publishedAt: '2026-01-02T03:04:05.000Z',
@@ -55,6 +58,7 @@ test.group('ProductionCardTransformer', () => {
       'domain',
       'downloadsCount',
       'id',
+      'language',
       'publishedAt',
       'slug',
       'summary',

@@ -48,7 +48,10 @@ export default function AuthorsPage({
   function applyState(next: AuthorsListState) {
     // Any change goes back to page 1 (D14); the scroll is brought back to the top of the results
     // when they start above the viewport (EXPERIENCE.md), otherwise kept.
+    // `preserveState` (Story 13.2): no remount, the keyboard focus stays on the control that
+    // changed (Select trigger, search field) instead of falling back to <body>.
     router.visit(filtersHref(base, next), {
+      preserveState: true,
       preserveScroll: true,
       onSuccess: () => {
         const results = document.getElementById(RESULTS_ID)

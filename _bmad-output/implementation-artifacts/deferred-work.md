@@ -200,3 +200,14 @@
 - **Règles « best-practice » de landmarks** (`region`, `landmark-*`) hors des tags WCAG de l'AC : suivi possible en 13.2 / 13.4.
 - **Photo du profil** : la garde ne vérifie que l'attribut `alt`, pas le chargement (`naturalWidth > 0`).
 
+## Deferred from: dev of 13-2-parcours-1-et-2-au-clavier-et-au-lecteur-d-ecran (2026-11-25)
+
+- Reports de la revue 13.1 traités en 13.2 : états fermés / ouverts audités (panneau mobile, groupes dépliés, vue grille, ligne inerte « 20 auteurs », liste de tri ouverte, suggestions en chargement), accroche du hero (`green-800`, 6,5:1), règles best-practice de landmarks et de titres (balayage de `keyboard.spec.ts`). Restent ouverts : cache Playwright en CI, `naturalWidth` de la photo du profil.
+- **Cadre PDF dans les tests navigateur** : avec `drive.fake('r2')`, l'URL signée du PDF est locale et le cadre affiche une page 404 d'Anta ; le parcours clavier prouve que le cadre est un arrêt de tabulation et qu'on en sort, pas le pilotage du lecteur PDF natif (absent de Chromium headless) → audit manuel (grille 13.2, étape B11).
+- **Lignes du panneau de filtres en « bouton bascule »** (D-13.1-6) : à confirmer à l'audit NVDA / VoiceOver (question PO 3 de 13.2) ; repli possible en cases à cocher natives.
+
+## Deferred from: code review of 13-2-parcours-1-et-2-au-clavier-et-au-lecteur-d-ecran (2026-11-25)
+
+- **`admin_layout.edge`** : `lang="fr"` codé en dur ; l'administration est hors périmètre de l'Epic 13 (pages publiques).
+- **Lecteurs vidéo / audio / PDF** : leur fonctionnement réel au clavier et au lecteur d'écran n'est prouvé que par la grille d'audit manuel (13.2) ; les tests navigateur prouvent l'arrêt de tabulation et la sortie.
+- **`DESIGN.md` D33** : texte à mettre à jour (bordure des champs et des cases `stone-500`) une fois la question PO 2 de 13.2 acceptée.

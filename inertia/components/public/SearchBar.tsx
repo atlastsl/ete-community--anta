@@ -21,7 +21,7 @@ export default function SearchBar({ defaultValue = '', onSubmit, placeholder }: 
     <form role="search" onSubmit={handleSubmit} className="flex w-full items-center gap-2">
       <div className="relative flex-1">
         <Search
-          className="pointer-events-none absolute left-3 top-1/2 size-5 -translate-y-1/2 text-stone-400"
+          className="pointer-events-none absolute left-3 top-1/2 size-5 -translate-y-1/2 text-stone-500"
           aria-hidden
         />
         <input
@@ -30,7 +30,7 @@ export default function SearchBar({ defaultValue = '', onSubmit, placeholder }: 
           onChange={(e) => setValue(e.target.value)}
           placeholder={placeholder ?? t('home.search_placeholder')}
           aria-label={t('search.label')}
-          className="h-12 w-full rounded-full border border-stone-300 bg-white pl-11 pr-12 text-base outline-none focus:border-green-700 focus:ring-2 focus:ring-green-700/20"
+          className="h-12 w-full rounded-full border border-stone-500 bg-white pl-11 pr-12 text-base placeholder:text-stone-500 focus:border-green-700"
         />
         {value && (
           <button

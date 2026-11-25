@@ -5,7 +5,7 @@ import PublicBylineService from '#services/public_byline_service'
 /**
  * Single serialization of the public production cards (P2.6, Story 10.3): home blocks,
  * listing and author profile. Expects the `viewsCount` / `downloadsCount` aggregates
- * (`withAggregate`) in `$extras`; exposes no image (D37). `authors` = the byline computed by
+ * (`withAggregate`) in `$extras`; exposes no image (D37); `language` → `lang` of the contents (13.2). `authors` = the byline computed by
  * `PublicBylineService.attach` (Story 10.4: `{ name, slug | null }[]`, pivot order).
  */
 export default class ProductionCardTransformer extends BaseTransformer<Production> {
@@ -19,6 +19,8 @@ export default class ProductionCardTransformer extends BaseTransformer<Productio
       category: p.category,
       domain: p.domain,
       summary: p.summary,
+      /** Stored language: `lang` of the title / summary when it differs from the UI (13.2). */
+      language: p.language,
       viewsCount: Number(p.$extras.viewsCount ?? 0),
       downloadsCount: Number(p.$extras.downloadsCount ?? 0),
       publishedAt: p.antaPublishedAt?.toISO() ?? null,
