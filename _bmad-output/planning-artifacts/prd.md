@@ -28,12 +28,18 @@ classification:
   domain: general
   complexity: low
   projectContext: brownfield
-lastEdited: '2026-11-15'
+lastEdited: '2026-11-18'
 editHistory:
   - date: '2026-11-15'
     changes: 'Phase 1 (MVP) marquée livrée. Phase 2 (Growth) redéfinie : refonte de la page d accueil (recherche avancée, bannière des productions à la une, 4 blocs titrés), entité Auteur (gestion admin, liste et profils publics, migration des auteurs existants), suggestions de productions similaires, conformité WCAG 2.1 AA du site public. Notifications aux membres reportées en Phase 3. FR5, FR9, FR17, FR21, FR36 modifiés ; FR44–FR61 ajoutés ; parcours 2 et 3 mis à jour, parcours 5 ajouté ; NFR Accessibilité ajoutée.'
   - date: '2026-11-15'
     changes: 'Corrections issues de validation-report-2026-11-15.md : traçabilité (listes des parcours 2 à 5, FR40–FR41 rattachées au cadrage et au parcours 2, FR31 signalée retirée), consentement des auteurs migrés (FR53, FR56, FR57, FR59) et affiliation à compléter (FR52), vignette obligatoire pour vidéo externe (FR50), règle de classement des suggestions (FR61), FR2 et FR28 précisées, fuites d implémentation retirées (FR41, FR44, NFR Sécurité), NFR chiffrées (performance, session, rétention des logs, intégrité, charge), risques actualisés, section Hors périmètre ajoutée, FR Phase 2 regroupées en fin de section.'
+  - date: '2026-11-16'
+    changes: 'Arbitrages de la révision UX Phase 2 (ux-designs/ux-anta-2026-11-16, décisions D1, D5, D16, D17) : FR46 exclusion des éléments à 0 sur 365 j, départage, totaux affichés ; FR50 vignette = attribut facultatif de la production réutilisé sur le site public ; FR53 consentement facultatif à la création (fiche non publique sans lui) et retrait du consentement.'
+  - date: '2026-11-16'
+    changes: 'Clarification issue du rapport implementation-readiness-report-2026-11-16.md : FR5 alignée sur la décision UX D12 validée (filtre auteur limité aux profils publics, cohérent avec FR53).'
+  - date: '2026-11-18'
+    changes: 'Correction d Aurélien (décision UX D37, amende D1) : FR50, la vignette est réservée aux productions à la une, renseignée depuis l écran de mise à la une et affichée uniquement dans la bannière ; aucune image dans les autres cartes ni en image Open Graph des productions.'
 ---
 
 # Product Requirements Document — Anta
@@ -265,7 +271,7 @@ AdonisJS génère côté serveur les balises meta (title, description, Open Grap
 - **FR2 :** Un visiteur peut filtrer les résultats par catégorie : livre, article, vidéo, musique, podcast, thèse, rapport, mémoire, note, actes de conférence, document de travail
 - **FR3 :** Un visiteur peut filtrer les résultats par domaine
 - **FR4 :** Un visiteur peut filtrer les résultats par sous-domaine
-- **FR5 (modifié Phase 2) :** Un visiteur peut filtrer les résultats par auteur, parmi les auteurs enregistrés (FR52)
+- **FR5 (modifié Phase 2) :** Un visiteur peut filtrer les résultats par auteur, parmi les auteurs enregistrés à profil public (FR52, FR53)
 - **FR6 :** Un visiteur peut filtrer les résultats par langue
 - **FR7 :** Un visiteur peut filtrer les résultats par pays de publication
 - **FR8 :** Un visiteur peut filtrer les résultats par statut de licence (production membre / licence libre / lien externe)
@@ -347,7 +353,7 @@ AdonisJS génère côté serveur les balises meta (title, description, Open Grap
   - **Les plus consultées :** les 3 productions publiées ayant le plus de vues ; « Voir plus » ouvre le listing trié par vues décroissantes
   - **Les plus téléchargées :** les 3 productions publiées ayant le plus de téléchargements ; « Voir plus » ouvre le listing trié par téléchargements décroissants
   - **Auteurs les plus consultés :** les 3 auteurs à profil public (FR53) dont les productions publiées cumulent le plus de vues ; « Voir plus » ouvre la liste des auteurs (FR57) avec son tri par défaut
-- **FR46 :** Les classements des blocs « Les plus consultées », « Les plus téléchargées » et « Auteurs les plus consultés » portent sur les vues ou téléchargements enregistrés sur les 365 derniers jours glissants. Un bloc sans aucun élément à afficher n'est pas affiché
+- **FR46 :** Les classements des blocs « Les plus consultées », « Les plus téléchargées » et « Auteurs les plus consultés » portent sur les vues ou téléchargements enregistrés sur les 365 derniers jours glissants ; un élément sans aucune vue (resp. aucun téléchargement) sur cette période n'y figure pas et, à égalité, la production la plus récemment publiée sur Anta passe en premier. Les nombres affichés restent les totaux. Un bloc sans aucun élément à afficher n'est pas affiché
 
 ### Productions à la Une (Phase 2)
 
@@ -358,13 +364,13 @@ AdonisJS génère côté serveur les balises meta (title, description, Open Grap
   - **3 productions :** la première occupe 2/3 de la largeur ; les deux suivantes se partagent le tiers restant, empilées et de hauteur égale
   - Sur mobile, les productions s'empilent verticalement dans l'ordre défini
 - **FR49 :** Chaque production à la une affiche uniquement sa vignette, son titre, son ou ses auteurs et ses nombres totaux de vues et de téléchargements ; un clic ouvre sa page de détail
-- **FR50 :** Une vignette (image) est obligatoire pour mettre à la une une production, sauf pour une vidéo hébergée sur Anta : sa vignette est facultative et, à défaut, une image extraite de la vidéo est affichée. Une vidéo disponible uniquement en lien externe requiert une vignette
+- **FR50 :** Seules les productions à la une ont une vignette (image) : elle est renseignée depuis l'écran de mise à la une et n'est affichée que dans la bannière ; les autres cartes du site public (blocs, listing, profils, suggestions) restent sans image. Une vignette est obligatoire pour mettre à la une une production, sauf pour une vidéo hébergée sur Anta : sa vignette est facultative et, à défaut, une image extraite de la vidéo est affichée. Une vidéo disponible uniquement en lien externe requiert une vignette
 - **FR51 :** Une production dépubliée ou supprimée est retirée automatiquement de la sélection à la une
 
 ### Gestion des Auteurs — Panel Admin (Phase 2)
 
 - **FR52 :** Un administrateur peut créer et modifier une fiche auteur : nom(s) et prénom(s) (obligatoires), établissements affiliés (au moins un ; chaque affiliation comprend une université ou institution obligatoire et un département facultatif — seules les fiches issues de la migration (FR56) peuvent n'en avoir aucun, et sont alors signalées « à compléter » dans le panel), lien Google Scholar (facultatif, URL valide), photo (facultative)
-- **FR53 :** Le profil d'un auteur n'est public qu'après confirmation par un administrateur du consentement de l'auteur à sa publication ; cette confirmation est requise à la création d'une fiche dans le panel. Tant qu'elle manque, l'auteur n'apparaît ni dans la liste des auteurs ni dans le bloc « Auteurs les plus consultés », et son nom s'affiche sur ses productions sans lien vers un profil
+- **FR53 :** Le profil d'un auteur n'est public qu'après confirmation par un administrateur du consentement de l'auteur à sa publication ; elle peut être donnée à la création de la fiche ou plus tard ; une fiche créée sans elle (y compris depuis le formulaire de production, FR54) reste non publique. Un administrateur peut retirer le consentement, ce qui repasse le profil en non public ; confirmation et retrait sont journalisés. Tant qu'elle manque, l'auteur n'apparaît ni dans la liste des auteurs ni dans le bloc « Auteurs les plus consultés », et son nom s'affiche sur ses productions sans lien vers un profil
 - **FR54 :** Dans le formulaire de création ou d'édition d'une production, l'administrateur sélectionne le ou les auteurs parmi les auteurs enregistrés, dans un ordre qu'il définit ; la saisie libre d'un nom d'auteur n'est plus possible. Il peut créer un nouvel auteur via une fenêtre sans quitter le formulaire ; l'auteur créé est alors sélectionné automatiquement
 - **FR55 :** Un administrateur peut supprimer une fiche auteur uniquement si elle n'est associée à aucune production (brouillon ou publiée)
 - **FR56 :** Les noms d'auteurs saisis avant la Phase 2 sont rattachés aux auteurs enregistrés selon une table de conversion (nom existant → fiche auteur) proposée puis validée par le product owner avant exécution ; chaque production conserve tous ses auteurs et leur ordre. Les fiches issues de la migration sont créées sans consentement confirmé (profil non public, FR53)
