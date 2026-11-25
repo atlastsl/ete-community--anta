@@ -3,21 +3,10 @@ import Production from '#models/production'
 import ProductionStatus from '#enums/production_status'
 import SeoService from '#services/seo_service'
 import { PRODUCTION_CATEGORIES } from '#constants/production_taxonomy'
+import ProductionCardTransformer from '#transformers/production_card_transformer'
+import PublicBylineService from '#services/public_byline_service'
 
 const SECTION_SIZE = 6
-
-type ProductionCardProps = {
-  id: string
-  slug: string
-  title: string
-  authors: string[]
-  category: string | null
-  domain: string | null
-  summary: string | null
-  viewsCount: number
-  downloadsCount: number
-  publishedAt: string | null
-}
 
 /** Base query : productions publiées + agrégats de vues/téléchargements (alias explicites). */
 function publishedWithCounts() {
@@ -25,21 +14,6 @@ function publishedWithCounts() {
     .where('status', ProductionStatus.PUBLISHED)
     .withAggregate('statsViews', (q) => q.count('*').as('viewsCount'))
     .withAggregate('statsDownloads', (q) => q.count('*').as('downloadsCount'))
-}
-
-function serialize(p: Production): ProductionCardProps {
-  return {
-    id: p.id,
-    slug: p.slug,
-    title: p.title,
-    authors: p.authorNames ?? [],
-    category: p.category,
-    domain: p.domain,
-    summary: p.summary,
-    viewsCount: Number(p.$extras.viewsCount ?? 0),
-    downloadsCount: Number(p.$extras.downloadsCount ?? 0),
-    publishedAt: p.antaPublishedAt?.toISO() ?? null,
-  }
 }
 
 export default class HomeController {
@@ -56,9 +30,11 @@ export default class HomeController {
       .orderBy('id', 'asc')
       .limit(SECTION_SIZE)
 
+    await PublicBylineService.attach([...mostViewedRows, ...recentRows])
+
     return inertia.render('home', {
-      mostViewed: mostViewedRows.map(serialize),
-      recent: recentRows.map(serialize),
+      mostViewed: ProductionCardTransformer.transform(mostViewedRows),
+      recent: ProductionCardTransformer.transform(recentRows),
       categories: [...PRODUCTION_CATEGORIES],
       meta: SeoService.site(locale),
     })

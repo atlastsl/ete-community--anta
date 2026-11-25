@@ -2054,7 +2054,7 @@ Afin d'illustrer sa fiche, sans exposer de métadonnées personnelles du fichier
 **Given** `sharp` ajouté aux dépendances de production et `app/services/image_service.ts`
 **When** une photo est soumise dans `AuthorForm` (création ou modification)
 **Then** elle est validée par `request.file('photo', { size: '5mb', extnames: ['jpg','jpeg','png','webp'] })` puis par décodage réel (`sharp().metadata()` : jpeg, png ou webp ; `limitInputPixels` 40 Mpx) ; sinon erreur en ligne (`authors.form.errors.photo_type`, `photo_size`)
-**And** l'image est réorientée (`.rotate()`), ses métadonnées (EXIF, géolocalisation) sont supprimées, et les variantes carrées `w128.webp`, `w384.webp`, `og.jpg` (600×600) sont produites par recadrage centré (P2.5)
+**And** l'image est réorientée (`.rotate()`), ses métadonnées (EXIF, géolocalisation) sont supprimées, et les variantes carrées `w128.webp`, `w384.webp` (recadrage centré) et `og.jpg` 1200×630 (recadrage sur la zone saillante, amendé le 2026-11-21, D-10.7-2) sont produites (P2.5)
 
 **Given** les variantes produites
 **When** elles sont envoyées sur R2 sous un préfixe neuf `authors/<id>/<token>`

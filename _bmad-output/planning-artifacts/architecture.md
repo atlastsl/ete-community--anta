@@ -1175,7 +1175,7 @@ Ne pas utiliser l'opérateur jsonb `?` dans `db.rawQuery` : knex le prend pour u
 | Usage | Ratio | Variantes R2 (`<préfixe>/…`) |
 |---|---|---|
 | Vignette de production / poster vidéo | 16:9 | `w400.webp` (400×225), `w800.webp`, `w1600.webp` |
-| Photo d'auteur | 1:1 | `w128.webp`, `w384.webp`, `og.jpg` (600×600) |
+| Photo d'auteur | 1:1 (+ 1.91:1) | `w128.webp`, `w384.webp` ; `og.jpg` 1200×630 recadré sur la zone saillante (D-10.7-2, 2026-11-21) |
 
 4. Clé : préfixe neuf à chaque téléversement (`thumbnails/<productionId>/<token 20>`), écrit en base **après** l'envoi des variantes ; l'ancien préfixe est supprimé ensuite (best-effort, journalisé en cas d'échec — même compensation que `files_controller.ts`). Les clés sont immuables, d'où un cache navigateur d'un an.
 

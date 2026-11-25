@@ -66,6 +66,22 @@ test.group('SeoService | listing', () => {
   })
 })
 
+test.group('SeoService | authorsList', () => {
+  test('titre « Auteurs — Anta », description = introduction de la liste, website', ({
+    assert,
+  }) => {
+    const fr = SeoService.authorsList('fr')
+    assert.equal(fr.title, 'Auteurs — Anta')
+    assert.equal(fr.ogTitle, fr.title)
+    assert.equal(fr.description, 'Les auteurs des productions publiées sur Anta.')
+    assert.equal(fr.ogType, 'website')
+    assert.equal(fr.locale, 'fr')
+    const en = SeoService.authorsList('en')
+    assert.equal(en.title, 'Authors — Anta')
+    assert.equal(en.description, 'The authors of the productions published on Anta.')
+  })
+})
+
 test.group('SeoService | forProduction', () => {
   test('ogType article + titre/description issus de la production', ({ assert }) => {
     const meta = SeoService.forProduction('fr', {
@@ -102,5 +118,123 @@ test.group('SeoService | forProduction', () => {
       'https://anta.example.com/'
     )
     assert.equal(meta.ogUrl, 'https://anta.example.com/productions/mon-article')
+  })
+})
+
+// Story 10.1 — titres dédiés de la politique de confidentialité et de la NotFoundPage.
+test.group('SeoService | privacy', () => {
+  test('titre traduit FR / EN', ({ assert }) => {
+    assert.equal(SeoService.privacy('fr').title, 'Politique de confidentialité — Anta')
+    assert.equal(SeoService.privacy('en').title, 'Privacy policy — Anta')
+    assert.equal(SeoService.privacy('en').ogTitle, 'Privacy policy — Anta')
+    assert.equal(SeoService.privacy('en').locale, 'en')
+    assert.equal(SeoService.privacy('fr').ogType, 'website')
+  })
+})
+
+test.group('SeoService | notFound', () => {
+  test('titre traduit FR / EN', ({ assert }) => {
+    assert.equal(SeoService.notFound('fr').title, 'Page introuvable — Anta')
+    assert.equal(SeoService.notFound('en').title, 'Page not found — Anta')
+    assert.equal(SeoService.notFound('en').locale, 'en')
+    assert.equal(
+      SeoService.notFound('fr').description,
+      "Cette page n'existe pas ou n'est plus disponible."
+    )
+    assert.equal(
+      SeoService.notFound('en').description,
+      'This page does not exist or is no longer available.'
+    )
+  })
+})
+
+// Story 10.3 — forme minimale de SeoService.forAuthor (ogImage en Story 10.7).
+test.group('SeoService | forAuthor', () => {
+  const author = {
+    firstNames: 'Awa Marie',
+    lastNames: 'Fictive',
+    slug: 'awa-marie-fictive',
+    primaryInstitution: 'Université Exemple',
+    publishedCount: 3,
+  }
+
+  test('FR : titre « Prénom NOM — Anta », description, profile, og:url absolue', ({ assert }) => {
+    const meta = SeoService.forAuthor('fr', author, 'https://anta.example.org/')
+    assert.equal(meta.title, 'Awa Marie FICTIVE — Anta')
+    assert.equal(meta.ogTitle, 'Awa Marie FICTIVE')
+    assert.equal(meta.description, 'Université Exemple — 3 productions publiées sur Anta')
+    assert.equal(meta.ogDescription, meta.description)
+    assert.equal(meta.ogType, 'profile')
+    assert.equal(meta.ogUrl, 'https://anta.example.org/authors/awa-marie-fictive')
+    assert.equal(meta.locale, 'fr')
+  })
+
+  test('EN et singulier', ({ assert }) => {
+    const meta = SeoService.forAuthor('en', { ...author, publishedCount: 1 }, null)
+    assert.equal(meta.description, 'Université Exemple — 1 production published on Anta')
+    assert.isUndefined(meta.ogUrl)
+    assert.equal(
+      SeoService.forAuthor('fr', { ...author, publishedCount: 1 }).description,
+      'Université Exemple — 1 production publiée sur Anta'
+    )
+  })
+
+  test('sans affiliation : affiliation omise', ({ assert }) => {
+    const meta = SeoService.forAuthor('fr', { ...author, primaryInstitution: null })
+    assert.equal(meta.description, '3 productions publiées sur Anta')
+  })
+})
+
+// Story 10.7 — og:image des profils (variante og.jpg de la photo publique), og:url de la liste.
+test.group('SeoService | forAuthor ogImage / authorsList ogUrl', () => {
+  const author = {
+    firstNames: 'Awa Marie',
+    lastNames: 'Fictive',
+    slug: 'awa-marie-fictive',
+    primaryInstitution: 'Université Exemple',
+    publishedCount: 3,
+  }
+  const photoBase = '/media/authors/0b7e1a52-6c55-4a8e-9a3e-2f1d1c0b9a77/AbCdEfGhIjKlMnOp_-12'
+
+  test('photo publique + APP_URL → og:image absolue og.jpg (slash final toléré)', ({ assert }) => {
+    for (const appUrl of ['https://anta.example.org', 'https://anta.example.org/']) {
+      const meta = SeoService.forAuthor('fr', { ...author, photoBase }, appUrl)
+      assert.equal(meta.ogImage, `https://anta.example.org${photoBase}/og.jpg`)
+      assert.equal(meta.ogType, 'profile')
+    }
+  })
+
+  test('sans photo, sans APP_URL ou base hors /media/authors/ → pas d’og:image', ({ assert }) => {
+    const appUrl = 'https://anta.example.org'
+    assert.isUndefined(SeoService.forAuthor('fr', author, appUrl).ogImage)
+    assert.isUndefined(SeoService.forAuthor('fr', { ...author, photoBase: null }, appUrl).ogImage)
+    assert.isUndefined(SeoService.forAuthor('fr', { ...author, photoBase }, null).ogImage)
+    assert.isUndefined(SeoService.forAuthor('fr', { ...author, photoBase }).ogImage)
+    for (const bad of ['/media/thumbnails/x/y', 'https://evil.example.org/a', '/media/authors']) {
+      assert.isUndefined(
+        SeoService.forAuthor('fr', { ...author, photoBase: bad }, appUrl).ogImage,
+        bad
+      )
+    }
+  })
+
+  test('authorsList : og:url absolue /authors avec APP_URL, jamais d’og:image', ({ assert }) => {
+    const fr = SeoService.authorsList('fr', 'https://anta.example.org/')
+    assert.equal(fr.ogUrl, 'https://anta.example.org/authors')
+    assert.isUndefined(fr.ogImage)
+    assert.equal(SeoService.authorsList('en', 'https://anta.example.org').title, 'Authors — Anta')
+    assert.isUndefined(SeoService.authorsList('fr').ogUrl)
+    assert.isUndefined(SeoService.authorsList('fr', null).ogUrl)
+  })
+
+  test('aucune og:image hors profil (production D37, site, listing)', ({ assert }) => {
+    const appUrl = 'https://anta.example.org'
+    assert.isUndefined(
+      SeoService.forProduction('fr', { title: 'T', slug: 't', authors: ['A B'] }, appUrl).ogImage
+    )
+    assert.isUndefined(SeoService.site('fr').ogImage)
+    assert.isUndefined(SeoService.listing('fr', 'q').ogImage)
+    assert.isUndefined(SeoService.notFound('fr').ogImage)
+    assert.isUndefined(SeoService.privacy('fr').ogImage)
   })
 })

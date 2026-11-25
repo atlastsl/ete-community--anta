@@ -38,9 +38,11 @@ test.group('search_query | helpers', () => {
     assert.include(source, 'current.includes(value)')
   })
 
-  test('clearFilters supprime les dimensions de filtre', ({ assert }) => {
+  test('clearFilters supprime les dimensions de filtre (auteur conservé par défaut)', ({
+    assert,
+  }) => {
     assert.include(source, 'export function clearFilters')
-    assert.include(source, 'for (const dimension of FILTER_DIMENSIONS) params.delete(dimension)')
+    assert.include(source, "if (dimension !== 'author' || includeAuthor) params.delete(dimension)")
   })
 
   test('setQuery définit ou retire q', ({ assert }) => {
@@ -51,6 +53,7 @@ test.group('search_query | helpers', () => {
 
   test('hasActiveFilters et isFilterActive exportés', ({ assert }) => {
     assert.include(source, 'export function hasActiveFilters')
+    assert.include(source, 'export function hasClearableFilters')
     assert.include(source, 'export function isFilterActive')
   })
 

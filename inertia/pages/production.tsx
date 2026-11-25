@@ -6,6 +6,8 @@ import { Badge } from '~/components/ui/badge'
 import ViewTracker from '~/components/public/ViewTracker'
 import MediaViewer from '~/components/public/MediaViewer'
 import ShareButton from '~/components/public/ShareButton'
+import AuthorByline from '~/components/public/AuthorByline'
+import type { AuthorCredit } from '~/components/public/ProductionCard'
 import { languageLabel } from '~/lib/languages'
 import { taxonomyLabel } from '~/lib/taxonomy'
 import type { SeoMeta } from '~/lib/seo'
@@ -31,7 +33,8 @@ export type ProductionDetail = {
   slug: string
   title: string
   summary: string | null
-  authors: string[]
+  /** Pivot order; `slug` only for a visible profile (Story 10.4). */
+  authors: AuthorCredit[]
   tags: string[]
   category: string | null
   domain: string | null
@@ -114,7 +117,7 @@ export default function ProductionShow({ production }: Props) {
           <h1 className="font-display text-3xl leading-tight text-stone-900">{production.title}</h1>
           {production.authors.length > 0 && (
             <p className="mt-2 text-stone-600">
-              {t('production_card.by')} {production.authors.join(', ')}
+              {t('production_card.by')} <AuthorByline authors={production.authors} />
             </p>
           )}
         </div>
@@ -201,6 +204,16 @@ export default function ProductionShow({ production }: Props) {
             </div>
 
             <dl className="mt-4">
+              {production.authors.length > 0 && (
+                <div className="border-t border-stone-100 py-2 first:border-t-0">
+                  <dt className="text-xs uppercase tracking-wide text-stone-500">
+                    {t('production_detail.authors')}
+                  </dt>
+                  <dd className="mt-0.5 text-sm text-stone-900">
+                    <AuthorByline authors={production.authors} variant="stacked" />
+                  </dd>
+                </div>
+              )}
               <MetaRow
                 label={t('production_detail.category')}
                 value={

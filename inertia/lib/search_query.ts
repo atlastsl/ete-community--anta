@@ -20,16 +20,64 @@ export const FILTER_DIMENSIONS = [
 
 export type FilterDimension = (typeof FILTER_DIMENSIONS)[number]
 export type ProductionFilters = Record<FilterDimension, string[]>
-export type Facets = Record<FilterDimension, string[]>
+/** Option d'une facette : valeur d'URL + libellé affiché. */
+export type FacetOption = { value: string; label: string }
+/**
+ * Facettes du listing : valeurs brutes par dimension, sauf `author` (Story 10.6, D12) =
+ * `{ value: slug, label: "Prénom NOM" }` des seuls auteurs visibles.
+ */
+export type Facets = Record<Exclude<FilterDimension, 'author'>, string[]> & {
+  author: FacetOption[]
+}
 
-export const EMPTY_FILTERS_CLIENT: ProductionFilters = {
-  category: [],
-  domain: [],
-  subdomain: [],
-  author: [],
-  language: [],
-  country: [],
-  license: [],
+/**
+ * Options d'une dimension sous une forme unique `{ value, label }` : les auteurs portent leur
+ * libellé (serveur) ; les autres valeurs passent par `labelOf` (traduction de taxonomie).
+ */
+export function facetOptions(
+  facets: Facets,
+  dimension: FilterDimension,
+  labelOf: (dimension: FilterDimension, value: string) => string
+): FacetOption[] {
+  if (dimension === 'author') return facets.author ?? []
+  return (facets[dimension] ?? []).map((value) => ({ value, label: labelOf(dimension, value) }))
+}
+
+/**
+ * Nombre maximal d'auteurs filtrés à la fois : au-delà de 20 valeurs répétées, `qs`
+ * (`arrayLimit: 20`) ne renvoie plus un tableau ; le serveur garde aussi les 20 premières.
+ */
+export const MAX_AUTHOR_FILTERS = 20
+
+/** Ligatures et lettres barrées sans décomposition NFD (« œ » ne devient pas « oe »). */
+const FOLDED_LETTERS: Record<string, string> = {
+  œ: 'oe',
+  æ: 'ae',
+  ø: 'o',
+  ß: 'ss',
+  ł: 'l',
+  đ: 'd',
+}
+
+/** Clé de comparaison insensible à la casse, aux accents et aux ligatures (facette). */
+function foldText(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[œæøßłđ]/g, (letter) => FOLDED_LETTERS[letter] ?? letter)
+}
+
+/**
+ * Vrai si chaque mot saisi figure dans `label`, dans n'importe quel ordre (« nom prénom »
+ * comme « prénom nom ») ; casse, accents et ligatures ignorés ; saisie vide = vrai.
+ */
+export function matchesFacetQuery(label: string, query: string): boolean {
+  const haystack = foldText(label)
+  return foldText(query)
+    .split(/\s+/)
+    .filter(Boolean)
+    .every((word) => haystack.includes(word))
 }
 
 function parse(search: string): URLSearchParams {
@@ -39,6 +87,18 @@ function parse(search: string): URLSearchParams {
 function toQueryString(params: URLSearchParams): string {
   const qs = params.toString()
   return qs ? `?${qs}` : ''
+}
+
+/**
+ * Remplace les paramètres `author` de l'URL par les slugs retenus par le serveur
+ * (`activeFilters.author`) : un slug ignoré (inconnu, non public, ancien nom libre, au-delà
+ * de 20) n'est plus recopié par les bascules, la pagination ni le tri (Story 10.6).
+ */
+export function withActiveAuthors(search: string, authors: string[]): string {
+  const params = parse(search)
+  params.delete('author')
+  for (const slug of authors) params.append('author', slug)
+  return toQueryString(params)
 }
 
 /**
@@ -61,10 +121,16 @@ export function toggleFilter(search: string, dimension: FilterDimension, value: 
   return toQueryString(params)
 }
 
-/** Retire toutes les dimensions de filtre + `page`. Conserve `q`. */
-export function clearFilters(search: string): string {
+/**
+ * « Effacer les filtres » : retire les dimensions de filtre + `page`, conserve `q` et le
+ * filtre auteur (la vue « productions de cet auteur » survit, D-10.6-2 amendée le
+ * 2026-11-21). `includeAuthor` retire aussi `author` (sortie de l'état vide).
+ */
+export function clearFilters(search: string, { includeAuthor = false } = {}): string {
   const params = parse(search)
-  for (const dimension of FILTER_DIMENSIONS) params.delete(dimension)
+  for (const dimension of FILTER_DIMENSIONS) {
+    if (dimension !== 'author' || includeAuthor) params.delete(dimension)
+  }
   params.delete('page')
   return toQueryString(params)
 }
@@ -95,6 +161,13 @@ export function setPage(search: string, page: number): string {
 
 export function hasActiveFilters(activeFilters: ProductionFilters): boolean {
   return FILTER_DIMENSIONS.some((dimension) => (activeFilters[dimension]?.length ?? 0) > 0)
+}
+
+/** Un filtre que `clearFilters` retire est actif (toute dimension sauf `author`). */
+export function hasClearableFilters(activeFilters: ProductionFilters): boolean {
+  return FILTER_DIMENSIONS.some(
+    (dimension) => dimension !== 'author' && (activeFilters[dimension]?.length ?? 0) > 0
+  )
 }
 
 export function isFilterActive(

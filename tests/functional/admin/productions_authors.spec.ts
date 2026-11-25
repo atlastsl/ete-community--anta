@@ -709,7 +709,10 @@ test.group('Admin productions | revue de code 9.7', (group) => {
 
     const page = await client.get(`/productions/${production.slug}`)
     page.assertStatus(200)
-    assert.deepEqual(extractProps(page.text()).production.authors, ['Zébulon Imaginarius'])
+    // Story 10.4: byline `{ name, slug }` ; profile not public (no consent) → no link.
+    assert.deepEqual(extractProps(page.text()).production.authors, [
+      { name: 'Zébulon IMAGINARIUS', slug: null },
+    ])
   })
 })
 

@@ -760,5 +760,13 @@
       "world_literature": "Littérature mondiale",
       "zoology": "Zoologie"
     }
+  },
+  "not_found": {
+    "title": "Page introuvable",
+    "message": "Cette page n'existe pas ou n'est plus disponible.",
+    "nav_label": "Liens utiles",
+    "home": "Accueil",
+    "search": "Recherche avancée",
+    "authors": "Auteurs"
   }
 }

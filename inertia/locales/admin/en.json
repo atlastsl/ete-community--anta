@@ -760,5 +760,13 @@
       "world_literature": "World Literature",
       "zoology": "Zoology"
     }
+  },
+  "not_found": {
+    "title": "Page not found",
+    "message": "This page does not exist or is no longer available.",
+    "nav_label": "Useful links",
+    "home": "Home",
+    "search": "Advanced search",
+    "authors": "Authors"
   }
 }

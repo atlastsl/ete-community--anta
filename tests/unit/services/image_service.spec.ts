@@ -29,7 +29,9 @@ async function expectCode(input: string | Buffer, code: ImageErrorCode, assert: 
 }
 
 test.group('ImageService | photo d’auteur', () => {
-  test('JPEG avec EXIF + GPS → 3 variantes carrées sans métadonnées', async ({ assert }) => {
+  test('JPEG avec EXIF + GPS → 2 avatars carrés + og.jpg 1200×630, sans métadonnées', async ({
+    assert,
+  }) => {
     const input = await blank(800, 500)
       .jpeg()
       .withExif({
@@ -50,15 +52,15 @@ test.group('ImageService | photo d’auteur', () => {
       ]
     )
     const expected = {
-      'w128.webp': [128, 'webp'],
-      'w384.webp': [384, 'webp'],
-      'og.jpg': [600, 'jpeg'],
+      'w128.webp': [128, 128, 'webp'],
+      'w384.webp': [384, 384, 'webp'],
+      'og.jpg': [1200, 630, 'jpeg'],
     }
     for (const variant of variants) {
       const meta = await sharp(variant.body).metadata()
-      const [size, format] = expected[variant.name as keyof typeof expected]
-      assert.equal(meta.width, size)
-      assert.equal(meta.height, size)
+      const [width, height, format] = expected[variant.name as keyof typeof expected]
+      assert.equal(meta.width, width)
+      assert.equal(meta.height, height)
       assert.equal(meta.format, format)
       assert.isUndefined(meta.exif)
       assert.isUndefined(meta.xmp)
@@ -68,15 +70,17 @@ test.group('ImageService | photo d’auteur', () => {
   })
 
   test('orientation EXIF 6 appliquée puis retirée', async ({ assert }) => {
-    // 300×200 en orientation 6 = portrait une fois réorienté : le recadrage carré reste exact.
+    // 300×200 en orientation 6 = portrait une fois réorienté : les recadrages restent exacts.
     const input = await blank(300, 200).jpeg().withMetadata({ orientation: 6 }).toBuffer()
     const inputMeta = await sharp(input).metadata()
     assert.equal(inputMeta.orientation, 6)
 
     for (const variant of await ImageService.authorPhotoVariants(input)) {
       const meta = await sharp(variant.body).metadata()
+      const spec = AUTHOR_PHOTO_VARIANTS.find((v) => v.name === variant.name)!
       assert.isUndefined(meta.orientation)
-      assert.equal(meta.width, meta.height)
+      assert.equal(meta.width, spec.width)
+      assert.equal(meta.height, spec.height)
     }
   })
 
@@ -112,6 +116,56 @@ test.group('ImageService | photo d’auteur', () => {
 
   test('TIFF (signature refusée avant tout décodage) → photo_type', async ({ assert }) => {
     await expectCode(await blank(20, 20).tiff().toBuffer(), 'photo_type', assert)
+  })
+
+  test('portrait : og.jpg recadré sur la zone saillante, avatars centrés', async ({ assert }) => {
+    // Portrait 600×800 gris, bande colorée en haut (y 80–280) : un recadrage 1.91:1 centré
+    // (y ≈ 243–557) la perdrait ; la stratégie `attention` la garde (D-10.7-2 amendée).
+    const band = await sharp({
+      create: { width: 600, height: 200, channels: 3, background: RED },
+    })
+      .png()
+      .toBuffer()
+    const input = await sharp({
+      create: { width: 600, height: 800, channels: 3, background: { r: 128, g: 128, b: 128 } },
+    })
+      .composite([{ input: band, top: 80, left: 0 }])
+      .png()
+      .toBuffer()
+
+    const variants = await ImageService.authorPhotoVariants(input)
+    const centre = async (name: string) => {
+      const variant = variants.find((v) => v.name === name)!
+      const { data, info } = await sharp(variant.body).raw().toBuffer({ resolveWithObject: true })
+      const offset =
+        (Math.floor(info.height / 2) * info.width + Math.floor(info.width / 2)) * info.channels
+      return [data[offset], data[offset + 1], data[offset + 2]]
+    }
+    const [r, g] = await centre('og.jpg')
+    assert.isAbove(r, 150)
+    assert.isBelow(g, 80)
+    const [ar, ag] = await centre('w384.webp')
+    assert.closeTo(ar, 128, 12)
+    assert.closeTo(ag, 128, 12)
+  })
+
+  test('format extrême (2×20000, 20000×2) : recadré au centre avant attention, rapide', async ({
+    assert,
+  }) => {
+    // Sans borne, `attention` évalue l'image agrandie entière (1200×12 000 000 px → mémoire).
+    for (const [width, height] of [
+      [2, 20000],
+      [20000, 2],
+      [100, 10000],
+    ]) {
+      const input = await blank(width, height).png().toBuffer()
+      const started = Date.now()
+      const variants = await ImageService.authorPhotoVariants(input)
+      assert.isBelow(Date.now() - started, 3000)
+      const meta = await sharp(variants.find((v) => v.name === 'og.jpg')!.body).metadata()
+      assert.equal(meta.width, 1200)
+      assert.equal(meta.height, 630)
+    }
   })
 
   test('PNG transparent → og.jpg sur fond blanc (pas le noir par défaut)', async ({ assert }) => {

@@ -19,7 +19,15 @@ router.get('/productions/:slug', [controllers.public.Productions, 'show']).as('p
 router
   .get('/productions/:slug/files/:fileId/download', [controllers.public.Productions, 'download'])
   .as('production.download')
+// Liste des auteurs visibles (P2.6, Story 10.5) puis profil public d'un auteur visible (D11) ; 404 sinon.
+router.get('/authors', [controllers.public.Authors, 'index']).as('authors.index')
+router.get('/authors/:slug', [controllers.public.Authors, 'show']).as('authors.show')
 router.get('/privacy-policy', [controllers.public.Pages, 'privacy']).as('privacy-policy')
+// Images publiques adossées à R2 (P2.5) : photos d'auteurs à profil public. Les fichiers
+// sous licence (`productions/…`) ne passent jamais par ici (URL signées).
+// Servie avant le routeur par `MediaMiddleware` (sans session ni cookies) ; la route reste
+// déclarée pour le nommage et la construction d'URL.
+router.get('/media/*', [controllers.public.Media, 'show']).as('media.show')
 
 // Health check (Docker / déploiement) — sans base de données ni rendu.
 // `revision` : commit de l'image, vérifié par le health check du déploiement (Story 8.4).

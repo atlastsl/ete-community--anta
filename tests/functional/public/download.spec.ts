@@ -100,4 +100,41 @@ test.group('Public download | endpoint', (group) => {
       .redirects(0)
     response.assertStatus(404)
   })
+
+  // Revue 10.1 : NotFoundPage traduite pour un navigateur, 404 sans page pour un client non HTML.
+  test('404 d’un navigateur → NotFoundPage traduite (statut 404)', async ({ client, assert }) => {
+    const prod = await createProduction('draft')
+    const file = await attachFile(prod)
+    const request = client.get(`/productions/${prod.slug}/files/${file.id}/download`).redirects(0)
+    request.cookiesJar['i18n_lang'] = { name: 'i18n_lang', value: 'en' }
+    const response = await request.header('Accept', 'text/html')
+    response.assertStatus(404)
+    const html = response.text()
+    assert.include(html, 'data-page=')
+    assert.include(html, 'errors/not_found')
+    assert.match(html, /<title[^>]*>\s*Page not found — Anta\s*<\/title>/)
+    assert.notInclude(html, 'introuvable</')
+  })
+
+  test('fichier inexistant d’une production publiée → NotFoundPage', async ({ client, assert }) => {
+    const prod = await createProduction('published')
+    const response = await client
+      .get(`/productions/${prod.slug}/files/00000000-0000-0000-0000-000000000000/download`)
+      .header('Accept', 'text/html')
+      .redirects(0)
+    response.assertStatus(404)
+    assert.include(response.text(), 'errors/not_found')
+  })
+
+  test('404 d’un client JSON → sans page Inertia', async ({ client, assert }) => {
+    const prod = await createProduction('draft')
+    const file = await attachFile(prod)
+    const response = await client
+      .get(`/productions/${prod.slug}/files/${file.id}/download`)
+      .accept('json')
+      .redirects(0)
+    response.assertStatus(404)
+    assert.notInclude(response.text(), 'data-page=')
+    assert.notInclude(response.text(), 'Production introuvable')
+  })
 })

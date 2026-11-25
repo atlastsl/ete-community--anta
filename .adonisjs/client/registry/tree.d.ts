@@ -8,7 +8,14 @@ export interface ApiDefinition {
     show: typeof routes['production.show']
     download: typeof routes['production.download']
   }
+  authors: {
+    index: typeof routes['authors.index']
+    show: typeof routes['authors.show']
+  }
   privacyPolicy: typeof routes['privacy-policy']
+  media: {
+    show: typeof routes['media.show']
+  }
   health: typeof routes['health']
   stats: {
     view: typeof routes['stats.view']

@@ -69,11 +69,74 @@ test.group('A11y | cibles tactiles >= 44px & scroll-snap', () => {
 })
 
 test.group('A11y | un seul <h1> par page publique', () => {
-  for (const page of ['home.tsx', 'productions.tsx', 'privacy-policy.tsx']) {
+  for (const page of [
+    'home.tsx',
+    'productions.tsx',
+    'privacy-policy.tsx',
+    'authors.tsx',
+    'errors/not_found.tsx',
+  ]) {
     test(`${page} contient exactement un <h1`, ({ assert }) => {
       const source = read(`inertia/pages/${page}`)
       const count = (source.match(/<h1[\s>]/g) ?? []).length
       assert.equal(count, 1, `${page} doit avoir exactement un <h1>`)
+    })
+  }
+})
+
+// Story 10.8 — un seul h1 sur tout l'arbre rendu : la page, PublicLayout (posé par
+// `inertia/app.tsx`) et tous les composants locaux importés, récursivement (le h1 du profil vit
+// dans AuthorProfileHeader ; aucun enfant — cartes, filtres, pagination — n'en ajoute un).
+function componentTree(entry: string): string[] {
+  const seen = new Set<string>()
+  const visit = (path: string) => {
+    if (seen.has(path)) return
+    seen.add(path)
+    const source = read(path)
+    for (const match of source.matchAll(/from '~\/((?:components|layouts)\/[^']+)'/g)) {
+      visit(`inertia/${match[1]}.tsx`)
+    }
+  }
+  visit(entry)
+  visit('inertia/layouts/PublicLayout.tsx')
+  return [...seen]
+}
+
+const h1Count = (source: string) => (source.match(/<h1[\s>]/g) ?? []).length
+
+test.group('A11y | un seul <h1> sur l’arbre des pages auteurs (Story 10.8)', () => {
+  const cases = {
+    'inertia/pages/authors.tsx': {
+      h1In: 'inertia/pages/authors.tsx',
+      children: [
+        'inertia/components/public/AuthorCard.tsx',
+        'inertia/components/public/AuthorFilters.tsx',
+        'inertia/components/shared/Pagination.tsx',
+        'inertia/components/shared/SortSelect.tsx',
+        'inertia/components/shared/Avatar.tsx',
+      ],
+    },
+    'inertia/pages/author.tsx': {
+      h1In: 'inertia/components/public/AuthorProfileHeader.tsx',
+      children: [
+        'inertia/components/public/AuthorProfileHeader.tsx',
+        'inertia/components/public/ProductionCard.tsx',
+        'inertia/components/public/AuthorByline.tsx',
+        'inertia/components/shared/Pagination.tsx',
+        'inertia/components/shared/SortSelect.tsx',
+        'inertia/components/shared/Avatar.tsx',
+      ],
+    },
+  }
+  for (const [page, { h1In, children }] of Object.entries(cases)) {
+    test(`${page} : exactement un <h1> (dans ${h1In}), aucun dans les autres fichiers`, ({
+      assert,
+    }) => {
+      const tree = componentTree(page)
+      for (const child of children) assert.include(tree, child, `${child} non résolu`)
+      for (const file of tree) {
+        assert.equal(h1Count(read(file)), file === h1In ? 1 : 0, `<h1> dans ${file}`)
+      }
     })
   }
 })

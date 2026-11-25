@@ -30,11 +30,29 @@ const routes = {
     tokens: [{"old":"/productions/:slug/files/:fileId/download","type":0,"val":"productions","end":""},{"old":"/productions/:slug/files/:fileId/download","type":1,"val":"slug","end":""},{"old":"/productions/:slug/files/:fileId/download","type":0,"val":"files","end":""},{"old":"/productions/:slug/files/:fileId/download","type":1,"val":"fileId","end":""},{"old":"/productions/:slug/files/:fileId/download","type":0,"val":"download","end":""}],
     types: placeholder as Registry['production.download']['types'],
   },
+  'authors.index': {
+    methods: ["GET","HEAD"],
+    pattern: '/authors',
+    tokens: [{"old":"/authors","type":0,"val":"authors","end":""}],
+    types: placeholder as Registry['authors.index']['types'],
+  },
+  'authors.show': {
+    methods: ["GET","HEAD"],
+    pattern: '/authors/:slug',
+    tokens: [{"old":"/authors/:slug","type":0,"val":"authors","end":""},{"old":"/authors/:slug","type":1,"val":"slug","end":""}],
+    types: placeholder as Registry['authors.show']['types'],
+  },
   'privacy-policy': {
     methods: ["GET","HEAD"],
     pattern: '/privacy-policy',
     tokens: [{"old":"/privacy-policy","type":0,"val":"privacy-policy","end":""}],
     types: placeholder as Registry['privacy-policy']['types'],
+  },
+  'media.show': {
+    methods: ["GET","HEAD"],
+    pattern: '/media/*',
+    tokens: [{"old":"/media/*","type":0,"val":"media","end":""},{"old":"/media/*","type":2,"val":"*","end":""}],
+    types: placeholder as Registry['media.show']['types'],
   },
   'health': {
     methods: ["GET","HEAD"],
